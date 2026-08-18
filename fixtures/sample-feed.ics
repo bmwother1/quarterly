@@ -1,0 +1,600 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Instructure//Canvas//EN
+CALSCALE:GREGORIAN
+X-WR-CALNAME:Canvas Calendar
+BEGIN:VEVENT
+UID:event-calendar-event-9800066@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;TZID=America/Los_Angeles:20261002T170000
+SUMMARY:Review Session [CHEM 142 A]
+DESCRIPTION:Optional\; Bagley 154
+URL:https://canvas.uw.edu/courses/17866/assignments/9800066
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800059@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART:20261010T065900Z
+SUMMARY:Discussion Post 1 [ENGL 131 C]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17859/assignments/9800059
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800016@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART:20261012T065900Z
+SUMMARY:Homework 1 [MATH 124 B]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17816/assignments/9800016
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800037@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART:20261015T065900Z
+SUMMARY:Quiz 1 [CSE 121 AA]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17837/assignments/9800037
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800017@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;VALUE=DATE:20261016
+SUMMARY:Homework 2 [MATH 124 B]
+DESCRIPTION:Submit via Canvas. Late work accepted up to 48 hours with a 10
+ % penalty\, per the syllabus\; see the course policy page for details on 
+ extensions\, regrades\, and the drop policy.
+URL:https://canvas.uw.edu/courses/17817/assignments/9800017
+END:VEVENT
+BEGIN:VEVENT
+UID:event-calendar-event-9800067@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART:20261017T000000Z
+SUMMARY:Review Session [CHEM 142 A]
+DESCRIPTION:Optional\; Bagley 154
+URL:https://canvas.uw.edu/courses/17867/assignments/9800067
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800047@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART:20261017T065900Z
+SUMMARY:Reading Response 1 [ENGL 131 C]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17847/assignments/9800047
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800001@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART:20261019T065900Z
+SUMMARY:Problem Set 1 [CHEM 142 A]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17801/assignments/9800001
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800012@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;VALUE=DATE:20261020
+SUMMARY:Quiz 1 [CHEM 142 A]
+DESCRIPTION:Submit via Canvas. Late work accepted up to 48 hours with a 10
+ % penalty\, per the syllabus\; see the course policy page for details on 
+ extensions\, regrades\, and the drop policy.
+URL:https://canvas.uw.edu/courses/17812/assignments/9800012
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800027@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART:20261021T065900Z
+SUMMARY:WebAssign 1 [MATH 124 B]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17827/assignments/9800027
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800032@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART:20261021T065900Z
+SUMMARY:Programming Assignment 1 [CSE 121 AA]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17832/assignments/9800032
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800060@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;VALUE=DATE:20261021
+SUMMARY:Discussion Post 2 [ENGL 131 C]
+DESCRIPTION:Submit via Canvas. Late work accepted up to 48 hours with a 10
+ % penalty\, per the syllabus\; see the course policy page for details on 
+ extensions\, regrades\, and the drop policy.
+URL:https://canvas.uw.edu/courses/17860/assignments/9800060
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800006@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;VALUE=DATE:20261023
+SUMMARY:Lab 1: Titration [CHEM 142 A]
+DESCRIPTION:Submit via Canvas. Late work accepted up to 48 hours with a 10
+ % penalty\, per the syllabus\; see the course policy page for details on 
+ extensions\, regrades\, and the drop policy.
+URL:https://canvas.uw.edu/courses/17806/assignments/9800006
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800056@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;VALUE=DATE:20261023
+SUMMARY:Major Paper 1 Final [ENGL 131 C]
+DESCRIPTION:Submit via Canvas. Late work accepted up to 48 hours with a 10
+ % penalty\, per the syllabus\; see the course policy page for details on 
+ extensions\, regrades\, and the drop policy.
+URL:https://canvas.uw.edu/courses/17856/assignments/9800056
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800024@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART:20261023T153000Z
+SUMMARY:Midterm 1 [MATH 124 B]
+DESCRIPTION:Bring a scientific calculator\; no notes permitted.
+URL:https://canvas.uw.edu/courses/17824/assignments/9800024
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800043@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;VALUE=DATE:20261025
+SUMMARY:Creative Project 1 [CSE 121 AA]
+DESCRIPTION:Submit via Canvas. Late work accepted up to 48 hours with a 10
+ % penalty\, per the syllabus\; see the course policy page for details on 
+ extensions\, regrades\, and the drop policy.
+URL:https://canvas.uw.edu/courses/17843/assignments/9800043
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800009@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART:20261025T153000Z
+SUMMARY:Midterm Exam 1 [CHEM 142 A]
+DESCRIPTION:Bring a scientific calculator\; no notes permitted.
+URL:https://canvas.uw.edu/courses/17809/assignments/9800009
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800053@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART:20261026T065900Z
+SUMMARY:Major Paper 1 Draft [ENGL 131 C]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17853/assignments/9800053
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800038@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;TZID=America/Los_Angeles:20261027T235900
+SUMMARY:Quiz 2 [CSE 121 AA]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17838/assignments/9800038
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800048@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;TZID=America/Los_Angeles:20261027T235900
+SUMMARY:Reading Response 2 [ENGL 131 C]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17848/assignments/9800048
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800033@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART:20261029T065900Z
+SUMMARY:Programming Assignment 2 [CSE 121 AA]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17833/assignments/9800033
+END:VEVENT
+BEGIN:VEVENT
+UID:event-calendar-event-9800068@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART:20261031T000000Z
+SUMMARY:Review Session [CHEM 142 A]
+DESCRIPTION:Optional\; Bagley 154
+URL:https://canvas.uw.edu/courses/17868/assignments/9800068
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800018@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART:20261031T065900Z
+SUMMARY:Homework 3 [MATH 124 B]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17818/assignments/9800018
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800061@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART:20261102T065900Z
+SUMMARY:Discussion Post 3 [ENGL 131 C]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17861/assignments/9800061
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800002@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART:20261104T065900Z
+SUMMARY:Problem Set 2 [CHEM 142 A]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17802/assignments/9800002
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800028@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;TZID=America/Los_Angeles:20261103T235900
+SUMMARY:WebAssign 2 [MATH 124 B]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17828/assignments/9800028
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800039@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;VALUE=DATE:20261104
+SUMMARY:Quiz 3 [CSE 121 AA]
+DESCRIPTION:Submit via Canvas. Late work accepted up to 48 hours with a 10
+ % penalty\, per the syllabus\; see the course policy page for details on 
+ extensions\, regrades\, and the drop policy.
+URL:https://canvas.uw.edu/courses/17839/assignments/9800039
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800019@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;TZID=America/Los_Angeles:20261104T235900
+SUMMARY:Homework 4 [MATH 124 B]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17819/assignments/9800019
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800013@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;VALUE=DATE:20261106
+SUMMARY:Quiz 2 [CHEM 142 A]
+DESCRIPTION:Submit via Canvas. Late work accepted up to 48 hours with a 10
+ % penalty\, per the syllabus\; see the course policy page for details on 
+ extensions\, regrades\, and the drop policy.
+URL:https://canvas.uw.edu/courses/17813/assignments/9800013
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800062@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART:20261109T065900Z
+SUMMARY:Discussion Post 4 [ENGL 131 C]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17862/assignments/9800062
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800049@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;VALUE=DATE:20261110
+SUMMARY:Reading Response 3 [ENGL 131 C]
+DESCRIPTION:Submit via Canvas. Late work accepted up to 48 hours with a 10
+ % penalty\, per the syllabus\; see the course policy page for details on 
+ extensions\, regrades\, and the drop policy.
+URL:https://canvas.uw.edu/courses/17849/assignments/9800049
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800029@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;VALUE=DATE:20261111
+SUMMARY:WebAssign 3 [MATH 124 B]
+DESCRIPTION:Submit via Canvas. Late work accepted up to 48 hours with a 10
+ % penalty\, per the syllabus\; see the course policy page for details on 
+ extensions\, regrades\, and the drop policy.
+URL:https://canvas.uw.edu/courses/17829/assignments/9800029
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800003@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART:20261112T065900Z
+SUMMARY:Problem Set 3 [CHEM 142 A]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17803/assignments/9800003
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800010@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART:20261112T153000Z
+SUMMARY:Midterm Exam 2 [CHEM 142 A]
+DESCRIPTION:Bring a scientific calculator\; no notes permitted.
+URL:https://canvas.uw.edu/courses/17810/assignments/9800010
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800057@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;VALUE=DATE:20261113
+SUMMARY:Major Paper 2 Final [ENGL 131 C]
+DESCRIPTION:Submit via Canvas. Late work accepted up to 48 hours with a 10
+ % penalty\, per the syllabus\; see the course policy page for details on 
+ extensions\, regrades\, and the drop policy.
+URL:https://canvas.uw.edu/courses/17857/assignments/9800057
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800025@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART:20261113T153000Z
+SUMMARY:Midterm 2 [MATH 124 B]
+DESCRIPTION:Bring a scientific calculator\; no notes permitted.
+URL:https://canvas.uw.edu/courses/17825/assignments/9800025
+END:VEVENT
+BEGIN:VEVENT
+UID:event-calendar-event-9800069@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART:20261114T000000Z
+SUMMARY:Review Session [CHEM 142 A]
+DESCRIPTION:Optional\; Bagley 154
+URL:https://canvas.uw.edu/courses/17869/assignments/9800069
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800020@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART:20261114T065900Z
+SUMMARY:Homework 5 [MATH 124 B]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17820/assignments/9800020
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800034@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;TZID=America/Los_Angeles:20261115T235900
+SUMMARY:Programming Assignment 3 [CSE 121 AA]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17834/assignments/9800034
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800040@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART:20261116T065900Z
+SUMMARY:Quiz 4 [CSE 121 AA]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17840/assignments/9800040
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800054@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART:20261116T065900Z
+SUMMARY:Major Paper 2 Draft [ENGL 131 C]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17854/assignments/9800054
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800007@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;TZID=America/Los_Angeles:20261117T235900
+SUMMARY:Lab 2: Titration [CHEM 142 A]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17807/assignments/9800007
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800044@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;TZID=America/Los_Angeles:20261117T235900
+SUMMARY:Creative Project 2 [CSE 121 AA]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17844/assignments/9800044
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800050@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART:20261118T065900Z
+SUMMARY:Reading Response 4 [ENGL 131 C]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17850/assignments/9800050
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800063@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;TZID=America/Los_Angeles:20261118T235900
+SUMMARY:Discussion Post 5 [ENGL 131 C]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17863/assignments/9800063
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800014@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART:20261121T065900Z
+SUMMARY:Quiz 3 [CHEM 142 A]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17814/assignments/9800014
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800021@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;TZID=America/Los_Angeles:20261124T235900
+SUMMARY:Homework 6 [MATH 124 B]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17821/assignments/9800021
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800004@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;TZID=America/Los_Angeles:20261125T235900
+SUMMARY:Problem Set 4 [CHEM 142 A]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17804/assignments/9800004
+END:VEVENT
+BEGIN:VEVENT
+UID:event-calendar-event-9800070@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;TZID=America/Los_Angeles:20261127T170000
+SUMMARY:Review Session [CHEM 142 A]
+DESCRIPTION:Optional\; Bagley 154
+URL:https://canvas.uw.edu/courses/17870/assignments/9800070
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800035@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;TZID=America/Los_Angeles:20261129T235900
+SUMMARY:Programming Assignment 4 [CSE 121 AA]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17835/assignments/9800035
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800051@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART:20261130T065900Z
+SUMMARY:Reading Response 5 [ENGL 131 C]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17851/assignments/9800051
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800030@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;VALUE=DATE:20261201
+SUMMARY:WebAssign 4 [MATH 124 B]
+DESCRIPTION:Submit via Canvas. Late work accepted up to 48 hours with a 10
+ % penalty\, per the syllabus\; see the course policy page for details on 
+ extensions\, regrades\, and the drop policy.
+URL:https://canvas.uw.edu/courses/17830/assignments/9800030
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800022@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART:20261202T065900Z
+SUMMARY:Homework 7 [MATH 124 B]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17822/assignments/9800022
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800041@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART:20261202T065900Z
+SUMMARY:Quiz 5 [CSE 121 AA]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17841/assignments/9800041
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800064@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;TZID=America/Los_Angeles:20261201T235900
+SUMMARY:Discussion Post 6 [ENGL 131 C]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17864/assignments/9800064
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800005@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;TZID=America/Los_Angeles:20261209T235900
+SUMMARY:Problem Set 5 [CHEM 142 A]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17805/assignments/9800005
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800045@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;TZID=America/Los_Angeles:20261209T235900
+SUMMARY:Creative Project 3 [CSE 121 AA]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17845/assignments/9800045
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800008@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;VALUE=DATE:20261211
+SUMMARY:Lab 3: Titration [CHEM 142 A]
+DESCRIPTION:Submit via Canvas. Late work accepted up to 48 hours with a 10
+ % penalty\, per the syllabus\; see the course policy page for details on 
+ extensions\, regrades\, and the drop policy.
+URL:https://canvas.uw.edu/courses/17808/assignments/9800008
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800058@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;VALUE=DATE:20261211
+SUMMARY:Major Paper 3 Final [ENGL 131 C]
+DESCRIPTION:Submit via Canvas. Late work accepted up to 48 hours with a 10
+ % penalty\, per the syllabus\; see the course policy page for details on 
+ extensions\, regrades\, and the drop policy.
+URL:https://canvas.uw.edu/courses/17858/assignments/9800058
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800015@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART:20261212T065900Z
+SUMMARY:Quiz 4 [CHEM 142 A]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17815/assignments/9800015
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800031@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;VALUE=DATE:20261213
+SUMMARY:WebAssign 5 [MATH 124 B]
+DESCRIPTION:Submit via Canvas. Late work accepted up to 48 hours with a 10
+ % penalty\, per the syllabus\; see the course policy page for details on 
+ extensions\, regrades\, and the drop policy.
+URL:https://canvas.uw.edu/courses/17831/assignments/9800031
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800036@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;VALUE=DATE:20261215
+SUMMARY:Programming Assignment 5 [CSE 121 AA]
+DESCRIPTION:Submit via Canvas. Late work accepted up to 48 hours with a 10
+ % penalty\, per the syllabus\; see the course policy page for details on 
+ extensions\, regrades\, and the drop policy.
+URL:https://canvas.uw.edu/courses/17836/assignments/9800036
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800065@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;VALUE=DATE:20261215
+SUMMARY:Discussion Post 7 [ENGL 131 C]
+DESCRIPTION:Submit via Canvas. Late work accepted up to 48 hours with a 10
+ % penalty\, per the syllabus\; see the course policy page for details on 
+ extensions\, regrades\, and the drop policy.
+URL:https://canvas.uw.edu/courses/17865/assignments/9800065
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800046@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART:20261215T173000Z
+SUMMARY:Final Exam [CSE 121 AA]
+DESCRIPTION:Bring a scientific calculator\; no notes permitted.
+URL:https://canvas.uw.edu/courses/17846/assignments/9800046
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800023@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;TZID=America/Los_Angeles:20261215T235900
+SUMMARY:Homework 8 [MATH 124 B]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17823/assignments/9800023
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800042@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;TZID=America/Los_Angeles:20261215T235900
+SUMMARY:Quiz 6 [CSE 121 AA]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17842/assignments/9800042
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800052@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;TZID=America/Los_Angeles:20261215T235900
+SUMMARY:Reading Response 6 [ENGL 131 C]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17852/assignments/9800052
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800055@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;TZID=America/Los_Angeles:20261215T235900
+SUMMARY:Major Paper 3 Draft [ENGL 131 C]
+DESCRIPTION:Submit via Canvas.
+URL:https://canvas.uw.edu/courses/17855/assignments/9800055
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800011@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;TZID=America/Los_Angeles:20261218T083000
+SUMMARY:Final Exam [CHEM 142 A]
+DESCRIPTION:Bring a scientific calculator\; no notes permitted.
+URL:https://canvas.uw.edu/courses/17811/assignments/9800011
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-9800026@canvas.uw.edu
+DTSTAMP:20260817T120000Z
+DTSTART;TZID=America/Los_Angeles:20261218T103000
+SUMMARY:Final Exam [MATH 124 B]
+DESCRIPTION:Bring a scientific calculator\; no notes permitted.
+URL:https://canvas.uw.edu/courses/17826/assignments/9800026
+END:VEVENT
+END:VCALENDAR

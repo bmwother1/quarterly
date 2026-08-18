@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Never commit a Canvas feed URL — it grants read access to a real schedule.
+*.local.ics
+.env*.local
+fixtures/my-*.ics

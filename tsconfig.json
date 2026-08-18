@@ -11,6 +11,10 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
+    // Node 24 runs TypeScript directly, which is what lets the domain logic be
+    // tested and previewed with no build step and no test framework — but its
+    // resolver needs the real .ts extension on every relative import.
+    "allowImportingTsExtensions": true,
     "jsx": "react-jsx",
     "incremental": true,
     "plugins": [
