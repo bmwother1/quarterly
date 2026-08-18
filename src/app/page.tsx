@@ -1,69 +1,217 @@
-import Image from "next/image";
+'use client';
+
+import { useState } from 'react';
+import type { Assignment, Course } from '@/lib/types';
+import { WorkloadChart, CourseList, UpcomingList, type WorkloadWeek } from '@/components/workload-chart';
+
+interface FeedResult {
+  assignments: Assignment[];
+  courses: Course[];
+  workload: WorkloadWeek[];
+  fetchedAt: string;
+  demo?: boolean;
+}
+
+type State =
+  | { step: 'intake' }
+  | { step: 'loading' }
+  | { step: 'error'; error: string; hint?: string }
+  | { step: 'ready'; data: FeedResult };
 
 export default function Home() {
+  const [state, setState] = useState<State>({ step: 'intake' });
+  const [url, setUrl] = useState('');
+
+  async function connect(e: React.FormEvent) {
+    e.preventDefault();
+    setState({ step: 'loading' });
+    try {
+      const res = await fetch('/api/feed', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        setState({ step: 'error', error: body.error ?? 'Something went wrong.', hint: body.hint });
+        return;
+      }
+      setState({ step: 'ready', data: body as FeedResult });
+    } catch {
+      setState({ step: 'error', error: 'Could not reach the server.', hint: 'Check your connection and try again.' });
+    }
+  }
+
+  async function showDemo() {
+    setState({ step: 'loading' });
+    try {
+      const res = await fetch('/api/feed');
+      if (!res.ok) throw new Error();
+      setState({ step: 'ready', data: (await res.json()) as FeedResult });
+    } catch {
+      setState({ step: 'error', error: 'Could not load the sample quarter.' });
+    }
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <main className="mx-auto max-w-2xl px-5 py-12 sm:py-20">
+      <header className="mb-10">
+        <h1 className="text-2xl font-semibold tracking-tight">Quarterly</h1>
+        <p className="mt-1 text-[var(--muted)]">
+          Your quarter, planned. Free for students.
+        </p>
+      </header>
+
+      {state.step === 'ready' ? (
+        <Results data={state.data} onReset={() => { setUrl(''); setState({ step: 'intake' }); }} />
+      ) : (
+        <Intake
+          url={url}
+          setUrl={setUrl}
+          onSubmit={connect}
+          loading={state.step === 'loading'}
+          error={state.step === 'error' ? state : undefined}
+          onDemo={showDemo}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+      )}
+    </main>
+  );
+}
+
+function Intake({
+  url, setUrl, onSubmit, loading, error, onDemo,
+}: {
+  url: string;
+  setUrl: (v: string) => void;
+  onSubmit: (e: React.FormEvent) => void;
+  loading: boolean;
+  error?: { error: string; hint?: string };
+  onDemo: () => void;
+}) {
+  return (
+    <>
+      <form onSubmit={onSubmit} className="space-y-3">
+        <label htmlFor="feed" className="block text-sm font-medium">
+          Paste your Canvas calendar feed
+        </label>
+        <input
+          id="feed"
+          type="url"
+          required
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="https://canvas.uw.edu/feeds/calendars/user_….ics"
+          autoComplete="off"
+          spellCheck={false}
+          className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm outline-none placeholder:text-[var(--faint)] focus:border-[var(--accent)]"
+        />
+        <button
+          type="submit"
+          disabled={loading || !url.trim()}
+          className="w-full rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-medium text-white transition-opacity disabled:opacity-40 sm:w-auto"
+        >
+          {loading ? 'Reading your quarter…' : 'Show me my quarter'}
+        </button>
+      </form>
+
+      <p className="mt-3 text-sm text-[var(--muted)]">
+        Not ready to hand over a link?{' '}
+        <button onClick={onDemo} disabled={loading} className="underline underline-offset-4 disabled:opacity-40">
+          See it with a sample quarter
+        </button>
+        .
+      </p>
+
+      {error && (
+        <div role="alert" className="mt-4 rounded-lg border border-[var(--warn)]/40 bg-[var(--accent-soft)] p-3 text-sm">
+          <p className="font-medium text-[var(--warn)]">{error.error}</p>
+          {error.hint && <p className="mt-1 text-[var(--muted)]">{error.hint}</p>}
+        </div>
+      )}
+
+      <section className="mt-10 space-y-4 text-sm text-[var(--muted)]">
+        <div>
+          <h2 className="font-medium text-[var(--ink)]">Where to find it</h2>
+          <p className="mt-1">
+            In Canvas, open <strong className="font-medium text-[var(--ink)]">Calendar</strong>, then click{' '}
+            <strong className="font-medium text-[var(--ink)]">Calendar Feed</strong> in the right-hand sidebar.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div>
+          <h2 className="font-medium text-[var(--ink)]">Treat that link like a password</h2>
+          <p className="mt-1">
+            Anyone holding it can see your whole schedule. We read it, show you your quarter, and
+            don&rsquo;t store it. Don&rsquo;t post it anywhere.
+          </p>
         </div>
-      </main>
+        <div>
+          <h2 className="font-medium text-[var(--ink)]">Between quarters?</h2>
+          <p className="mt-1">
+            Canvas feeds only carry 30 days back and a year forward, so they&rsquo;re often empty over
+            a break. That&rsquo;s expected, not a failure.
+          </p>
+        </div>
+      </section>
+    </>
+  );
+}
+
+function Results({ data, onReset }: { data: FeedResult; onReset: () => void }) {
+  // The server's fetch time is the clock. Reading Date.now() here would be
+  // impure during render and could differ between server and client passes.
+  const now = new Date(data.fetchedAt).getTime();
+  const upcoming = data.assignments.filter((a) => new Date(a.due).getTime() >= now);
+  const hours = Math.round(upcoming.reduce((s, a) => s + a.estimatedMinutes, 0) / 60);
+
+  // Weeks that already finished are noise; start from the one we're in.
+  const currentWeek = new Date(now - 7 * 86_400_000).toISOString().slice(0, 10);
+  const weeks = data.workload.filter((w) => w.weekStart >= currentWeek);
+
+  return (
+    <div className="space-y-10">
+      <section>
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-lg font-medium">Your quarter</h2>
+          <button onClick={onReset} className="text-sm text-[var(--muted)] underline underline-offset-4">
+            use a different feed
+          </button>
+        </div>
+        {data.demo && (
+          <p className="mt-2 inline-block rounded border border-[var(--border)] px-2 py-0.5 text-xs text-[var(--muted)]">
+            sample data
+          </p>
+        )}
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          {data.courses.length} courses · {data.assignments.length} assignments ·{' '}
+          {upcoming.length} still ahead of you · roughly {hours} hours of work
+        </p>
+        <div className="mt-4">
+          <CourseList courses={data.courses} />
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-lg font-medium">Workload by week</h2>
+        <p className="mb-4 mt-1 text-sm text-[var(--muted)]">
+          Every deadline in your feed, bucketed by the week it lands in.
+        </p>
+        <WorkloadChart weeks={weeks} />
+      </section>
+
+      <section>
+        <h2 className="text-lg font-medium">Next up</h2>
+        <div className="mt-2">
+          <UpcomingList assignments={data.assignments} now={now} />
+        </div>
+      </section>
+
+      <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
+        <h2 className="font-medium">Next: tell it when you&rsquo;re free</h2>
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          Knowing the deadlines is the easy half. The scheduler needs your classes, sleep, and
+          work shifts before it can lay out a week worth following.
+        </p>
+      </section>
     </div>
   );
 }

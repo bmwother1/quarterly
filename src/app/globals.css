@@ -1,26 +1,59 @@
 @import "tailwindcss";
 
+/*
+ * One palette, defined once, working in both themes. Students open this at
+ * 11pm as often as at 9am, so dark mode is not an afterthought.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --bg: #fbfaf9;
+  --surface: #ffffff;
+  --border: #e7e3de;
+  --ink: #1a1815;
+  --muted: #6b6560;
+  --faint: #97918a;
+  --accent: #b4531f;
+  --accent-soft: #fdf3ec;
+  --warn: #c02a1e;
+  --ok: #2f6b43;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --bg: #14120f;
+    --surface: #1c1a16;
+    --border: #302c26;
+    --ink: #f0ece6;
+    --muted: #a29a90;
+    --faint: #6f675e;
+    --accent: #e0894f;
+    --accent-soft: #241a12;
+    --warn: #f2604a;
   }
 }
 
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-warn: var(--warn);
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Respect a reduced-motion preference rather than animating regardless. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
