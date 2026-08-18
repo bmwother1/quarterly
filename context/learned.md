@@ -30,6 +30,45 @@ gets a polite yes from everyone and teaches nothing. "Walk me through last Sunda
 
 ## From building
 
+### An empty Canvas feed is the launch-day default (2026-08-18)
+
+Brydon connected his real UW feed and it returned a valid calendar with zero
+assignments. Not a bug: Canvas feeds carry 30 days back and a year forward, and
+instructors publish assignments when they publish the course, often in the final
+week before instruction starts.
+
+**Why this matters more than it looks.** Launch is September 30, the first day of
+autumn quarter. Students will onboard in the days *before* that. The single most
+likely first experience of this product is an empty feed. "0 courses · 0
+assignments" reads as a broken app, and a student who concludes it's broken in
+week 0 never comes back in week 1.
+
+The empty state now says the feed works, explains that it's timing, and routes
+them into setting up availability, which doesn't depend on Canvas at all. That
+turns the dead end into the useful half of onboarding.
+
+**Open question for the interviews:** how many students would try this before
+their quarter is published, and would they come back?
+
+### webcal:// broke the terminal scripts but not the web route (2026-08-18)
+
+Canvas's "Calendar Feed" button copies a `webcal://` URL. The web route
+normalises it; both terminal scripts tested for `^https?://` only, so a valid URL
+fell through to the file branch and failed with "no such file". Reported as
+"couldn't load the feed", which reads like a bad link.
+
+**Lesson:** the same input normalisation existed in two places and only one got
+fixed. Shared validation belongs in one module used by everything, which is where
+`src/lib/canvas/feed-url.ts` came from.
+
+### The host allowlist had a suffix bypass (2026-08-18)
+
+Matching `canvas.` anywhere in a hostname accepted
+`canvas.uw.edu.attacker.com`, a domain anyone can register, turning the feed
+route into an open proxy. Anchored to the suffix instead. Caught by a test
+written specifically to try the bypass, not by the tests confirming valid URLs
+work.
+
 ### The energy-fit feature was structurally inert (2026-08-18)
 
 Wrote the scheduler the obvious way: walk time forward, at each opening place

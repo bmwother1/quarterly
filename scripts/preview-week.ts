@@ -43,8 +43,10 @@ const C = process.stdout.isTTY
   : { dim: (s: string) => s, b: (s: string) => s, cyan: (s: string) => s, amber: (s: string) => s, red: (s: string) => s };
 
 async function load(source: string): Promise<string> {
-  if (/^https?:\/\//i.test(source)) {
-    const res = await fetch(source.replace(/^http:/i, 'https:'), { redirect: 'follow' });
+  // webcal:// is what Canvas's "Calendar Feed" button actually copies.
+  if (/^(https?|webcal):\/\//i.test(source)) {
+    const url = source.replace(/^webcal:/i, 'https:').replace(/^http:/i, 'https:');
+    const res = await fetch(url, { redirect: 'follow' });
     if (!res.ok) throw new Error(`Canvas returned HTTP ${res.status}`);
     return res.text();
   }

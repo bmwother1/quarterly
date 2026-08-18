@@ -191,9 +191,12 @@ const C = process.stdout.isTTY
 
 // ─── main ──────────────────────────────────────────────────────────
 async function loadSource(src) {
-  if (/^https?:\/\//i.test(src)) {
-    // Canvas feed URLs are http:// by default — upgrade to https.
-    const url = src.replace(/^http:/i, 'https:');
+  if (/^(https?|webcal):\/\//i.test(src)) {
+    // Canvas hands out webcal:// links from the "Calendar Feed" button, and
+    // http:// elsewhere. Both mean https in practice. Missing webcal:// here
+    // makes a perfectly good URL fall through to the file branch and fail with
+    // "no such file", which reads like a broken link rather than a scheme.
+    const url = src.replace(/^webcal:/i, 'https:').replace(/^http:/i, 'https:');
     const res = await fetch(url, { redirect: 'follow' });
     if (!res.ok) throw new Error(`Canvas returned HTTP ${res.status}. Double-check the feed URL.`);
     return res.text();

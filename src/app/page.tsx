@@ -167,6 +167,13 @@ function Results({ data, onReset }: { data: FeedResult; onReset: () => void }) {
   const currentWeek = new Date(now - 7 * 86_400_000).toISOString().slice(0, 10);
   const weeks = data.workload.filter((w) => w.weekStart >= currentWeek);
 
+  // The launch-window case. UW autumn quarter starts September 30, students
+  // will onboard in the days before it, and Canvas often has nothing published
+  // yet. "0 courses · 0 assignments" reads as a broken app; it isn't.
+  if (data.assignments.length === 0) {
+    return <EmptyQuarter demo={data.demo} onReset={onReset} />;
+  }
+
   return (
     <div className="space-y-10">
       <section>
@@ -212,6 +219,49 @@ function Results({ data, onReset }: { data: FeedResult; onReset: () => void }) {
           work shifts before it can lay out a week worth following.
         </p>
       </section>
+    </div>
+  );
+}
+
+function EmptyQuarter({ demo, onReset }: { demo?: boolean; onReset: () => void }) {
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-lg font-medium">Your feed works. It&rsquo;s just empty.</h2>
+        <button onClick={onReset} className="text-sm text-[var(--muted)] underline underline-offset-4">
+          use a different feed
+        </button>
+      </div>
+
+      <p className="text-sm text-[var(--muted)]">
+        We reached Canvas and read your calendar. There are no assignments in it yet.
+        {demo ? ' (This was sample data.)' : ''}
+      </p>
+
+      <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 text-sm">
+        <h3 className="font-medium">This is almost always timing, not a mistake</h3>
+        <ul className="mt-2 space-y-2 text-[var(--muted)]">
+          <li>
+            Canvas feeds carry 30 days back and a year forward, so between quarters
+            there&rsquo;s genuinely nothing there.
+          </li>
+          <li>
+            Instructors publish assignments when they publish the course, often in the
+            last week before instruction begins. Before that the calendar is bare even
+            though you&rsquo;re enrolled.
+          </li>
+        </ul>
+      </div>
+
+      <div className="rounded-lg border border-[var(--border)] p-4 text-sm">
+        <h3 className="font-medium">What you can do now</h3>
+        <p className="mt-2 text-[var(--muted)]">
+          Set up your week anyway. Your classes, sleep and work shifts don&rsquo;t depend on
+          Canvas, and they&rsquo;re half of what the scheduler needs. When your courses go
+          live, the deadlines drop straight into a week that&rsquo;s already shaped
+          around you.
+        </p>
+      </div>
     </div>
   );
 }
