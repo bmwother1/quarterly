@@ -1,6 +1,6 @@
-# Tonight — about 30 minutes
+# Tonight, about 20 minutes
 
-Six things, in order. Steps 2 and 3 are the ones that matter; the rest is
+Five things, in order. Steps 2 and 3 are the ones that matter; the rest is
 plumbing. Delete this file once you've done them.
 
 ---
@@ -79,34 +79,26 @@ Write down whatever annoys you. Annoyance is the most useful signal here.
 
 ---
 
-## 4 · Correct the file about you · 2 minutes
+## ~~4 · Correct the file about you~~ · done
 
-```
-open -e ~/Desktop/quarterly/context/founder.md
-```
-
-**Why:** that file shapes how every future conversation is pitched. I inferred
-you're an EE major with a real programming background from what's on your
-machine — the Kalshi bot, the Verilog labs, the Arduino work. If that's wrong,
-every explanation I give from now on is aimed at the wrong person. Two minutes
-here saves a lot of mismatched conversation later.
+Replaced with your own CLAUDE.md. No action needed.
 
 ---
 
-## 5 · Make GitHub and Vercel accounts · 10 minutes
+## 5 · Push to GitHub · 2 minutes
 
-- **github.com** → sign up
-- **vercel.com** → sign up, and choose **"Continue with GitHub"**
+You already have GitHub and Vercel from Prismwave, so this is just a repo.
 
-**Why:** GitHub stores your code somewhere other than your laptop — that's your
-backup, and it's also how Vercel gets hold of it. Vercel is what turns the code
-into a real website with a URL you can text to someone. You need both before any
-student other than you can try this. Signing into Vercel *with* GitHub links them
-so deploys happen automatically when you push code.
+```
+cd ~/Desktop/quarterly && gh repo create quarterly --private --source=. --push
+```
 
-While you're there: **education.github.com/pack** — the GitHub Student Developer
-Pack. Free credits and tools for anyone with a .edu address. Costs nothing and
-covers a chunk of the six-month budget.
+If `gh` isn't installed, make the repo in the browser and push the remote
+manually. Keep it **private** for now: the fixtures are synthetic, but this
+becomes a repo that handles student schedule data.
+
+Grab **education.github.com/pack** if you haven't already. Free credits against
+the six-month budget.
 
 ---
 
@@ -134,7 +126,6 @@ Tell me:
 
 1. Did the feed work, and how many assignments did it find?
 2. What looked wrong or annoying in your week?
-3. Anything in `founder.md` you corrected?
 
 Then I'll build the interface — the screens that turn all of this into something
 you can actually show someone.

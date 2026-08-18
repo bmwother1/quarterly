@@ -13,62 +13,70 @@ conversation can start from here instead of from scratch.
 
 # Who you're working with
 
-> **Correct anything wrong here.** This file shapes every conversation, so an
-> error in it is expensive and a fix is cheap. Parts of it are inferred from the
-> machine and from how past sessions went, and inference is not knowledge.
+Sourced from his own CLAUDE.md (2026-08-18). Accurate, not inferred.
 
-## The short version
+## Who
 
-UW student in Seattle, building Quarterly — a study scheduler for students —
-solo, AI-assisted, against a September 30 2026 launch. Budget $500–$5,000 for six
-months. First-time founder.
+Electrical & Computer Engineering senior at UW, class of 2027, based in Kenmore
+WA. Focus: embedded systems, hardware design, computer architecture. Builds end
+to end and doesn't consider a prototype finished until it runs on real hardware
+with a real interface.
 
-## What he can actually build
+FE Electrical & Computer exam October 2026. Sponsorship Lead for the UW Solar
+Vehicle Team (51 people). Deep golf domain knowledge from three years in a pro
+shop. DJs and runs an FPV/aerial YouTube channel.
 
-More than "non-technical," which is how the early planning documents framed it
-and which undersells him.
+## Technical background
 
-Evidence on the machine: a Python prediction-market trading bot with a real
-structure (feature engineering, a price feed, an outcome tracker, a notifier);
-Verilog labs (FSMs, DE1-SoC); Arduino/C++ motor control and line following; R;
-Java from CSE coursework. Coursework spans CSE 121/122, EE 351, power
-electronics, MATH 124, CHEM 142/152, PHYS 114, ACCTG 219, ENGL 131. Reads like
-electrical engineering with a real programming spine.
+**Languages:** Python, JavaScript/TypeScript, Verilog, Java, C/C++ (Arduino,
+embedded)
 
-What that means in practice:
+**Web stack he already ships:** Next.js, TypeScript, Supabase (Postgres, RLS,
+storage), Tailwind, shadcn/ui, Vercel, FastAPI, React
 
-- **Not new to code.** Don't explain what a function is, what a loop does, or why
-  tests exist.
-- **New to the JavaScript world.** Before this project the machine had no Node,
-  no npm, no Homebrew. React, Next.js, the package ecosystem, and deployment are
-  genuinely unfamiliar. Explain those.
-- **Comfortable with systems thinking.** Scheduling as a constraint problem, a
-  scoring function, feedback from observed data — these land without preamble.
+**Hardware:** KiCad, Quartus, ModelSim, Fusion 360, Raspberry Pi 5, Arduino,
+systemd, SQLite, sensor integration, FPV builds
+
+**Also:** SQL migrations, REST integration, Anthropic API
+
+### What this means for Quarterly
+
+He is not learning this stack. He is currently running SQL migrations against
+Supabase for another Next.js/TypeScript/Vercel product (Prismwave Network, a
+verification-led professional network built for his mother's HR/biotech
+consultancy).
+
+So: skip explanations of React, Next, Tailwind, Supabase, deployment, and Git.
+Explain the parts specific to *this* project, the scheduler's design, and
+anything genuinely non-obvious. shadcn/ui is a safe default for UI here since he
+already uses it.
+
+Prior work worth knowing: a Kalshi weather bot on a Pi via systemd (killed after
+forward testing found no edge, which is the right instinct), a World Cup bracket
+coherence engine, and a DIY golf launch monitor using Doppler radar with a
+FastAPI backend and React dashboard.
 
 ## How to work with him
 
-**Be direct and cut the padding.** The single most useful correction he's given
-so far: told that week 1 was mostly setup, he said he didn't see installing Node
-taking a week. He was right, it took three minutes, and the plan was padded.
-Estimate honestly and revise out loud when the estimate was wrong.
+His own rules, verbatim in substance:
 
-**Lead with the recommendation.** He asks "what are your thoughts on how I should
-proceed" and wants an answer, not a menu. Give the call, give the reasoning in a
-sentence or two, then move.
+- Give a direct recommendation, not a list of options. If there are tradeoffs,
+  pick one and say why.
+- Concrete next steps over extended planning. Give the command to run.
+- Be concise. Skip preamble. Skip summaries of what you just did.
+- **No em dashes.** No AI filler ("delve", "it's worth noting", "let's dive in").
+- If what he's asking for is a bad idea, say so before writing the code.
+- Assume he can read code. Explain the non-obvious parts, not the syntax.
 
-**Show the thing rather than describing it.** He responds to working output —
-a printed schedule, a real chart, a running app. Build the small version instead
-of writing a paragraph about what it would look like.
+Two things confirmed in practice: he pushed back correctly on a padded week-1
+estimate (installing Node took three minutes, not a week), and he has taken
+every piece of bad news and acted on it. Don't soften findings.
 
-**Say when something won't work.** He hasn't pushed back on bad news once. The
-research that changed the plan most — don't scrape Canvas, don't market grade
-improvements, don't use an LLM for scheduling — was all received and acted on.
+## Context that shapes decisions
 
-**Speed is the constraint he cares about.** He wants to move fast and is right
-that a lot of conventional startup advice is calendar-padding. The honest
-distinction to keep making: what's *actually* slow because it depends on other
-people (interviews, accounts, approvals) versus what's only slow because someone
-wrote a six-week plan.
+Solo, AI-assisted, launching September 30 2026. Budget $500 to $5,000 for six
+months. Two other active projects competing for the same hours, so scope
+discipline matters more than architecture.
 
 ---
 

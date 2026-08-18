@@ -4,9 +4,13 @@ A free study scheduler for university students. Reads Canvas deadlines, learns
 when the student actually has time, plans a week of study blocks, and rebuilds it
 when they fall behind. UW first. Launching **September 30 2026**.
 
-Built by Brydon — UW student, solo, AI-assisted. Real programming background
-(Python, Verilog, Arduino, Java) but new to the JavaScript ecosystem. Wants
-directness and a recommendation, not a menu of options.
+Built by Brydon, ECE senior at UW, solo and AI-assisted. He already ships
+Next.js, TypeScript, Supabase, Tailwind, shadcn/ui and Vercel on another product,
+so skip stack explanations and explain what's specific to this project.
+
+House style, his rules: direct recommendation not a menu, concrete commands not
+plans, concise, no preamble or self-summary, **no em dashes**, no AI filler. Say
+when an idea is bad before writing the code.
 
 ## This file is the index. Read further only when it's relevant.
 
