@@ -9,9 +9,10 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "node --test \"tests/**/*.test.ts\"",
-    "feed": "node scripts/read-feed.ts",
+    "feed": "node scripts/read-feed.mjs",
     "week": "node scripts/preview-week.ts",
-    "check": "npm run typecheck && npm run lint && npm test"
+    "check": "npm run typecheck && npm run lint && npm test",
+    "handoff": "node scripts/handoff.ts"
   },
   "dependencies": {
     "next": "16.3.1",

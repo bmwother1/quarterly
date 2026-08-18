@@ -18,11 +18,13 @@
  *   Canvas → Calendar → "Calendar Feed" (right sidebar) → copy the link.
  *   Keep it private. Anyone with that link can see your schedule.
  *
- * No npm install required. Node 18+ only.
+ * No npm install required, no dependencies. Node 18+ only.
+ *
+ * Superseded inside the app by src/lib/canvas/*, but kept standalone so it can
+ * be handed to anyone with Node and nothing else installed.
  */
 
-'use strict';
-const fs = require('fs');
+import fs from 'node:fs';
 
 // ─── config ────────────────────────────────────────────────────────
 const TZ = 'America/Los_Angeles';   // change if you're not on Pacific time

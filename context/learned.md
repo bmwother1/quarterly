@@ -1,0 +1,120 @@
+# What we've learned
+
+Findings that cost something to obtain, recorded so they're never paid for twice.
+Decisions go in `decisions.md`; this is the evidence underneath them.
+
+The most valuable entries here are the ones that start "this didn't work."
+
+---
+
+## From students
+
+**Nothing yet.** 0 of 20 interviews done. This is the largest hole in the project
+and no amount of building closes it.
+
+The four numbers that matter, from the week-1 playbook:
+
+- How many of 20 describe the 9pm decision problem *unprompted*? 8+ → proceed.
+  Under 8 → the thesis needs revising, not more code.
+- How many gave a phone number unprompted? That's the alpha list. Under 10 → the
+  problem is distribution, not product.
+- What did they abandon, and why? This is retention research, free.
+- What was heard that nobody predicted? The single most valuable output, and the
+  one thing no document written in advance can contain.
+
+The rule: **ask what they did, never what they'd want.** "Would you use this?"
+gets a polite yes from everyone and teaches nothing. "Walk me through last Sunday
+— what did you work on and how did you decide?" gets the truth.
+
+---
+
+## From building
+
+### The energy-fit feature was structurally inert (2026-08-18)
+
+Wrote the scheduler the obvious way: walk time forward, at each opening place
+whatever scores highest. 61 of 62 tests passed. The one failure — an evening
+person getting exam prep at 8am — turned out not to be a tuning problem but a
+structural one. When slots pick tasks, a fit term can only break ties; it can
+never move work to a better hour.
+
+**The generalisable lesson:** a feature can pass every test around it and still
+do nothing, if the architecture gives it no mechanism to act through. The test
+that caught it was a behavioural one ("an evening student gets demanding work in
+the evening"), not a unit test of the scoring function — which was correct all
+along.
+
+### The first honest preview was 90% past-due work (2026-08-18)
+
+Running the planner against the sample feed produced a week almost entirely
+composed of work from three weeks earlier, every block labelled "Past due."
+Overdue items score maximum urgency by construction, and a Canvas feed carries 30
+days of history without ever saying what was submitted.
+
+**Lesson:** the terminal preview found this in one run. No test would have — the
+schedule was *correct* by every constraint, and useless. Build the thing that
+lets you look at real output.
+
+### Inverting the loop cost 20× in speed (2026-08-18)
+
+15ms → 384ms. The culprits were `Intl` formatting inside the inner loop (each
+local-hour lookup is expensive) and re-scanning the full block list for every
+candidate placement. Fixed by precomputing an hour grid once and keeping
+per-course spans sorted. Back to ~21ms.
+
+### Two parser bugs that ran cleanly and were quietly wrong (2026-08-17)
+
+Both from the original week-1 script, both caught by tests:
+
+- Timezone conversion accumulated an offset instead of recomputing it, putting
+  every `TZID`-format deadline 7 hours late. Invisible without checking.
+- The work classifier read "Major Paper 2 Final" as an exam, because the generic
+  word won before the specific one.
+
+**Lesson, and the one to carry into every AI-assisted session:** the failure mode
+is not code that crashes. It's code that runs cleanly and is wrong. Write the
+test that would catch the plausible mistake, not the one that confirms the happy
+path.
+
+### All-day deadlines are due at the *end* of the day (2026-08-18)
+
+Canvas emits all-day items with no time. Treating them as due at midnight
+starting that day silently removes a full day of runway from every one of them —
+and makes anything due today read as already missed.
+
+---
+
+## From research
+
+### Canvas access is a solved problem (2026-08-17)
+
+Every Canvas student has a public per-user iCal feed at Calendar → Calendar Feed.
+No OAuth, no approval, no credentials. It carries assignments and due dates and
+is how Shovel does it. The feed covers 30 days back and 366 forward, so it's
+often empty between quarters — which is a support question, not a bug.
+
+By contrast, UW's formal LMS Vendor Integration Program takes up to six months of
+data-privacy agreements.
+
+### The competitive gap is real and specific (2026-08-17)
+
+Twelve competitors reviewed. Nobody fills all three of: knows deadlines,
+reschedules automatically, knows what to study. Cram Fighter fills all three —
+for two medical board exams, paid. That's both the strongest validation and the
+clearest map of what's open.
+
+Shovel is the closest: mature, good, $39/year, already uses the Canvas feed. The
+wedge is rescheduling and topic-level planning, not deadline tracking.
+
+### Spaced retrieval works far better in labs than in classrooms (2026-08-17)
+
+Real-classroom effect is about 2 percentage points across nine intro STEM
+courses, only two significant on their own. Enough to justify retrieval practice
+as a sensible default; nowhere near enough to advertise grade improvements.
+University students will catch overclaiming faster than any other audience.
+
+### Non-dilutive money exists on campus (2026-08-17)
+
+UW's Dempsey Startup Competition awarded $92,500 in 2026 with a $25,000 grand
+prize; Jones + Foster provides accelerator funding. Designed for exactly this
+situation. Application goes in over winter break, with real users as the pitch.
