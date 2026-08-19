@@ -51,6 +51,23 @@ gets a polite yes from everyone and teaches nothing. "Walk me through last Sunda
 
 ## From building
 
+### Success messages lie, three times in two days (2026-08-19)
+
+A pattern worth naming, because it has now cost real time.
+
+The setup page said nothing and saved nothing, and looked identical either way.
+`git push` succeeded while the site kept serving a commit from hours earlier,
+because the project had no Git connection. `vercel --prod` reported success on a
+deployment nobody outside the account can load, because Deployment Protection is
+on by default.
+
+None of these announced themselves. All three were caught by checking the actual
+artifact: reading localStorage, curling the live URL, following the redirect.
+
+**The habit:** after any action whose whole point is a side effect, verify the
+side effect rather than the return value. A green checkmark describes the
+command, not the world.
+
 ### Nearly every bug this session came from looking, not testing (2026-08-18)
 
 A tally worth keeping, because it should shape how the next stretch is built.

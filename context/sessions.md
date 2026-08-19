@@ -9,6 +9,24 @@ delete them.
 
 ---
 
+## 2026-08-19 · Claude Code · Landing page, privacy, and a deployment mess
+
+Replaced the entry point. It opened with "paste your Canvas feed" in August,
+when every student's feed is empty by construction, and never mentioned the mode
+that actually works. Canvas moved to /canvas, landing leads with building a week
+by hand. Added navigation, which was missing entirely, and a privacy page
+written against the code rather than aspirationally.
+
+Writing the privacy page caught two false claims: a delete control that didn't
+exist, and a source link on a private repo. Both fixed rather than softened.
+
+Deployment turned out to be broken in a way the success messages hid. The shared
+URL belongs to a project with no Git connection, so five pushes never deployed. A
+CLI deploy created a second project, which is behind Vercel SSO and invisible to
+anyone but Brydon. Neither failure announced itself.
+
+First interview happened. Logged as zero signal, with the reasons.
+
 ## 2026-08-18 · Claude Code · Shipped it
 
 From engine to deployed product in one session. Feed route with a hardened URL

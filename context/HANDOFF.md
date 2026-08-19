@@ -167,63 +167,84 @@ compound within a course.
 
 # Where things stand
 
-**Updated: 2026-08-18** · 43 days to launch (September 30)
+**Updated: 2026-08-19** · 42 days to launch (September 30)
 
 This file describes the present. It gets rewritten, not appended to.
 
-**Live at https://quarterly-alpha.vercel.app** — every push to `main` deploys.
-Repo: `bmwother1/quarterly` (private).
+Repo: `bmwother1/quarterly` (private). Deployment needs attention, see below.
 
 ---
 
 ## Right now
 
-The product works end to end and is deployed. A student can connect Canvas or
-describe their week by hand, get a planned week as a calendar, check blocks off,
-and replan around what they actually did.
+The product works end to end. A student can describe their week, or connect
+Canvas, get a plan as a calendar, check blocks off, and replan around what they
+actually did. Built, tested, and running.
 
-Zero student interviews. That is still the largest risk on the board and no
-amount of building reduces it.
+Two things are not done: the deployment is in a broken half-state, and there is
+essentially no evidence from real students.
 
 ## Shipped
 
 - **Canvas ingestion** — dependency-free iCal parser handling all three
-  timestamp shapes including floating times across a DST boundary; course
-  extraction, work classification, seed durations and grade weights
+  timestamp shapes including floating times across a DST boundary
 - **Scheduling engine** — scoring function, free-time discovery, greedy
-  placement under real constraints, generated per-block explanations, honest
-  reporting of what didn't fit. ~21ms for a full quarter, deterministic
-- **Recurring commitments** — weekly quotas with no deadline, so the app works
-  outside a quarter. Hard constraints (time windows, session minimums, trailing
-  buffers) sit outside the scoring function as filters
-- **Feed route** — server-side fetch with a host allowlist, private-range
-  refusal, redirects off, size cap and timeout. Never logs or stores the URL
-- **Onboarding, setup and week view** — Canvas intake with the workload chart,
-  availability and commitments editor, calendar grid with busy time drawn in,
-  check-off, explicit replanning
+  placement under real constraints, per-block explanations, honest reporting of
+  what didn't fit. ~21ms for a full quarter, deterministic
+- **Recurring commitments** — weekly quotas with no deadline, so it works
+  outside a quarter. Hard constraints sit outside the scoring function as filters
+- **Feed route** — server-side fetch, host allowlist, private-range refusal,
+  redirects off, size cap, timeout. Never logs or stores the URL
+- **Landing, Canvas intake, setup, week view, privacy** — calendar grid with
+  busy time drawn in, check-off, explicit replanning, delete-my-data
 - **Persistence** — localStorage behind an interface, no signup
 - **122 tests**, clean typecheck, lint and production build
 
+## Broken or unfinished
+
+- **Deployment is split across two Vercel projects.** `quarterly-alpha` is the
+  URL that was shared but has no Git connection, so five pushes never deployed
+  and it still serves an old commit. A second project `quarterly` was created by
+  the CLI, has current code, and is behind Vercel SSO so nobody can view it.
+  Fix: connect `quarterly-alpha` to the repo, delete the stray project, confirm
+  Deployment Protection is off.
+- **Tailwind build oddity** — `max-w-5xl` and arbitrary values produced no CSS,
+  so the calendar width is set inline. Works, will bite again.
+
 ## Next, in order
 
-1. **Twenty interviews.** Nothing else on this list matters as much.
-2. **Privacy page.** Plain English. Required before showing this to students,
-   since the landing page makes a claim about the feed URL with nothing behind it.
-3. **Supabase.** Cross-device sync and, more importantly, the usage data that
-   week-4 retention depends on. Decision below is now settled in favour.
-4. **Syllabus parsing** — the one job an LLM genuinely belongs in.
-5. **Tailwind build oddity** — `max-w-5xl` and `max-w-[1080px]` both produced no
-   CSS, so the calendar width is set inline. Works, but it will bite again on a
-   class that matters more.
+1. **Fix the deployment.** One project, Git-connected, publicly reachable.
+2. **Nineteen more interviews.** Nothing else on this list matters as much.
+3. **Use it yourself for a week.** Closest available proxy for week-4 retention.
+4. **Supabase.** Cross-device sync, and the usage data retention depends on.
+5. **Syllabus parsing** — the one job an LLM genuinely belongs in.
 
-## Open questions
+## Evidence from students
 
-- Would a student who connected in week 0 and saw an empty quarter come back?
-- Nothing in the product has been seen by a student yet.
+**1 of 20 interviews.** See `learned.md`. The one conversation produced no
+usable signal, for reasons recorded there.
 
 ---
 
 # Recent sessions
+
+## 2026-08-19 · Claude Code · Landing page, privacy, and a deployment mess
+
+Replaced the entry point. It opened with "paste your Canvas feed" in August,
+when every student's feed is empty by construction, and never mentioned the mode
+that actually works. Canvas moved to /canvas, landing leads with building a week
+by hand. Added navigation, which was missing entirely, and a privacy page
+written against the code rather than aspirationally.
+
+Writing the privacy page caught two false claims: a delete control that didn't
+exist, and a source link on a private repo. Both fixed rather than softened.
+
+Deployment turned out to be broken in a way the success messages hid. The shared
+URL belongs to a project with no Git connection, so five pushes never deployed. A
+CLI deploy created a second project, which is behind Vercel SSO and invisible to
+anyone but Brydon. Neither failure announced itself.
+
+First interview happened. Logged as zero signal, with the reasons.
 
 ## 2026-08-18 · Claude Code · Shipped it
 
@@ -247,23 +268,6 @@ Built this `context/` system, a `/wrap` skill to maintain it, and `npm run
 handoff` to generate a paste-ready brief for Cowork chats. Root `CLAUDE.md`
 rewritten as a short always-loaded index that routes to everything else on
 demand, so the deep files cost nothing until they're needed.
-
-## 2026-08-18 · Claude Code · Canvas ingestion and the scheduling engine
-
-Installed Node (user-local, no sudo — the machine had none), scaffolded Next.js,
-and built the entire domain layer: ICS parser, Canvas interpretation, and the
-scheduler. 66 tests, all green, plus a terminal preview that prints a real week.
-
-Two things were found by building that no amount of planning would have caught.
-The energy-fit feature was structurally inert — it passed every test and did
-nothing, because slots were picking tasks rather than tasks picking slots. And
-the first honest preview was 90% past-due work, because overdue Canvas items
-score maximum urgency and the feed never says what was submitted. Both are fixed
-and both are written up in `learned.md`.
-
-Also confirmed Brydon was right that the six-week plan padded week 1. Node took
-three minutes. The parts that genuinely can't compress are the ones that depend
-on other people.
 
 ---
 
@@ -347,6 +351,4 @@ ceiling is pinned at 150ms so this can't silently regress.
 
 # Currently waiting on Brydon
 
-- **Twenty interviews.** Run them in parallel with everything else.
-- **Use it for a week.** The off-season case is real now. Whether *you* still
-  open it on day five is the closest available proxy for week-4 retention.
+_Nothing blocked._
