@@ -33,7 +33,7 @@
  */
 
 import type { Assignment, Availability, Commitment, StudyBlock, WorkKind } from '../types.ts';
-import { DEFAULT_TZ, localParts, zonedInstant } from '../time.ts';
+import { DEFAULT_TZ, localParts, weekdayOf, zonedInstant } from '../time.ts';
 import { freeMinutesByDay, freeSlots } from './slots.ts';
 import {
   CATEGORY_METHOD,
@@ -145,6 +145,13 @@ interface Pending {
   priority: number;
   /** Sessions must land on separate days: exams, and anything done once a day. */
   separateDays: boolean;
+  /** Shortest session worth placing. Below this, report short instead. */
+  minMinutes: number;
+  /** Reserved after the block and not part of it: shower, pack-up, travel. */
+  bufferAfterMinutes: number;
+  /** Hard local-time window, minutes after midnight. Null means anytime. */
+  windowStartMin: number | null;
+  windowEndMin: number | null;
   assignment: Assignment | null;
   commitment: Commitment | null;
   placed: StudyBlock | null;
@@ -163,6 +170,8 @@ interface Opening {
   startMs: number;
   endMs: number;
   startHour: number;
+  /** Local minutes after midnight, for hard time-window constraints. */
+  startMinuteOfDay: number;
 }
 
 /** One placed block, reduced to the three numbers the adjacency check needs. */
@@ -242,6 +251,11 @@ function buildSessions(a: Assignment, opts: Required<PlanOptions>): Pending[] {
     priority,
     // Spacing exam prep across days is the entire point of spacing it.
     separateDays: a.kind === 'exam' || a.kind === 'quiz',
+    // Coursework is happy to be trimmed: partial progress beats none.
+    minMinutes: MIN_SESSION_MINUTES,
+    bufferAfterMinutes: 0,
+    windowStartMin: null,
+    windowEndMin: null,
     placed: null,
   }));
 }
@@ -291,6 +305,10 @@ function buildCommitmentSessions(c: Commitment, opts: Required<PlanOptions>): Pe
     priority,
     // A "five times a week" habit means five days, not five sessions on Sunday.
     separateDays: c.maxPerDay <= 1,
+    minMinutes: clamp(c.minSessionMinutes || MIN_SESSION_MINUTES, MIN_SESSION_MINUTES, minutes),
+    bufferAfterMinutes: Math.max(0, c.bufferAfterMinutes ?? 0),
+    windowStartMin: c.windowStartMin,
+    windowEndMin: c.windowEndMin,
     placed: null,
   }));
 }
@@ -358,9 +376,17 @@ export function planWeek(
 
   // The buffer applies per day, not to the week as a whole. A week that's 80%
   // full on average but 100% full on Tuesday is a week that breaks Tuesday.
+  const dailyCap = (dateKey: string): number => {
+    const perDay = availability.maxDailyMinutesByDay?.[weekdayOf(dateKey)];
+    return perDay ?? availability.maxDailyMinutes;
+  };
+
   const capacity = new Map<string, number>();
+  const capacityTotal = new Map<string, number>();
   for (const [dateKey, minutes] of freeByDay) {
-    capacity.set(dateKey, Math.min(availability.maxDailyMinutes, Math.floor(minutes * (1 - opts.bufferFraction))));
+    const usable = Math.min(dailyCap(dateKey), Math.floor(minutes * (1 - opts.bufferFraction)));
+    capacity.set(dateKey, usable);
+    capacityTotal.set(dateKey, usable);
   }
 
   const horizonEnd = now.getTime() + (opts.days + 30) * 86_400_000;
@@ -390,21 +416,29 @@ export function planWeek(
     a.index - b.index,
   );
 
-  let openings: Opening[] = slots.map((s) => ({
-    dateKey: s.dateKey,
-    startMs: s.start.getTime(),
-    endMs: s.end.getTime(),
-    startHour: localParts(s.start, tz).hour,
-  }));
+  let openings: Opening[] = slots.map((s) => {
+    const p = localParts(s.start, tz);
+    return {
+      dateKey: s.dateKey,
+      startMs: s.start.getTime(),
+      endMs: s.end.getTime(),
+      startHour: p.hour,
+      startMinuteOfDay: p.minutesOfDay,
+    };
+  });
 
   // Every hour boundary in the horizon, resolved once. Fit only varies by the
   // hour, so these are the only start times worth considering — and computing
   // them up front keeps `Intl` out of the inner loop entirely.
-  const hourGrid = new Map<string, Array<{ ms: number; hour: number }>>();
+  const hourGrid = new Map<string, Array<{ ms: number; hour: number; minuteOfDay: number }>>();
   for (const dateKey of new Set(openings.map((o) => o.dateKey))) {
     hourGrid.set(
       dateKey,
-      Array.from({ length: 24 }, (_, h) => ({ ms: zonedInstant(dateKey, h * 60, tz).getTime(), hour: h })),
+      Array.from({ length: 24 }, (_, h) => ({
+        ms: zonedInstant(dateKey, h * 60, tz).getTime(),
+        hour: h,
+        minuteOfDay: h * 60,
+      })),
     );
   }
 
@@ -445,30 +479,50 @@ export function planWeek(
       const dayLeft = capacity.get(o.dateKey) ?? 0;
       if (dayLeft < MIN_SESSION_MINUTES) continue;
 
+      // Trimming is fine for coursework and wrong for a project that needs an
+      // hour just to get somewhere. Each session declares its own floor.
       const minutes = Math.min(p.minutes, dayLeft);
-      if (minutes < Math.min(MIN_SESSION_MINUTES, p.minutes)) continue;
+      if (minutes < Math.min(p.minMinutes, p.minutes)) continue;
       const durationMs = minutes * 60_000;
+      // The buffer is real time even though it isn't part of the block.
+      const holdMs = durationMs + p.bufferAfterMinutes * 60_000;
 
       // The opening's own start, then each hour boundary inside it.
       const grid = hourGrid.get(o.dateKey)!;
-      const candidates: Array<{ ms: number; hour: number }> = [{ ms: o.startMs, hour: o.startHour }];
+      const candidates: Array<{ ms: number; hour: number; minuteOfDay: number }> = [
+        { ms: o.startMs, hour: o.startHour, minuteOfDay: o.startMinuteOfDay },
+      ];
       for (const g of grid) {
         if (g.ms <= o.startMs) continue;
-        if (g.ms + durationMs > o.endMs) break;
+        if (g.ms + holdMs > o.endMs) break;
         candidates.push(g);
       }
+
+      // How much of this day is still free, 0-1. Used to push work off a day
+      // that's already stacked and onto one that's genuinely open.
+      const dayTotal = capacityTotal.get(o.dateKey) ?? 1;
+      const openness = dayTotal > 0 ? dayLeft / dayTotal : 0;
 
       for (const c of candidates) {
         if (c.ms < earliestMs) continue;
         const endMs = c.ms + durationMs;
-        if (endMs > o.endMs) continue;
+        if (c.ms + holdMs > o.endMs) continue;
         if (endMs > placeByMs) continue;
+
+        // Hard local-time window, where one exists. The scoring function has no
+        // concept of "don't run right before bed", so this is a filter, not a term.
+        if (p.windowStartMin !== null && c.minuteOfDay < p.windowStartMin) continue;
+        if (p.windowEndMin !== null && c.minuteOfDay + minutes + p.bufferAfterMinutes > p.windowEndMin) continue;
 
         if (contiguousCourseMinutes(spans, c.ms, endMs, minutes) > opts.maxConsecutiveCourseMinutes) continue;
 
         const fit = fitForDemand(p.demand, c.hour, availability.energy);
         const daysOut = Math.max(0, (c.ms - nowMs) / 86_400_000);
-        const value = fit / (1 + daysOut * opts.earlyBiasPerDay);
+
+        // Three pulls, balanced: the right hour, sooner rather than later, and
+        // a day that isn't already full. Without the third, everything stacks
+        // onto the next two days and a wide-open Saturday sits empty.
+        const value = fit * (0.45 + 0.55 * openness) / (1 + daysOut * opts.earlyBiasPerDay);
 
         if (!best || value > best.value + 1e-9) {
           best = { openingIndex: i, startMs: c.ms, hour: c.hour, minutes, value };
@@ -525,8 +579,11 @@ export function planWeek(
     spansByCourse.set(p.group, spans);
 
     const dateKey = openings[openingIndex].dateKey;
-    capacity.set(dateKey, (capacity.get(dateKey) ?? 0) - minutes);
-    openings = splitOpening(openings, openingIndex, startMs, endMs, breakMs, tz);
+    // The buffer costs the day real time even though the block doesn't show it.
+    capacity.set(dateKey, (capacity.get(dateKey) ?? 0) - minutes - p.bufferAfterMinutes);
+    openings = splitOpening(
+      openings, openingIndex, startMs, endMs + p.bufferAfterMinutes * 60_000, breakMs, tz,
+    );
   }
 
   // Report what didn't fit, and why, rather than pretending the week is fine.
@@ -556,10 +613,7 @@ export function planWeek(
   }
 
   const freeMinutes = [...freeByDay.values()].reduce((s, m) => s + m, 0);
-  const usableMinutes = [...freeByDay].reduce(
-    (s, [, m]) => s + Math.min(availability.maxDailyMinutes, Math.floor(m * (1 - opts.bufferFraction))),
-    0,
-  );
+  const usableMinutes = [...capacityTotal.values()].reduce((s, m) => s + m, 0);
 
   return {
     blocks: blocks.sort((a, b) => a.start.localeCompare(b.start)),
@@ -603,6 +657,7 @@ function splitOpening(
       startMs: rightStart,
       endMs: target.endMs,
       startHour: localParts(new Date(rightStart), tz).hour,
+      startMinuteOfDay: localParts(new Date(rightStart), tz).minutesOfDay,
     });
   }
 

@@ -21,6 +21,10 @@ function commitment(over: Partial<Commitment> & { id: string; title: string }): 
     lastDoneAt: null,
     doneThisWeek: 0,
     maxPerDay: 1,
+    minSessionMinutes: 25,
+    bufferAfterMinutes: 0,
+    windowStartMin: null,
+    windowEndMin: null,
     active: true,
     color: '#888888',
     ...over,
@@ -204,6 +208,107 @@ describe('scheduling recurring commitments', () => {
     const block = r.blocks.find((b) => b.commitmentId === 'long');
     assert.ok(block, 'expected a trimmed session rather than nothing');
     assert.equal(block!.minutes, 45);
+  });
+
+  test('a hard time window is respected', () => {
+    // Running is low-demand, so a low-energy hour "fits" perfectly and the
+    // scheduler will happily put a run at 11pm for someone asleep at midnight.
+    // Physiology isn't in the scoring function, so the window is a hard filter.
+    const evening = commitment({
+      id: 'run', title: 'Run', category: 'fitness', sessionsPerWeek: 5,
+      minutesPerSession: 35, demand: 0.25,
+      windowStartMin: 6 * 60, windowEndMin: 21 * 60,
+    });
+    const r = planWeek([], workingWeek(), { now: MONDAY, tz: TZ, commitments: [evening] });
+
+    assert.ok(r.blocks.length > 0);
+    for (const b of r.blocks) {
+      const start = localParts(new Date(b.start), TZ);
+      const end = localParts(new Date(b.end), TZ);
+      assert.ok(start.minutesOfDay >= 6 * 60, `starts at ${start.hour}:00, before the window`);
+      assert.ok(end.minutesOfDay <= 21 * 60, `ends at ${end.hour}:00, past the window`);
+    }
+  });
+
+  test('a trailing buffer is held, not just decorated', () => {
+    // Ten minutes in the shower is real time. Nothing may be scheduled into it.
+    const runs = commitment({
+      id: 'run', title: 'Run', category: 'fitness', sessionsPerWeek: 5,
+      minutesPerSession: 35, bufferAfterMinutes: 10, demand: 0.25,
+    });
+    const study = commitment({
+      id: 'study', title: 'Study', category: 'learning', sessionsPerWeek: 5,
+      minutesPerSession: 45, demand: 0.85,
+    });
+    const r = planWeek([], workingWeek(), { now: MONDAY, tz: TZ, commitments: [runs, study] });
+
+    for (const run of r.blocks.filter((b) => b.commitmentId === 'run')) {
+      const runEnd = new Date(run.end).getTime();
+      for (const other of r.blocks) {
+        if (other.id === run.id) continue;
+        const otherStart = new Date(other.start).getTime();
+        if (otherStart >= runEnd) {
+          assert.ok(
+            otherStart - runEnd >= 10 * 60_000,
+            `"${other.title}" starts ${(otherStart - runEnd) / 60000} min after the run, inside the buffer`,
+          );
+        }
+      }
+    }
+  });
+
+  test('a session below its own minimum is not scheduled at all', () => {
+    // A Pi, a radar sensor and a server. Twenty minutes is setup and nothing else.
+    const needsAnHour = commitment({
+      id: 'rig', title: 'Launch monitor', category: 'project',
+      sessionsPerWeek: 3, minutesPerSession: 90, minSessionMinutes: 60,
+    });
+    const r = planWeek([], workingWeek({ maxDailyMinutes: 45 }), {
+      now: MONDAY, tz: TZ, commitments: [needsAnHour],
+    });
+
+    for (const b of r.blocks) {
+      assert.ok(b.minutes >= 60, `scheduled a ${b.minutes}-minute session below the 60-minute floor`);
+    }
+    assert.ok(r.unscheduled.some((u) => u.commitmentId === 'rig'), 'the shortfall should be reported');
+  });
+
+  test('the daily ceiling can differ by weekday', () => {
+    // Three hours after a nine-hour shift, five on an open weekend.
+    const filler = commitment({
+      id: 'fill', title: 'Filler', sessionsPerWeek: 7, minutesPerSession: 90, maxPerDay: 1,
+    });
+    const av = workingWeek({ maxDailyMinutesByDay: [90, 90, 90, 90, 90, 300, 300] });
+    const r = planWeek([], av, { now: MONDAY, tz: TZ, commitments: [filler] });
+
+    const byDay = new Map<number, number>();
+    for (const b of r.blocks) {
+      const wd = localParts(new Date(b.start), TZ).weekday;
+      byDay.set(wd, (byDay.get(wd) ?? 0) + b.minutes);
+    }
+    for (const [wd, minutes] of byDay) {
+      const cap = wd <= 4 ? 90 : 300;
+      assert.ok(minutes <= cap, `weekday ${wd} booked ${minutes} against a ${cap} ceiling`);
+    }
+  });
+
+  test('work slides onto an open day instead of stacking on a full one', () => {
+    // The bug this prevents: 4.6h piled onto Tuesday after a full workday while
+    // a wide-open Saturday sits nearly empty. Same shape as a student with a
+    // free Sunday and a brutal Wednesday.
+    const load = [
+      commitment({ id: 'a', title: 'A', category: 'project', sessionsPerWeek: 3, minutesPerSession: 90, minSessionMinutes: 60 }),
+      commitment({ id: 'b', title: 'B', category: 'project', sessionsPerWeek: 3, minutesPerSession: 90, minSessionMinutes: 60 }),
+      commitment({ id: 'c', title: 'C', category: 'learning', sessionsPerWeek: 3, minutesPerSession: 60, minSessionMinutes: 45 }),
+    ];
+    const av = workingWeek({ maxDailyMinutesByDay: [180, 180, 180, 180, 180, 300, 300] });
+    const r = planWeek([], av, { now: MONDAY, tz: TZ, commitments: load });
+
+    const weekendMinutes = r.blocks
+      .filter((b) => localParts(new Date(b.start), TZ).weekday >= 5)
+      .reduce((s, b) => s + b.minutes, 0);
+
+    assert.ok(weekendMinutes > 0, 'the open weekend was left empty while weeknights filled up');
   });
 
   test('is still deterministic with both sources in play', () => {

@@ -48,6 +48,9 @@ function availability(): Availability {
     dayEndMin: 23 * 60 + 45,
     energy: 'bimodal',
     maxDailyMinutes: 300,
+    // Three hours on a workday, five on a weekend. One number for every day is
+    // how you get a plan that looks fine and dies on Thursday.
+    maxDailyMinutesByDay: [180, 180, 180, 180, 180, 300, 300],
   };
 }
 
@@ -57,30 +60,39 @@ const commitments: Commitment[] = [
     sessionsPerWeek: 5, minutesPerSession: 35,
     importance: 0.8, demand: 0.25,
     lastDoneAt: null, doneThisWeek: 0, maxPerDay: 1, active: true, color: '#10b981',
+    // 35 minutes running plus 10 in the shower, and finished by 9pm — a run
+    // that ends at 11:35 for someone asleep at midnight is not a run they'll do.
+    minSessionMinutes: 30, bufferAfterMinutes: 10,
+    windowStartMin: 6 * 60, windowEndMin: 21 * 60,
   },
   {
     id: 'stanford', title: 'Stanford AI agents course', category: 'learning',
     sessionsPerWeek: 3, minutesPerSession: 60,
     importance: 0.7, demand: 0.85,
     lastDoneAt: null, doneThisWeek: 0, maxPerDay: 1, active: true, color: '#8b5cf6',
+    minSessionMinutes: 45, bufferAfterMinutes: 0, windowStartMin: null, windowEndMin: null,
   },
   {
     id: 'quarterly', title: 'Quarterly', category: 'project',
     sessionsPerWeek: 4, minutesPerSession: 90,
     importance: 0.9, demand: 0.85,
     lastDoneAt: null, doneThisWeek: 0, maxPerDay: 1, active: true, color: '#e11d48',
+    minSessionMinutes: 60, bufferAfterMinutes: 0, windowStartMin: null, windowEndMin: null,
   },
   {
     id: 'prismwave', title: 'Prismwave Network', category: 'project',
     sessionsPerWeek: 2, minutesPerSession: 90,
     importance: 0.6, demand: 0.85,
     lastDoneAt: null, doneThisWeek: 0, maxPerDay: 1, active: true, color: '#0ea5e9',
+    minSessionMinutes: 60, bufferAfterMinutes: 0, windowStartMin: null, windowEndMin: null,
   },
   {
     id: 'launchmon', title: 'Golf launch monitor', category: 'project',
     sessionsPerWeek: 2, minutesPerSession: 90,
     importance: 0.45, demand: 0.85,
     lastDoneAt: null, doneThisWeek: 0, maxPerDay: 1, active: true, color: '#f59e0b',
+    // A Pi, a radar sensor and a FastAPI server. Under an hour is setup and nothing else.
+    minSessionMinutes: 60, bufferAfterMinutes: 0, windowStartMin: null, windowEndMin: null,
   },
 ];
 

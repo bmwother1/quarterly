@@ -30,6 +30,34 @@ gets a polite yes from everyone and teaches nothing. "Walk me through last Sunda
 
 ## From building
 
+### One daily ceiling for every day is a plan that dies on Thursday (2026-08-18)
+
+The first run of Brydon's real week put 4.6 hours on Tuesday and 0.6 on
+Saturday. Both were legal: the daily cap was a single number, and the early-bias
+term pulled everything toward the nearest days. After a nine-hour shift plus
+commute, 4.6 hours of project work is fiction; meanwhile the genuinely open day
+sat empty.
+
+Two fixes. The ceiling is now per weekday, and slot value includes how open the
+day already is, so work slides onto an empty day rather than stacking on a full
+one. Result: 2.1 to 3.1 hours a day across six days instead of three brutal
+evenings.
+
+**Why it generalises:** this is the same bug a student hits in week 8 with a free
+Sunday and a brutal Wednesday. The off-season fixture caught it early because a
+full-time job makes the imbalance obvious.
+
+### The scheduler was right and the schedule was wrong (2026-08-18)
+
+It scheduled a run at 11:00pm for someone who sleeps at midnight, and by its own
+model that was the correct answer: running is low cognitive demand, so it fits a
+low-energy hour better than anything else does.
+
+**Lesson:** a scoring function only knows what you put in it. Anything that is
+never acceptable at any score is a constraint, not a term, and belongs in the
+filter rather than the arithmetic. Three of the four fixes in this session were
+the same mistake in different clothes.
+
 ### An empty Canvas feed is the launch-day default (2026-08-18)
 
 Brydon connected his real UW feed and it returned a valid calendar with zero

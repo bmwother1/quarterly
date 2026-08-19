@@ -82,6 +82,14 @@ export interface Availability {
   energy: EnergyPattern;
   /** Hard ceiling on scheduled study minutes in any one day. */
   maxDailyMinutes: number;
+  /**
+   * Per-weekday ceiling, 0 = Monday. `null` falls back to `maxDailyMinutes`.
+   *
+   * One number for every day is wrong for anyone with a job. Five hours of
+   * project work after a nine-hour shift is not a plan, it's a plan you abandon
+   * by Thursday; five hours on an open Saturday is easy.
+   */
+  maxDailyMinutesByDay?: Array<number | null>;
 }
 
 /**
@@ -151,6 +159,31 @@ export interface Commitment {
   doneThisWeek: number;
   /** Most things should happen at most once a day. Running twice isn't the goal. */
   maxPerDay: number;
+  /**
+   * Shortest session worth scheduling at all.
+   *
+   * For coursework, a trimmed session is partial progress and better than
+   * nothing. For a project that needs a Pi booted and a sensor wired, twenty
+   * minutes is setup and nothing else. Below this, the session isn't scheduled
+   * and the shortfall is reported instead.
+   */
+  minSessionMinutes: number;
+  /**
+   * Time to hold after the session that isn't part of it: a shower after a run,
+   * packing up, travel back. Real time, so nothing else gets scheduled into it,
+   * but not part of the block itself.
+   */
+  bufferAfterMinutes: number;
+  /**
+   * Optional local-time window, in minutes after midnight, this may occupy.
+   *
+   * Exists because the energy model gets running exactly backwards: it's low
+   * cognitive demand, so a low-energy hour "fits" perfectly, and the scheduler
+   * cheerfully puts a run at 11pm for someone asleep at midnight. Physiology
+   * isn't in the scoring function, so it goes here as a hard constraint.
+   */
+  windowStartMin: number | null;
+  windowEndMin: number | null;
   active: boolean;
   color: string;
 }
