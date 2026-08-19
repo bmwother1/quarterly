@@ -1,6 +1,16 @@
 # Quarterly
 
-A study scheduler for university students. Free. UW first.
+A scheduler for students that plans around the life they actually have. Free.
+UW first.
+
+**The positioning shifted on 2026-08-18 and it matters.** This started as a study
+planner driven by Canvas. Building the off-season case — recurring commitments
+with no deadline — showed that the engine never cared where work came from.
+Canvas is one input, not the product. That change does three things: it makes the
+app useful in the eight months a year that aren't midterms, it removes the
+seasonality problem that would otherwise make every summer a dead zone, and it
+widens the addressable user from "student with heavy coursework" to "student with
+a job, a sport, and a side project", which is most of them.
 
 ## The problem, stated precisely
 
@@ -24,6 +34,22 @@ work takes by a factor of two, so even a good plan collapses by Wednesday.
 3. Lays out study blocks with a specific task, a duration, a method, and a
    one-line reason each block is there
 4. Rebuilds the week when they fall behind, which is the differentiating feature
+
+## What actually differentiates it
+
+Four things, in the order they'd convince a sceptical user:
+
+1. **It plans hours, not lists.** Almost everything else tells you what's due.
+   This works out when each piece happens, in sessions long enough to be worth
+   sitting down for, around time already spent.
+2. **Every block explains itself.** The reason is generated from whichever
+   scoring term actually dominated, so it's a real account of the ranking rather
+   than decoration. A student who can't see why a block exists won't do it.
+3. **It refuses to lie about capacity.** Work that doesn't fit comes back with a
+   reason while there's still time to act. Every competitor quietly overbooks and
+   lets Thursday deliver the news.
+4. **It reschedules on demand, not silently.** Silent reshuffling is why planners
+   become fiction: nothing ever feels missed and the app always says you're fine.
 
 ## Why it can work
 
