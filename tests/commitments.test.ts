@@ -197,6 +197,8 @@ describe('scheduling recurring commitments', () => {
     const short = r.unscheduled.find((u) => u.commitmentId === 'greedy');
     assert.ok(short, 'a quota that cannot fit must be reported, not silently dropped');
     assert.equal(short!.sessionsShort, 6 - placed);
+    // A commitment has no deadline to be short of; it runs out of week.
+    assert.equal(short!.reason, 'the week ran out before you hit the target');
   });
 
   test('a session is trimmed rather than skipped when the day is nearly full', () => {

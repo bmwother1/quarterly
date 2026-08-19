@@ -66,15 +66,23 @@ export function useQuarterly(tz: string) {
     mutate((prev) => ({ ...prev, ...applyCompletion(prev, blockId, outcome, minutes, new Date()) }));
   }, [mutate]);
 
-  const setAvailability = useCallback((availability: Availability) => {
-    mutate((prev) => ({ ...prev, availability }));
+  /**
+   * Updater form, deliberately.
+   *
+   * Taking a plain value means every caller builds its update from whatever the
+   * component captured at render time. Two edits in quick succession then both
+   * derive from the same stale snapshot, and the second silently discards the
+   * first — which is exactly how a saved work shift disappeared.
+   */
+  const updateAvailability = useCallback((fn: (prev: Availability) => Availability) => {
+    mutate((prev) => ({ ...prev, availability: fn(prev.availability) }));
   }, [mutate]);
 
-  const setCommitments = useCallback((commitments: Commitment[]) => {
-    mutate((prev) => ({ ...prev, commitments }));
+  const updateCommitments = useCallback((fn: (prev: Commitment[]) => Commitment[]) => {
+    mutate((prev) => ({ ...prev, commitments: fn(prev.commitments) }));
   }, [mutate]);
 
   const reset = useCallback(() => quarterlyStore.clear(), []);
 
-  return { state, hydrated, mutate, replan, complete, setAvailability, setCommitments, reset };
+  return { state, hydrated, mutate, replan, complete, updateAvailability, updateCommitments, reset };
 }

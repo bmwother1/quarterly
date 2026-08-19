@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useQuarterly } from '@/hooks/use-quarterly';
 import { DEFAULT_TZ } from '@/lib/time';
@@ -21,30 +22,50 @@ function toHHMM(min: number): string {
 }
 
 export default function SetupPage() {
-  const { state, hydrated, setAvailability, setCommitments, replan } = useQuarterly(TZ);
+  const { state, hydrated, updateAvailability, updateCommitments, replan } = useQuarterly(TZ);
+  const router = useRouter();
+  const [saved, setSaved] = useState<string | null>(null);
   const av = state.availability;
+
+  /** Brief confirmation. A silent save is indistinguishable from a broken one. */
+  function confirm(what: string) {
+    setSaved(what);
+    setTimeout(() => setSaved((cur) => (cur === what ? null : cur)), 2200);
+  }
 
   if (!hydrated) {
     return <main className="mx-auto max-w-2xl px-5 py-12"><p className="text-[var(--muted)]">Loading…</p></main>;
   }
 
   const sleepStart = av.busy.find((b) => b.kind === 'sleep')?.endMin ?? 7 * 60;
+  const bedMin = av.busy.find((b) => b.kind === 'sleep')?.startMin ?? 0;
   const commitBlock = av.busy.find((b) => b.kind === 'work' || b.kind === 'class');
 
+  // Every one of these reads `prev`, never the render-time `av`.
   function setSleep(wakeMin: number, bedMin: number) {
-    const busy = av.busy.filter((b) => b.kind !== 'sleep');
-    for (let day = 0; day < 7; day++) {
-      busy.push({ id: `sleep-${day}`, day, startMin: bedMin, endMin: wakeMin, label: 'Sleep', kind: 'sleep' });
-    }
-    setAvailability({ ...av, busy, dayStartMin: wakeMin, dayEndMin: bedMin > wakeMin ? bedMin : 24 * 60 - 15 });
+    updateAvailability((prev) => {
+      const busy = prev.busy.filter((b) => b.kind !== 'sleep');
+      for (let day = 0; day < 7; day++) {
+        busy.push({ id: `sleep-${day}`, day, startMin: bedMin, endMin: wakeMin, label: 'Sleep', kind: 'sleep' });
+      }
+      return {
+        ...prev,
+        busy,
+        dayStartMin: wakeMin,
+        dayEndMin: bedMin > wakeMin ? bedMin : 24 * 60 - 15,
+      };
+    });
   }
 
   function setWorkShift(days: number[], startMin: number, endMin: number, label: string) {
-    const busy = av.busy.filter((b) => b.kind !== 'work');
-    for (const day of days) {
-      busy.push({ id: `work-${day}`, day, startMin, endMin, label, kind: 'work' });
-    }
-    setAvailability({ ...av, busy });
+    updateAvailability((prev) => {
+      const busy = prev.busy.filter((b) => b.kind !== 'work');
+      for (const day of days) {
+        busy.push({ id: `work-${day}`, day, startMin, endMin, label, kind: 'work' });
+      }
+      return { ...prev, busy };
+    });
+    confirm(`${label || 'Work'} saved`);
   }
 
   return (
@@ -67,16 +88,16 @@ export default function SetupPage() {
           <Field label="Wake">
             <input
               type="time"
-              defaultValue={toHHMM(sleepStart)}
-              onBlur={(e) => setSleep(toMin(e.target.value), av.busy.find((b) => b.kind === 'sleep')?.startMin ?? 0)}
+              value={toHHMM(sleepStart)}
+              onChange={(e) => setSleep(toMin(e.target.value), bedMin)}
               className="rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm"
             />
           </Field>
           <Field label="Sleep">
             <input
               type="time"
-              defaultValue={toHHMM(av.busy.find((b) => b.kind === 'sleep')?.startMin ?? 0)}
-              onBlur={(e) => setSleep(sleepStart, toMin(e.target.value))}
+              value={toHHMM(bedMin)}
+              onChange={(e) => setSleep(sleepStart, toMin(e.target.value))}
               className="rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm"
             />
           </Field>
@@ -94,7 +115,7 @@ export default function SetupPage() {
           {(['morning', 'evening', 'steady', 'bimodal'] as EnergyPattern[]).map((p) => (
             <button
               key={p}
-              onClick={() => setAvailability({ ...av, energy: p })}
+              onClick={() => updateAvailability((prev) => ({ ...prev, energy: p }))}
               className={`rounded-full border px-3 py-1.5 text-sm ${
                 av.energy === p
                   ? 'border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]'
@@ -122,12 +143,14 @@ export default function SetupPage() {
                   min={0}
                   max={16}
                   step={0.5}
-                  defaultValue={(value / 60).toString()}
-                  onBlur={(e) => {
+                  value={value / 60}
+                  onChange={(e) => {
                     const hours = Number(e.target.value);
-                    const next = [...(av.maxDailyMinutesByDay ?? Array(7).fill(null))];
-                    next[day] = Number.isFinite(hours) ? Math.round(hours * 60) : null;
-                    setAvailability({ ...av, maxDailyMinutesByDay: next });
+                    updateAvailability((prev) => {
+                      const next = [...(prev.maxDailyMinutesByDay ?? Array(7).fill(null))];
+                      next[day] = Number.isFinite(hours) ? Math.round(hours * 60) : null;
+                      return { ...prev, maxDailyMinutesByDay: next };
+                    });
                   }}
                   className="mt-1 w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1 py-1.5 text-center text-sm text-[var(--ink)]"
                 />
@@ -137,18 +160,25 @@ export default function SetupPage() {
         </div>
       </Section>
 
-      <CommitmentsSection commitments={state.commitments} onChange={setCommitments} />
+      <CommitmentsSection commitments={state.commitments} onChange={updateCommitments} />
+
+      {saved && (
+        <div
+          role="status"
+          className="fixed inset-x-0 bottom-4 z-10 mx-auto w-fit rounded-full bg-[var(--ink)] px-4 py-2 text-sm text-[var(--bg)] shadow-lg"
+        >
+          {saved}
+        </div>
+      )}
 
       <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-[var(--border)] pt-6">
         <button
-          onClick={() => replan(new Date())}
+          onClick={() => { replan(new Date()); router.push('/week'); }}
           className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white"
         >
           Plan my week
         </button>
-        <Link href="/week" className="text-sm text-[var(--muted)] underline underline-offset-4">
-          see the result
-        </Link>
+        <span className="text-sm text-[var(--muted)]">takes you to the result</span>
       </div>
     </main>
   );
@@ -187,6 +217,15 @@ function WorkSection({
 
   return (
     <Section title="Work, class or anything fixed" hint="Include your commute. It's time you don't have.">
+      {current && days.length > 0 && (
+        <p className="mb-3 rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm">
+          <span className="font-medium">{current.label}</span>
+          <span className="text-[var(--muted)]">
+            {' · '}{toHHMM(current.startMin)}–{toHHMM(current.endMin)}
+            {' · '}{[...new Set(days)].sort().map((d) => DAYS[d]).join(' ')}
+          </span>
+        </p>
+      )}
       <div className="space-y-3">
         <input
           value={label}
@@ -234,7 +273,7 @@ function CommitmentsSection({
   commitments, onChange,
 }: {
   commitments: Commitment[];
-  onChange: (c: Commitment[]) => void;
+  onChange: (fn: (prev: Commitment[]) => Commitment[]) => void;
 }) {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<CommitmentCategory>('fitness');
@@ -246,7 +285,7 @@ function CommitmentsSection({
     const sessions = Math.max(1, Number(perWeek) || 1);
     const each = Math.max(15, Number(minutes) || 45);
 
-    onChange([...commitments, {
+    onChange((prev) => [...prev, {
       id: `c-${Date.now()}`,
       title: title.trim(),
       category,
@@ -263,7 +302,7 @@ function CommitmentsSection({
       windowStartMin: category === 'fitness' ? 6 * 60 : null,
       windowEndMin: category === 'fitness' ? 21 * 60 : null,
       active: true,
-      color: COMMITMENT_COLORS[commitments.length % COMMITMENT_COLORS.length],
+      color: COMMITMENT_COLORS[prev.length % COMMITMENT_COLORS.length],
     }]);
 
     setTitle('');
@@ -284,7 +323,7 @@ function CommitmentsSection({
                 {c.sessionsPerWeek}× {c.minutesPerSession}m
               </span>
               <button
-                onClick={() => onChange(commitments.filter((x) => x.id !== c.id))}
+                onClick={() => onChange((prev) => prev.filter((x) => x.id !== c.id))}
                 className="shrink-0 text-[var(--faint)] underline underline-offset-4"
               >
                 remove

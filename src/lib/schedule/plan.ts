@@ -105,7 +105,11 @@ export interface UnscheduledItem {
   minutes: number;
   /** For commitments: how many of the week's target sessions went unplaced. */
   sessionsShort?: number;
-  reason: 'not enough time before the deadline' | 'no room left this week';
+  reason:
+    | 'not enough time before the deadline'
+    | 'no room left this week'
+    /** Commitments have no deadline; they run out of week. */
+    | 'the week ran out before you hit the target';
 }
 
 export interface PlanResult {
@@ -622,8 +626,9 @@ export function planWeek(
   const leftovers = new Map<string, UnscheduledItem>();
   for (const p of pending) {
     if (p.placed) continue;
-    const reason: UnscheduledItem['reason'] =
-      p.placeBy.getTime() < now.getTime() + opts.days * 86_400_000
+    const reason: UnscheduledItem['reason'] = p.commitment
+      ? 'the week ran out before you hit the target'
+      : p.placeBy.getTime() < now.getTime() + opts.days * 86_400_000
         ? 'not enough time before the deadline'
         : 'no room left this week';
 
