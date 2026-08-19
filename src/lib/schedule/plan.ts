@@ -32,14 +32,17 @@
  *      decoration.
  */
 
-import type { Assignment, Availability, StudyBlock, WorkKind } from '../types.ts';
+import type { Assignment, Availability, Commitment, StudyBlock, WorkKind } from '../types.ts';
 import { DEFAULT_TZ, localParts, zonedInstant } from '../time.ts';
 import { freeMinutesByDay, freeSlots } from './slots.ts';
 import {
+  CATEGORY_METHOD,
   MIN_SESSION_MINUTES,
   SESSION_MINUTES,
+  DEMAND,
+  commitmentPriority,
   confidenceFactor,
-  fitAt,
+  fitForDemand,
   methodFor,
   scoreSlot,
   spacingFactor,
@@ -80,13 +83,19 @@ export interface PlanOptions {
    * They come back in `overdue` instead, for the student to confirm.
    */
   includeOverdue?: boolean;
+  /** Recurring weekly quotas: runs, project hours, a course to get through. */
+  commitments?: Commitment[];
 }
 
 export interface UnscheduledItem {
-  assignmentId: string;
+  /** Set for coursework; null for a recurring commitment that fell short. */
+  assignmentId: string | null;
+  commitmentId: string | null;
   title: string;
   course: string;
   minutes: number;
+  /** For commitments: how many of the week's target sessions went unplaced. */
+  sessionsShort?: number;
   reason: 'not enough time before the deadline' | 'no room left this week';
 }
 
@@ -108,8 +117,24 @@ export interface PlanResult {
   };
 }
 
+/**
+ * One schedulable session, from either source.
+ *
+ * Coursework and recurring commitments land in the same queue deliberately.
+ * They compete on one priority scale, so a run doesn't automatically lose to a
+ * problem set and an exam doesn't automatically lose to a gym habit. Keeping
+ * them in separate passes was the alternative, and it always ends with one
+ * category quietly eating all the good hours.
+ */
 interface Pending {
-  assignment: Assignment;
+  /** Stable prefix for the resulting block id. */
+  key: string;
+  title: string;
+  /** Display grouping: a course code, or the commitment's own name. */
+  group: string;
+  kind: WorkKind;
+  /** Cognitive load for energy fit. From the work type, or set by the commitment. */
+  demand: number;
   index: number;      // 1-based
   count: number;
   minutes: number;
@@ -118,6 +143,10 @@ interface Pending {
   placeBy: Date;
   /** Slot-independent rank: how much this deserves time at all, before asking when. */
   priority: number;
+  /** Sessions must land on separate days: exams, and anything done once a day. */
+  separateDays: boolean;
+  assignment: Assignment | null;
+  commitment: Commitment | null;
   placed: StudyBlock | null;
 }
 
@@ -154,6 +183,7 @@ const DEFAULTS: Required<PlanOptions> = {
   maxSessionMinutes: 90,
   earlyBiasPerDay: 0.35,
   includeOverdue: false,
+  commitments: [],
 };
 
 /**
@@ -197,15 +227,78 @@ function buildSessions(a: Assignment, opts: Required<PlanOptions>): Pending[] {
     confidenceFactor(a.confidence);
 
   return Array.from({ length: count }, (_, i) => ({
+    key: a.id,
+    title: a.title,
+    group: a.course,
+    kind: a.kind,
+    demand: DEMAND[a.kind],
     assignment: a,
+    commitment: null,
     index: i + 1,
     count,
     minutes: per,
     dueAt,
     placeBy,
     priority,
+    // Spacing exam prep across days is the entire point of spacing it.
+    separateDays: a.kind === 'exam' || a.kind === 'quiz',
     placed: null,
   }));
+}
+
+/**
+ * Sessions for one recurring commitment, for the remainder of the current week.
+ *
+ * The quota resets weekly, so the horizon here is the end of the week rather
+ * than the full planning window. Scheduling next week's runs today would be
+ * both wrong and demoralising.
+ */
+function buildCommitmentSessions(c: Commitment, opts: Required<PlanOptions>): Pending[] {
+  if (!c.active) return [];
+
+  const remaining = Math.max(0, c.sessionsPerWeek - c.doneThisWeek);
+  if (remaining === 0) return [];
+
+  // Days left in the week, counting today. Monday-anchored.
+  const today = localParts(opts.now, opts.tz);
+  const daysLeftInWeek = 7 - today.weekday;
+  const endOfWeek = zonedInstant(addDaysKey(today.dateKey, daysLeftInWeek - 1), 23 * 60 + 59, opts.tz);
+
+  // Don't plan beyond the requested horizon either.
+  const horizonEnd = new Date(opts.now.getTime() + opts.days * 86_400_000);
+  const placeBy = endOfWeek < horizonEnd ? endOfWeek : horizonEnd;
+
+  const priority = commitmentPriority(
+    { remaining, daysLeftInWeek, importance: c.importance, lastDoneAt: c.lastDoneAt },
+    opts.now,
+  );
+
+  const minutes = clamp(c.minutesPerSession, MIN_SESSION_MINUTES, opts.maxSessionMinutes);
+
+  return Array.from({ length: remaining }, (_, i) => ({
+    key: c.id,
+    title: c.title,
+    group: c.title,
+    kind: 'other' as WorkKind,
+    demand: c.demand,
+    assignment: null,
+    commitment: c,
+    index: i + 1,
+    count: remaining,
+    minutes,
+    dueAt: placeBy,
+    placeBy,
+    priority,
+    // A "five times a week" habit means five days, not five sessions on Sunday.
+    separateDays: c.maxPerDay <= 1,
+    placed: null,
+  }));
+}
+
+/** YYYY-MM-DD plus n days. Local to this module to avoid a circular import. */
+function addDaysKey(dateKey: string, n: number): string {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
 }
 
 /** Half an hour of daylight between two blocks is enough to reset the clock. */
@@ -274,14 +367,18 @@ export function planWeek(
   const live = assignments.filter((a) => a.status === 'todo' && new Date(a.due).getTime() < horizonEnd);
 
   const overdue = live.filter((a) => dueInstant(a, tz).getTime() < now.getTime());
-  const pending = (opts.includeOverdue ? live : live.filter((a) => !overdue.includes(a)))
-    .flatMap((a) => buildSessions(a, opts));
+  const pending = [
+    ...(opts.includeOverdue ? live : live.filter((a) => !overdue.includes(a)))
+      .flatMap((a) => buildSessions(a, opts)),
+    // Recurring quotas join the same queue and compete on the same scale.
+    ...opts.commitments.flatMap((c) => buildCommitmentSessions(c, opts)),
+  ];
 
   const siblingsOf = new Map<string, Pending[]>();
   for (const p of pending) {
-    const list = siblingsOf.get(p.assignment.id);
+    const list = siblingsOf.get(p.key);
     if (list) list.push(p);
-    else siblingsOf.set(p.assignment.id, [p]);
+    else siblingsOf.set(p.key, [p]);
   }
 
   // Highest priority picks its hour first. Ties broken by deadline then id, so
@@ -289,7 +386,7 @@ export function planWeek(
   const order = [...pending].sort((a, b) =>
     b.priority - a.priority ||
     a.dueAt.getTime() - b.dueAt.getTime() ||
-    a.assignment.id.localeCompare(b.assignment.id) ||
+    a.key.localeCompare(b.key) ||
     a.index - b.index,
   );
 
@@ -319,7 +416,7 @@ export function planWeek(
   for (const p of order) {
     if (p.placed) continue;
 
-    const siblings = siblingsOf.get(p.assignment.id)!;
+    const siblings = siblingsOf.get(p.key)!;
 
     // Sessions of one assignment run in order, so this one starts after the
     // previous one finished. Sessions are visited in index order because
@@ -330,14 +427,12 @@ export function planWeek(
       ? new Date(previous.placed.end).getTime() + breakMs
       : nowMs;
 
-    // Exams and quizzes get their sessions on separate days. That's the entire
-    // point of spacing them, and it's the one place the scheduler is opinionated.
-    const spaced = p.assignment.kind === 'exam' || p.assignment.kind === 'quiz';
+    const spaced = p.separateDays;
     const usedDays = new Set(
       siblings.filter((q) => q.placed).map((q) => localParts(new Date(q.placed!.start), tz).dateKey),
     );
 
-    const spans = spansByCourse.get(p.assignment.course) ?? [];
+    const spans = spansByCourse.get(p.group) ?? [];
     const placeByMs = p.placeBy.getTime();
 
     let best: { openingIndex: number; startMs: number; hour: number; minutes: number; value: number } | null = null;
@@ -371,7 +466,7 @@ export function planWeek(
 
         if (contiguousCourseMinutes(spans, c.ms, endMs, minutes) > opts.maxConsecutiveCourseMinutes) continue;
 
-        const fit = fitAt(p.assignment.kind, c.hour, availability.energy);
+        const fit = fitForDemand(p.demand, c.hour, availability.energy);
         const daysOut = Math.max(0, (c.ms - nowMs) / 86_400_000);
         const value = fit / (1 + daysOut * opts.earlyBiasPerDay);
 
@@ -385,25 +480,33 @@ export function planWeek(
 
     const { openingIndex, startMs, hour, minutes } = best;
     const endMs = startMs + minutes * 60_000;
-    const method = methodFor(p.assignment.kind, p.index, p.count);
+    const method = p.commitment
+      ? CATEGORY_METHOD[p.commitment.category]
+      : methodFor(p.kind, p.index, p.count);
 
-    const breakdown = scoreSlot({
-      kind: p.assignment.kind,
-      weight: p.assignment.weight,
-      confidence: p.assignment.confidence,
-      lastTouched: p.assignment.lastTouched,
-      dueAt: p.dueAt,
-      slotStart: new Date(startMs),
-      energy: availability.energy,
-      localHour: hour,
-      now,
-    });
+    // Only coursework has a deadline, a grade weight, and a confidence rating,
+    // so the full breakdown is only meaningful there. A commitment's "why" comes
+    // from its quota instead.
+    const breakdown: ScoreBreakdown | null = p.assignment
+      ? scoreSlot({
+          kind: p.assignment.kind,
+          weight: p.assignment.weight,
+          confidence: p.assignment.confidence,
+          lastTouched: p.assignment.lastTouched,
+          dueAt: p.dueAt,
+          slotStart: new Date(startMs),
+          energy: availability.energy,
+          localHour: hour,
+          now,
+        })
+      : null;
 
     const block: StudyBlock = {
-      id: `${p.assignment.id}::${p.index}`,
-      assignmentId: p.assignment.id,
-      course: p.assignment.course,
-      title: p.assignment.title,
+      id: `${p.key}::${p.index}`,
+      assignmentId: p.assignment?.id ?? null,
+      commitmentId: p.commitment?.id ?? null,
+      course: p.group,
+      title: p.title,
       start: new Date(startMs).toISOString(),
       end: new Date(endMs).toISOString(),
       minutes,
@@ -419,7 +522,7 @@ export function planWeek(
     p.placed = block;
 
     insertSpan(spans, { startMs, endMs, minutes });
-    spansByCourse.set(p.assignment.course, spans);
+    spansByCourse.set(p.group, spans);
 
     const dateKey = openings[openingIndex].dateKey;
     capacity.set(dateKey, (capacity.get(dateKey) ?? 0) - minutes);
@@ -435,15 +538,21 @@ export function planWeek(
         ? 'not enough time before the deadline'
         : 'no room left this week';
 
-    const existing = leftovers.get(p.assignment.id);
-    if (existing) existing.minutes += p.minutes;
-    else leftovers.set(p.assignment.id, {
-      assignmentId: p.assignment.id,
-      title: p.assignment.title,
-      course: p.assignment.course,
-      minutes: p.minutes,
-      reason,
-    });
+    const existing = leftovers.get(p.key);
+    if (existing) {
+      existing.minutes += p.minutes;
+      if (p.commitment) existing.sessionsShort = (existing.sessionsShort ?? 0) + 1;
+    } else {
+      leftovers.set(p.key, {
+        assignmentId: p.assignment?.id ?? null,
+        commitmentId: p.commitment?.id ?? null,
+        title: p.title,
+        course: p.group,
+        minutes: p.minutes,
+        sessionsShort: p.commitment ? 1 : undefined,
+        reason,
+      });
+    }
   }
 
   const freeMinutes = [...freeByDay.values()].reduce((s, m) => s + m, 0);
@@ -526,24 +635,31 @@ const KIND_NOUN: Record<WorkKind, string> = {
 };
 
 /**
- * One sentence explaining the block, built from whichever scoring term actually
- * dominated. Generated rather than written by an LLM: it has to be instant,
- * identical on every re-plan, and incapable of inventing a reason.
+ * One sentence explaining the block.
+ *
+ * For coursework it's built from whichever scoring term actually dominated. For
+ * a recurring commitment there is no deadline to appeal to, so the reason is the
+ * quota: how many are left and how much week is left to do them in.
+ *
+ * Generated, not written by an LLM: it has to be instant, identical on every
+ * re-plan, and incapable of inventing a reason.
  */
 function explain(
   p: Pending,
-  breakdown: ScoreBreakdown,
+  breakdown: ScoreBreakdown | null,
   method: string,
   now: Date,
   tz: string,
 ): string {
-  const a = p.assignment;
+  if (p.commitment) return explainCommitment(p, now, tz);
+
+  const a = p.assignment!;
   const when = relativeDue(p.dueAt, now, tz);
   const session = p.count > 1 ? `Session ${p.index} of ${p.count} — ` : '';
 
   if (p.dueAt < now) return 'Past due. Worth clearing before it starts costing you elsewhere.';
 
-  switch (breakdown.dominant) {
+  switch (breakdown!.dominant) {
     case 'urgency':
       return `${session}${when}, and this is the last comfortable slot for it.`;
 
@@ -563,4 +679,26 @@ function explain(
     case 'fit':
       return `${session}this needs real focus and this is one of your sharper hours.`;
   }
+}
+
+/** The quota story: what's left of this week's target, and how much week is left. */
+function explainCommitment(p: Pending, now: Date, tz: string): string {
+  const c = p.commitment!;
+  const done = c.doneThisWeek;
+  const target = c.sessionsPerWeek;
+  const daysLeft = 7 - localParts(now, tz).weekday;
+  const remainingAfter = target - done - p.index;
+
+  if (c.lastDoneAt) {
+    const since = Math.round((now.getTime() - new Date(c.lastDoneAt).getTime()) / 86_400_000);
+    if (since >= 3) {
+      return `${done + p.index} of ${target} this week — it's been ${since} days since the last one.`;
+    }
+  }
+
+  if (remainingAfter > 0 && remainingAfter >= daysLeft - 1) {
+    return `${done + p.index} of ${target} this week, and only ${daysLeft} days left to fit the rest.`;
+  }
+
+  return `${done + p.index} of ${target} this week.`;
 }

@@ -16,7 +16,7 @@
  * scheduling for.
  */
 
-import type { EnergyPattern, StudyMethod, WorkKind } from '../types.ts';
+import type { CommitmentCategory, EnergyPattern, StudyMethod, WorkKind } from '../types.ts';
 
 /** How long an unbroken working session should be, per kind of work. */
 export const SESSION_MINUTES: Record<WorkKind, number> = {
@@ -38,7 +38,7 @@ export const MIN_SESSION_MINUTES = 25;
  * How much focused attention the work demands, 0–1. Paired with the student's
  * energy curve to decide what belongs at 9am versus 9pm.
  */
-const DEMAND: Record<WorkKind, number> = {
+export const DEMAND: Record<WorkKind, number> = {
   exam: 1.0,
   quiz: 0.8,
   'problem set': 0.9,
@@ -115,13 +115,28 @@ export function energyAt(hour: number, pattern: EnergyPattern): number {
               0.6, 0.6, 0.7, 0.7, 0.8, 0.8, 0.8, 0.9, 1.0, 1.0, 0.9, 0.7],
     steady:  [0.1, 0.1, 0.1, 0.1, 0.1, 0.2, 0.4, 0.6, 0.8, 0.9, 1.0, 1.0,
               0.8, 0.8, 0.9, 0.9, 0.9, 0.8, 0.7, 0.7, 0.7, 0.6, 0.4, 0.2],
+    // Two peaks with a flat middle: sharp before the day starts, sharp again
+    // after it ends. The shape of anyone whose middle hours belong to a job or
+    // a class schedule, which is most people this is built for.
+    bimodal: [0.1, 0.1, 0.1, 0.1, 0.1, 0.2, 0.7, 1.0, 1.0, 0.9, 0.7, 0.6,
+              0.5, 0.5, 0.5, 0.5, 0.6, 0.8, 0.9, 1.0, 1.0, 0.95, 0.85, 0.6],
   };
   return curves[pattern][clamp(Math.floor(hour), 0, 23)];
 }
 
 /** 0.55 (demanding work at a dead hour) → 1.0 (well matched). */
 export function fitAt(kind: WorkKind, hour: number, pattern: EnergyPattern): number {
-  return 1 - 0.45 * Math.abs(DEMAND[kind] - energyAt(hour, pattern));
+  return fitForDemand(DEMAND[kind], hour, pattern);
+}
+
+/**
+ * The same calculation for anything that carries its own cognitive load rather
+ * than inheriting one from a work type. Recurring commitments set demand
+ * directly: a run is physically hard and mentally cheap, and belongs in an hour
+ * that reading a paper would waste.
+ */
+export function fitForDemand(demand: number, hour: number, pattern: EnergyPattern): number {
+  return 1 - 0.45 * Math.abs(clamp(demand, 0, 1) - energyAt(hour, pattern));
 }
 
 export interface ScoreInput {
@@ -208,3 +223,56 @@ export function methodFor(kind: WorkKind, sessionIndex: number, sessionCount: nu
 export function clamp(x: number, lo: number, hi: number): number {
   return Math.min(hi, Math.max(lo, x));
 }
+
+// ─── recurring commitments ─────────────────────────────────────────
+
+/**
+ * Pressure from falling behind a weekly quota.
+ *
+ * This replaces `urgency` for things with no deadline. Five runs with six days
+ * left is relaxed; five runs with two days left is not. It rises as the ratio of
+ * work remaining to days remaining grows, and returns to the floor once the
+ * week's target is met.
+ */
+export function quotaPressure(remaining: number, daysLeftInWeek: number): number {
+  if (remaining <= 0) return 0;
+  const perDay = remaining / Math.max(daysLeftInWeek, 0.5);
+  return 1 + 4 * clamp(perDay, 0, 1.25) / 1.25;
+}
+
+/** 0.6 (nice to have) → 1.6 (non-negotiable). Same range as weightFactor. */
+export function importanceFactor(importance: number): number {
+  return 0.6 + clamp(importance, 0, 1);
+}
+
+/**
+ * Slot-independent rank for one session of a recurring commitment, on the same
+ * scale as an assignment's priority so the two compete honestly for the same
+ * hours. Coursework should not automatically outrank exercise, and exercise
+ * should not automatically outrank an exam.
+ */
+export function commitmentPriority(
+  input: { remaining: number; daysLeftInWeek: number; importance: number; lastDoneAt: string | null },
+  now: Date,
+): number {
+  return (
+    quotaPressure(input.remaining, input.daysLeftInWeek) *
+    importanceFactor(input.importance) *
+    spacingFactor(input.lastDoneAt, now)
+  );
+}
+
+/** Default cognitive load per category, overridable per commitment. */
+export const CATEGORY_DEMAND: Record<CommitmentCategory, number> = {
+  fitness: 0.25,
+  project: 0.85,
+  learning: 0.8,
+  personal: 0.35,
+};
+
+export const CATEGORY_METHOD: Record<CommitmentCategory, StudyMethod> = {
+  fitness: 'work session',
+  project: 'build',
+  learning: 'active reading',
+  personal: 'work session',
+};

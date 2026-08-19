@@ -84,12 +84,22 @@ export interface Availability {
   maxDailyMinutes: number;
 }
 
-export type EnergyPattern = 'morning' | 'evening' | 'steady';
+/**
+ * When the student actually has attention available.
+ *
+ * `bimodal` exists because the first real user didn't fit the other three: sharp
+ * early, sharp late, flat through the middle of the day. That's the shape of
+ * anyone with a day job or a full class schedule, which is most of them.
+ */
+export type EnergyPattern = 'morning' | 'evening' | 'steady' | 'bimodal';
 
 /** A scheduled study session — the thing the product actually produces. */
 export interface StudyBlock {
   id: string;
-  assignmentId: string;
+  /** Set for coursework. Exactly one of this and `commitmentId` is present. */
+  assignmentId: string | null;
+  /** Set for recurring commitments. */
+  commitmentId: string | null;
   course: string;
   title: string;
   /** ISO instants. */
@@ -113,6 +123,40 @@ export interface Course {
   color: string;
 }
 
+/**
+ * Something that recurs on a weekly quota rather than having a deadline.
+ *
+ * Runs five times a week. Six hours on a side project. Gym, practice, reading.
+ * This is the primitive that lets Quarterly work outside a quarter, when there
+ * is no Canvas feed and no due dates, and it's the only genuinely new concept
+ * needed for that: everything else was already a busy block or an assignment.
+ *
+ * The scheduling difference that matters: there's no deadline, so the urgency
+ * term that drives assignments is meaningless. Pressure comes from falling
+ * behind the weekly target with fewer days left to make it up.
+ */
+export interface Commitment {
+  id: string;
+  title: string;
+  category: CommitmentCategory;
+  sessionsPerWeek: number;
+  minutesPerSession: number;
+  /** How much this matters relative to everything else, 0-1. */
+  importance: number;
+  /** Cognitive load, 0-1. Feeds the same energy-fit machinery as coursework. */
+  demand: number;
+  /** ISO instant this was last completed. Drives the staleness signal. */
+  lastDoneAt: string | null;
+  /** Sessions already finished in the current week. */
+  doneThisWeek: number;
+  /** Most things should happen at most once a day. Running twice isn't the goal. */
+  maxPerDay: number;
+  active: boolean;
+  color: string;
+}
+
+export type CommitmentCategory = 'fitness' | 'project' | 'learning' | 'personal';
+
 /** Everything we persist for one student. */
 export interface PlanState {
   feedUrl: string | null;
@@ -120,5 +164,6 @@ export interface PlanState {
   courses: Course[];
   assignments: Assignment[];
   availability: Availability;
+  commitments: Commitment[];
   blocks: StudyBlock[];
 }

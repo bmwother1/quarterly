@@ -12,7 +12,8 @@
     "feed": "node scripts/read-feed.mjs",
     "week": "node scripts/preview-week.ts",
     "check": "npm run typecheck && npm run lint && npm test",
-    "handoff": "node scripts/handoff.ts"
+    "handoff": "node scripts/handoff.ts",
+    "my-week": "node scripts/my-week.ts"
   },
   "dependencies": {
     "next": "16.3.1",
