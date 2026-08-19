@@ -9,6 +9,22 @@ delete them.
 
 ---
 
+## 2026-08-18 · Claude Code · Shipped it
+
+From engine to deployed product in one session. Feed route with a hardened URL
+guard, onboarding, setup, the calendar grid, check-off, explicit replanning,
+persistence. Live at quarterly-alpha.vercel.app, pushed to GitHub, 122 tests.
+
+Almost every bug this session was found by looking at the thing rather than by a
+failing test. The scheduler put a run at 11pm and was right by its own model. One
+daily ceiling stacked 4.6 hours onto a Tuesday after a nine-hour shift. Setup
+silently discarded saved work hours because handlers built updates from stale
+render closures. Block ids collided after a replan because the session index
+restarts at 1. The calendar never drew the work schedule at all.
+
+Brydon's own week became the fixture, and the off-season case caught a bug four
+weeks before a student would have.
+
 ## 2026-08-18 · Claude Code · The context system
 
 Built this `context/` system, a `/wrap` skill to maintain it, and `npm run

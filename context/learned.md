@@ -30,6 +30,24 @@ gets a polite yes from everyone and teaches nothing. "Walk me through last Sunda
 
 ## From building
 
+### Nearly every bug this session came from looking, not testing (2026-08-18)
+
+A tally worth keeping, because it should shape how the next stretch is built.
+Found by reading real output or clicking the real UI: the 11pm run, the 4.6-hour
+Tuesday, the 90%-past-due week, the energy-fit feature being structurally inert,
+setup discarding saved work hours, colliding block ids after a replan, the
+calendar never drawing the work schedule, a run labelled WORK SESSION.
+
+Found by a test first: essentially one, the host-allowlist bypass, and only
+because the test was written specifically to attempt the bypass.
+
+**The lesson is not that tests are low value.** All 122 exist to stop these
+coming back, and the suite caught real regressions during three separate
+refactors. The lesson is that tests confirm what you already thought to check,
+and the expensive bugs live in what you didn't. Build the thing that lets you
+look at real output early: `npm run week` and `npm run my-week` paid for
+themselves several times over.
+
 ### One daily ceiling for every day is a plan that dies on Thursday (2026-08-18)
 
 The first run of Brydon's real week put 4.6 hours on Tuesday and 0.6 on

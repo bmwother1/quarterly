@@ -9,68 +9,22 @@ record of what was tried and abandoned is worth more than a tidy file.
 
 ---
 
-## Open — needs a call
+## 2026-08-18 · Ship with no signup, move to Supabase later
 
-### Ship with no signup at all?
+**Decided:** local-first with no account, behind a storage interface. Supabase
+becomes a second adapter rather than a rewrite.
 
-**Proposed:** everything in the browser, no account, no email. Data in local
-storage behind an interface so Supabase can slot in later.
+**Why the original argument changed:** the case for no-signup rested partly on
+auth being a burden for a first-time builder. It isn't — Brydon runs Supabase
+with RLS on another product. So the remaining argument is purely about the
+student: an account wall in front of something a classmate mentioned once is the
+single biggest drop-off point available.
 
-**For:** removes the single biggest drop-off point for a student trying something
-a classmate mentioned, and removes an entire auth surface from a first build.
+**What it costs, and this is real:** no cross-device sync, and no usage data. The
+metric that decides this whole project is week-4 retention, and right now nothing
+measures it. That is why Supabase is next rather than eventually.
 
-**Against:** no cross-device sync, and no usage data — which is awkward given
-that week-4 retention is the metric that decides everything.
-
-**Status:** recommended, not yet decided.
-
----
-
-## 2026-08-18 · Quarterly works outside a quarter
-
-**Decided:** add recurring commitments as a first-class primitive, so the app
-schedules a life rather than only a course load. Same engine, second input
-source.
-
-**Why:** the immediate reason is that Brydon has no Canvas data until UW
-publishes courses, so he cannot use his own product, and a founder who can't use
-their own thing ships worse versions of it. The strategic reason is that Canvas
-was never the value. The ranking and the rescheduling are, and they work on any
-source, which also means the Canvas integration is not a moat worth defending.
-Shovel already has it.
-
-**What it cost:** one new concept. A commitment is a weekly quota with no
-deadline, so `urgency` is meaningless and `quotaPressure` replaces it: how far
-behind the target, against how much week is left. Everything else Brydon
-described was already a busy block or an assignment.
-
-**Rejected:** scheduling commitments in a separate pass from coursework. That
-always ends with one category quietly eating every good hour. They share one
-priority scale and compete honestly.
-
-**The line being held:** general mode reuses the same scoring engine. Anything
-that needs genuinely different scheduling logic waits until after launch. This is
-the exact point where a focused student product becomes a worse Motion.
-
----
-
-## 2026-08-18 · Hard constraints live outside the scoring function
-
-**Decided:** time windows, per-session minimums, and trailing buffers are
-filters, not scoring terms.
-
-**Why:** found by generating Brydon's real week and reading it. The scheduler put
-a run at 11:00pm for someone asleep at midnight, and it was *right* by its own
-model: running is low cognitive demand, so a low-energy hour fits it perfectly.
-Physiology is not a preference to be weighed, so it can't be a term that
-something else outranks.
-
-Same shape for the other two: a 25-minute block on a project that needs a Pi
-booted and a sensor wired is setup and nothing else, and ten minutes in the
-shower after a run is real time even though it isn't part of the block.
-
-**The general rule:** if violating it is never acceptable at any score, it's a
-filter. If it's a trade-off, it's a term.
+**Superseded:** the earlier "Open — needs a call" entry on this question.
 
 ---
 

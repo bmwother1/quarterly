@@ -108,7 +108,9 @@ function Intake({
         <button
           type="submit"
           disabled={loading || !url.trim()}
-          className="w-full rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-medium text-white transition-opacity disabled:opacity-40 sm:w-auto"
+          // A dimmed accent fill reads as a broken button rather than a waiting
+          // one, so the disabled state drops the fill entirely.
+          className="w-full rounded-lg px-4 py-2.5 text-sm font-medium transition-colors sm:w-auto bg-[var(--accent)] text-white disabled:bg-transparent disabled:text-[var(--faint)] disabled:ring-1 disabled:ring-[var(--border)]"
         >
           {loading ? 'Reading your quarter…' : 'Show me my quarter'}
         </button>

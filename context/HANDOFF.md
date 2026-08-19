@@ -1,13 +1,13 @@
 # Quarterly — project brief
 
-*Generated 2026-08-18 from the project's `context/` files by `npm run handoff`.
+*Generated 2026-08-19 from the project's `context/` files by `npm run handoff`.
 Don't edit this by hand; edit the source files and regenerate.*
 
 This is the standing context for Quarterly. It covers the person building it,
 what's being built, where it stands, and what has already been decided — so a
 conversation can start from here instead of from scratch.
 
-**43 days to launch** (September 30 2026).
+**42 days to launch** (September 30 2026).
 
 ---
 
@@ -171,56 +171,75 @@ compound within a course.
 
 This file describes the present. It gets rewritten, not appended to.
 
+**Live at https://quarterly-alpha.vercel.app** — every push to `main` deploys.
+Repo: `bmwother1/quarterly` (private).
+
 ---
 
 ## Right now
 
-The domain layer is done and trustworthy. Canvas ingestion and the scheduling
-engine are built, tested, and committed — 66 tests, no dependencies, no React.
-Planning a full quarter takes ~21ms and is deterministic.
+The product works end to end and is deployed. A student can connect Canvas or
+describe their week by hand, get a planned week as a calendar, check blocks off,
+and replan around what they actually did.
 
-Nothing is on screen yet. The next stretch is all interface.
-
-Zero student interviews done. That's the real risk on the board.
+Zero student interviews. That is still the largest risk on the board and no
+amount of building reduces it.
 
 ## Shipped
 
-- **Canvas ingestion** — dependency-free iCal parser handling all three timestamp
-  shapes including floating times across a DST boundary; course extraction, work
-  classification, seed durations and grade weights, estimate revision from
-  observed time
+- **Canvas ingestion** — dependency-free iCal parser handling all three
+  timestamp shapes including floating times across a DST boundary; course
+  extraction, work classification, seed durations and grade weights
 - **Scheduling engine** — scoring function, free-time discovery, greedy
-  placement with constraints (deadline, busy time, daily cap, 20% buffer, 2-hour
-  consecutive-course limit, exam sessions on separate days), generated per-block
-  explanations, honest reporting of what didn't fit
-- **Terminal tooling** — `npm run week` prints a real planned week; `npm run
-  feed` prints raw Canvas deadlines and a workload-by-week chart
-- **66 tests** covering timezone edges, every scheduling constraint, determinism,
-  and a 150ms performance ceiling
-- Next.js 16 / React 19 / Tailwind 4 scaffold, clean typecheck, lint, and build
+  placement under real constraints, generated per-block explanations, honest
+  reporting of what didn't fit. ~21ms for a full quarter, deterministic
+- **Recurring commitments** — weekly quotas with no deadline, so the app works
+  outside a quarter. Hard constraints (time windows, session minimums, trailing
+  buffers) sit outside the scoring function as filters
+- **Feed route** — server-side fetch with a host allowlist, private-range
+  refusal, redirects off, size cap and timeout. Never logs or stores the URL
+- **Onboarding, setup and week view** — Canvas intake with the workload chart,
+  availability and commitments editor, calendar grid with busy time drawn in,
+  check-off, explicit replanning
+- **Persistence** — localStorage behind an interface, no signup
+- **122 tests**, clean typecheck, lint and production build
 
 ## Next, in order
 
-1. **Canvas feed proxy route** — the browser can't fetch the ICS directly (CORS),
-   so a Next route handler fetches it server-side and returns parsed JSON
-2. **Onboarding** — paste feed URL → see your courses and your quarter's workload
-   chart. This screen is also the recruiting demo.
-3. **Availability grid** — weekly click-and-drag to mark class, sleep, work
-4. **Week view** — blocks with course, duration, method, and the "why now" line;
-   mark done / skipped / partial; the **reschedule my week** button, which is the
-   differentiating feature and does not get cut
-5. **Local-first persistence** behind a storage interface
-6. **Deploy** to a public URL and check it on a real phone
+1. **Twenty interviews.** Nothing else on this list matters as much.
+2. **Privacy page.** Plain English. Required before showing this to students,
+   since the landing page makes a claim about the feed URL with nothing behind it.
+3. **Supabase.** Cross-device sync and, more importantly, the usage data that
+   week-4 retention depends on. Decision below is now settled in favour.
+4. **Syllabus parsing** — the one job an LLM genuinely belongs in.
+5. **Tailwind build oddity** — `max-w-5xl` and `max-w-[1080px]` both produced no
+   CSS, so the calendar width is set inline. Works, but it will bite again on a
+   class that matters more.
 
 ## Open questions
 
-- Ship with no signup at all? Recommended, not decided. See `decisions.md`.
-- Nothing in the product has been seen by a student. Every design choice so far
-  rests on research and reasoning, not observation.
+- Would a student who connected in week 0 and saw an empty quarter come back?
+- Nothing in the product has been seen by a student yet.
 
 ---
 
 # Recent sessions
+
+## 2026-08-18 · Claude Code · Shipped it
+
+From engine to deployed product in one session. Feed route with a hardened URL
+guard, onboarding, setup, the calendar grid, check-off, explicit replanning,
+persistence. Live at quarterly-alpha.vercel.app, pushed to GitHub, 122 tests.
+
+Almost every bug this session was found by looking at the thing rather than by a
+failing test. The scheduler put a run at 11pm and was right by its own model. One
+daily ceiling stacked 4.6 hours onto a Tuesday after a nine-hour shift. Setup
+silently discarded saved work hours because handlers built updates from stale
+render closures. Block ids collided after a replan because the session index
+restarts at 1. The calendar never drew the work schedule at all.
+
+Brydon's own week became the fixture, and the off-season case caught a bug four
+weeks before a student would have.
 
 ## 2026-08-18 · Claude Code · The context system
 
@@ -246,17 +265,6 @@ Also confirmed Brydon was right that the six-week plan padded week 1. Node took
 three minutes. The parts that genuinely can't compress are the ones that depend
 on other people.
 
-## 2026-08-17 · Cowork · Research and planning
-
-Competitive research across twelve competitors, then a business plan, competitor
-analysis, build roadmap, pitch deck, dashboard, week-1 playbook, and interview
-tracker. Three findings reshaped the plan: the Canvas calendar feed removes the
-integration problem entirely, the classroom evidence for spaced retrieval is far
-weaker than the lab evidence so grade claims are off the table, and the scheduler
-should be deterministic code rather than an LLM call.
-
-Deliverables live in `~/Downloads/Quarterly_*`.
-
 ---
 
 # Recent decisions
@@ -265,20 +273,22 @@ Deliverables live in `~/Downloads/Quarterly_*`.
 `context/decisions.md` and `context/learned.md`. Ask for them if a question
 turns on history this brief doesn't cover.*
 
-## Open — needs a call
+## 2026-08-18 · Ship with no signup, move to Supabase later
 
-### Ship with no signup at all?
+**Decided:** local-first with no account, behind a storage interface. Supabase
+becomes a second adapter rather than a rewrite.
 
-**Proposed:** everything in the browser, no account, no email. Data in local
-storage behind an interface so Supabase can slot in later.
+**Why the original argument changed:** the case for no-signup rested partly on
+auth being a burden for a first-time builder. It isn't — Brydon runs Supabase
+with RLS on another product. So the remaining argument is purely about the
+student: an account wall in front of something a classmate mentioned once is the
+single biggest drop-off point available.
 
-**For:** removes the single biggest drop-off point for a student trying something
-a classmate mentioned, and removes an entire auth surface from a first build.
+**What it costs, and this is real:** no cross-device sync, and no usage data. The
+metric that decides this whole project is week-4 retention, and right now nothing
+measures it. That is why Supabase is next rather than eventually.
 
-**Against:** no cross-device sync, and no usage data — which is awkward given
-that week-4 retention is the metric that decides everything.
-
-**Status:** recommended, not yet decided.
+**Superseded:** the earlier "Open — needs a call" entry on this question.
 
 ## 2026-08-18 · No test framework, no build step in the domain layer
 
@@ -337,18 +347,6 @@ ceiling is pinned at 150ms so this can't silently regress.
 
 # Currently waiting on Brydon
 
-- **Add Node to the shell.** The permission classifier blocked two attempts to
-  write `~/.zshrc`. Until then every terminal needs
-  `export PATH="$HOME/.local/node/bin:$PATH"`.
-  ```
-  echo 'export PATH="$HOME/.local/node/bin:$PATH"' >> ~/.zshrc
-  ```
-- **Run the planner against a real Canvas feed.** Everything so far is validated
-  against fixtures. Don't paste the feed URL into a chat — it's a password.
-  ```
-  cd ~/Desktop/quarterly && npm run week -- "<your feed url>"
-  ```
-- **GitHub and Vercel accounts** before deploying. Account creation isn't
-  something Claude can do.
-- **Twenty interviews.** Not on the code critical path — run them in parallel,
-  starting now.
+- **Twenty interviews.** Run them in parallel with everything else.
+- **Use it for a week.** The off-season case is real now. Whether *you* still
+  open it on day five is the closest available proxy for week-4 retention.
