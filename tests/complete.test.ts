@@ -225,3 +225,31 @@ describe('replanning around what already happened', () => {
     assert.equal(mondayRuns.length, 0, 'replanning scheduled a second run on a day already run');
   });
 });
+
+describe('block identity', () => {
+  test('ids stay unique across a replan that keeps history', async () => {
+    // The bug: ids were `key::sessionIndex`, and sessionIndex restarts at 1 on
+    // every replan. A completed session 1 and a newly planned session 1 then
+    // collided, and React dropped or duplicated blocks.
+    const { planWeek } = await import('../src/lib/schedule/plan.ts');
+    const { defaultAvailability } = await import('../src/lib/schedule/slots.ts');
+
+    const av = { ...defaultAvailability(), energy: 'steady' as const, maxDailyMinutes: 600 };
+    const monday = zonedInstant('2026-10-05', 8 * 60, TZ);
+    const runs = commitment({ id: 'run', sessionsPerWeek: 5 });
+
+    const first = planWeek([], av, { now: monday, tz: TZ, commitments: [runs] });
+    const done = { ...first.blocks[0], status: 'done' as const, actualMinutes: 35 };
+
+    const tuesday = zonedInstant('2026-10-06', 8 * 60, TZ);
+    const second = planWeek([], av, {
+      now: tuesday, tz: TZ,
+      commitments: [{ ...runs, doneThisWeek: 1 }],
+      existingBlocks: [done],
+    });
+
+    const all = [done, ...second.blocks];
+    const ids = all.map((b) => b.id);
+    assert.equal(new Set(ids).size, ids.length, `duplicate block ids: ${ids.join(', ')}`);
+  });
+});

@@ -592,7 +592,10 @@ export function planWeek(
       : null;
 
     const block: StudyBlock = {
-      id: `${p.key}::${p.index}`,
+      // Keyed by start instant, not session index. Index restarts at 1 on every
+      // replan, so a completed session 1 and a freshly planned session 1 shared
+      // an id — React saw duplicate keys and dropped or duplicated blocks.
+      id: `${p.key}@${new Date(startMs).toISOString()}`,
       assignmentId: p.assignment?.id ?? null,
       commitmentId: p.commitment?.id ?? null,
       course: p.group,

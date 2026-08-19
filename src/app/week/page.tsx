@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useQuarterly } from '@/hooks/use-quarterly';
 import { BlockCard } from '@/components/block-card';
+import { WeekGrid } from '@/components/week-grid';
 import { DEFAULT_TZ, addDays, fmtDay, localParts } from '@/lib/time';
 import { missedBlocks } from '@/lib/schedule/complete';
 import type { StudyBlock } from '@/lib/types';
@@ -15,6 +16,8 @@ export default function WeekPage() {
   // Fixed at mount so every render agrees on "now" — reading the clock during
   // render is impure and drifts between the server and client passes.
   const [now] = useState(() => new Date());
+  const [view, setView] = useState<'grid' | 'list'>('grid');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const colourFor = useMemo(() => {
     const map = new Map<string, string>();
@@ -41,16 +44,30 @@ export default function WeekPage() {
   }, [state.blocks]);
 
   const missed = useMemo(() => missedBlocks(state.blocks, now), [state.blocks, now]);
+  const selected = useMemo(
+    () => state.blocks.find((b) => b.id === selectedId) ?? null,
+    [state.blocks, selectedId],
+  );
 
   if (!hydrated) {
-    return <main className="mx-auto max-w-2xl px-5 py-12"><p className="text-[var(--muted)]">Loading your week…</p></main>;
+    return (
+      <main className="mx-auto max-w-2xl px-5 py-12">
+        <p className="text-[var(--muted)]">Loading your week…</p>
+      </main>
+    );
   }
 
   const hasInputs = state.assignments.length > 0 || state.commitments.length > 0;
   const planned = state.blocks.filter((b) => b.status === 'planned');
 
   return (
-    <main className="mx-auto max-w-2xl px-5 py-10 sm:py-14">
+    <main
+      className="mx-auto w-full px-5 py-10 sm:py-14"
+      // Set directly rather than through a utility class: the calendar needs
+      // roughly twice the width of the prose views, and a conditional class name
+      // here was not surviving the CSS build.
+      style={{ maxWidth: view === 'grid' ? 1080 : 672 }}
+    >
       <header className="mb-8 flex flex-wrap items-baseline justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">This week</h1>
@@ -133,6 +150,53 @@ export default function WeekPage() {
             </div>
           )}
 
+          <div className="mb-6 flex gap-1 text-sm">
+            {(['grid', 'list'] as const).map((v) => (
+              <button
+                key={v}
+                onClick={() => setView(v)}
+                className={`rounded-full px-3 py-1 ${
+                  view === v
+                    ? 'bg-[var(--accent-soft)] text-[var(--accent)]'
+                    : 'text-[var(--muted)]'
+                }`}
+              >
+                {v === 'grid' ? 'Calendar' : 'List'}
+              </button>
+            ))}
+          </div>
+
+          {view === 'grid' && (
+            <div className="mb-8 space-y-4">
+              <WeekGrid
+                days={days}
+                blocks={state.blocks}
+                availability={state.availability}
+                tz={TZ}
+                colourFor={colourFor}
+                selectedId={selectedId}
+                onSelect={(id) => setSelectedId((cur) => (cur === id ? null : id))}
+                todayKey={localParts(now, TZ).dateKey}
+              />
+
+              {selected ? (
+                <BlockCard
+                  block={selected}
+                  tz={TZ}
+                  colour={colourFor(selected.course)}
+                  isPast={new Date(selected.end) < now}
+                  onComplete={(outcome, minutes) => complete(selected.id, outcome, minutes)}
+                />
+              ) : (
+                <p className="text-sm text-[var(--faint)]">
+                  Tap a block to see why it&rsquo;s there and mark it off. Shaded bands are the
+                  hours you already gave away.
+                </p>
+              )}
+            </div>
+          )}
+
+          {view === 'list' && (
           <div className="space-y-8">
             {days.map((dateKey) => {
               const blocks = byDay.get(dateKey) ?? [];
@@ -173,6 +237,7 @@ export default function WeekPage() {
               );
             })}
           </div>
+          )}
         </>
       )}
     </main>
