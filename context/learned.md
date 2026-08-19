@@ -9,8 +9,29 @@ The most valuable entries here are the ones that start "this didn't work."
 
 ## From students
 
-**Nothing yet.** 0 of 20 interviews done. This is the largest hole in the project
-and no amount of building closes it.
+**1 of 20 interviews done.** Still the largest hole in the project, and still
+the thing no amount of building closes.
+
+### Interview 1 · Brydon's brother (2026-08-18)
+
+Outcome: liked the idea, could see himself using it, no substantive critique.
+
+**Counts as zero signal, and it's worth being precise about why.** "I could see
+myself using it" is the single least predictive answer in the set — it's a
+prediction about future behaviour, and people are unreliable predictors of their
+own future behaviour and excellent reporters of their recent past. A family
+member also cannot say no, so the answer carries no information either way.
+
+Two process notes for the remaining nineteen:
+
+- **The product was shown.** That contaminates it. Once someone has seen the
+  artifact they react to the artifact instead of describing their own week, and
+  the thing you need is the week. Show it at the end, if at all.
+- **No past-behaviour questions were asked**, which is where all the value is.
+  The conversation is recoverable: he's family, he'll answer again.
+
+What would have counted: an unprompted description of the 9pm decision problem,
+a named planner he abandoned and why, or a duration he underestimated by 2x.
 
 The four numbers that matter, from the week-1 playbook:
 
