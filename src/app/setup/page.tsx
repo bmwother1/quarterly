@@ -22,13 +22,13 @@ function toHHMM(min: number): string {
 }
 
 export default function SetupPage() {
-  const { state, hydrated, updateAvailability, updateCommitments, replan } = useQuarterly(TZ);
+  const { state, hydrated, updateAvailability, updateCommitments, replan, reset } = useQuarterly(TZ);
   const router = useRouter();
   const [saved, setSaved] = useState<string | null>(null);
   const av = state.availability;
 
   /** Brief confirmation. A silent save is indistinguishable from a broken one. */
-  function confirm(what: string) {
+  function flash(what: string) {
     setSaved(what);
     setTimeout(() => setSaved((cur) => (cur === what ? null : cur)), 2200);
   }
@@ -65,7 +65,7 @@ export default function SetupPage() {
       }
       return { ...prev, busy };
     });
-    confirm(`${label || 'Work'} saved`);
+    flash(`${label || 'Work'} saved`);
   }
 
   return (
@@ -179,6 +179,25 @@ export default function SetupPage() {
           Plan my week
         </button>
         <span className="text-sm text-[var(--muted)]">takes you to the result</span>
+      </div>
+
+      <div className="mt-10 border-t border-[var(--border)] pt-6">
+        <h2 className="font-medium">Delete everything</h2>
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          Your schedule only exists in this browser, so this removes it for good. There is no
+          copy anywhere else.
+        </p>
+        <button
+          onClick={() => {
+            if (window.confirm('Delete your whole setup and plan? This cannot be undone.')) {
+              reset();
+              flash('Everything deleted');
+            }
+          }}
+          className="mt-3 rounded border border-[var(--warn)]/50 px-3 py-1.5 text-sm text-[var(--warn)]"
+        >
+          Delete my data
+        </button>
       </div>
     </main>
   );
