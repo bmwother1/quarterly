@@ -176,3 +176,52 @@ describe('weekly quota reset', () => {
     assert.equal(out[0].doneThisWeek, 2);
   });
 });
+
+describe('replanning around what already happened', () => {
+  test('hours already spent are not offered again', async () => {
+    const { planWeek } = await import('../src/lib/schedule/plan.ts');
+    const { defaultAvailability } = await import('../src/lib/schedule/slots.ts');
+
+    const av = { ...defaultAvailability(), energy: 'steady' as const, maxDailyMinutes: 600 };
+    const monday = zonedInstant('2026-10-05', 8 * 60, TZ);
+
+    const spent = block({
+      id: 'spent', commitmentId: 'run', status: 'done', actualMinutes: 60,
+      start: zonedInstant('2026-10-05', 10 * 60, TZ).toISOString(),
+      end: zonedInstant('2026-10-05', 11 * 60, TZ).toISOString(),
+    });
+
+    const filler = commitment({ id: 'x', title: 'Filler', sessionsPerWeek: 7, minutesPerSession: 60, maxPerDay: 1 });
+    const r = planWeek([], av, { now: monday, tz: TZ, commitments: [filler], existingBlocks: [spent] });
+
+    const spentStart = new Date(spent.start).getTime();
+    const spentEnd = new Date(spent.end).getTime();
+    for (const b of r.blocks) {
+      const s = new Date(b.start).getTime();
+      const e = new Date(b.end).getTime();
+      assert.ok(e <= spentStart || s >= spentEnd, `"${b.title}" overlaps an hour already spent`);
+    }
+  });
+
+  test('a commitment already done today is not scheduled again today', async () => {
+    const { planWeek } = await import('../src/lib/schedule/plan.ts');
+    const { defaultAvailability } = await import('../src/lib/schedule/slots.ts');
+
+    const av = { ...defaultAvailability(), energy: 'steady' as const, maxDailyMinutes: 600 };
+    const monday = zonedInstant('2026-10-05', 8 * 60, TZ);
+
+    const ranAlready = block({
+      id: 'ran', commitmentId: 'run', status: 'done', actualMinutes: 35,
+      start: zonedInstant('2026-10-05', 6 * 60 + 30, TZ).toISOString(),
+      end: zonedInstant('2026-10-05', 7 * 60 + 5, TZ).toISOString(),
+    });
+
+    const runs = commitment({ id: 'run', sessionsPerWeek: 5, doneThisWeek: 1, maxPerDay: 1 });
+    const r = planWeek([], av, { now: monday, tz: TZ, commitments: [runs], existingBlocks: [ranAlready] });
+
+    const mondayRuns = r.blocks.filter(
+      (b) => b.commitmentId === 'run' && b.start.startsWith('2026-10-05'),
+    );
+    assert.equal(mondayRuns.length, 0, 'replanning scheduled a second run on a day already run');
+  });
+});

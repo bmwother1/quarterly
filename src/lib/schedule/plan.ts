@@ -85,6 +85,15 @@ export interface PlanOptions {
   includeOverdue?: boolean;
   /** Recurring weekly quotas: runs, project hours, a course to get through. */
   commitments?: Commitment[];
+  /**
+   * Blocks already settled — done, partial, or skipped — that this plan must
+   * work around.
+   *
+   * Without these, replanning at noon happily schedules a second run on a day
+   * the student already ran, and drops new work on top of the hours they just
+   * spent. The past is not free time.
+   */
+  existingBlocks?: StudyBlock[];
 }
 
 export interface UnscheduledItem {
@@ -193,6 +202,7 @@ const DEFAULTS: Required<PlanOptions> = {
   earlyBiasPerDay: 0.35,
   includeOverdue: false,
   commitments: [],
+  existingBlocks: [],
 };
 
 /**
@@ -427,6 +437,27 @@ export function planWeek(
     };
   });
 
+  // Hours already spent are not available to spend again.
+  for (const b of opts.existingBlocks) {
+    const bStart = new Date(b.start).getTime();
+    const bEnd = new Date(b.end).getTime();
+    for (let i = openings.length - 1; i >= 0; i--) {
+      const o = openings[i];
+      if (bEnd <= o.startMs || bStart >= o.endMs) continue;
+      openings = splitOpening(openings, i, bStart, bEnd, breakMsFor(opts), tz);
+    }
+  }
+  openings.sort((a, b) => a.startMs - b.startMs);
+
+  // Days a commitment already happened on, so "five times a week" stays five days.
+  const settledDaysByKey = new Map<string, Set<string>>();
+  for (const b of opts.existingBlocks) {
+    if (!b.commitmentId || b.status === 'skipped') continue;
+    const set = settledDaysByKey.get(b.commitmentId) ?? new Set<string>();
+    set.add(localParts(new Date(b.start), tz).dateKey);
+    settledDaysByKey.set(b.commitmentId, set);
+  }
+
   // Every hour boundary in the horizon, resolved once. Fit only varies by the
   // hour, so these are the only start times worth considering — and computing
   // them up front keeps `Intl` out of the inner loop entirely.
@@ -462,9 +493,10 @@ export function planWeek(
       : nowMs;
 
     const spaced = p.separateDays;
-    const usedDays = new Set(
-      siblings.filter((q) => q.placed).map((q) => localParts(new Date(q.placed!.start), tz).dateKey),
-    );
+    const usedDays = new Set([
+      ...siblings.filter((q) => q.placed).map((q) => localParts(new Date(q.placed!.start), tz).dateKey),
+      ...(p.commitment ? settledDaysByKey.get(p.commitment.id) ?? [] : []),
+    ]);
 
     const spans = spansByCourse.get(p.group) ?? [];
     const placeByMs = p.placeBy.getTime();
@@ -756,4 +788,10 @@ function explainCommitment(p: Pending, now: Date, tz: string): string {
   }
 
   return `${done + p.index} of ${target} this week.`;
+}
+
+
+/** Break length as milliseconds, for the opening arithmetic. */
+function breakMsFor(opts: Required<PlanOptions>): number {
+  return opts.breakMinutes * 60_000;
 }

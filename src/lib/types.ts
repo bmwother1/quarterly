@@ -33,6 +33,7 @@ export type StudyMethod =
   | 'lab prep'
   | 'build'
   | 'review notes'
+  | 'training'
   | 'work session';
 
 /** A deadline pulled from Canvas. */

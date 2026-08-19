@@ -271,7 +271,7 @@ export const CATEGORY_DEMAND: Record<CommitmentCategory, number> = {
 };
 
 export const CATEGORY_METHOD: Record<CommitmentCategory, StudyMethod> = {
-  fitness: 'work session',
+  fitness: 'training',
   project: 'build',
   learning: 'active reading',
   personal: 'work session',
