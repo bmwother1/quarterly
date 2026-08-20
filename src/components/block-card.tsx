@@ -28,9 +28,9 @@ export function BlockCard({
 
   return (
     <div
-      className={`rounded-lg border p-3 transition-opacity ${
-        settled ? 'opacity-55' : ''
-      } ${isPast && !settled ? 'border-[var(--warn)]/50' : 'border-[var(--border)]'} bg-[var(--surface)]`}
+      className={`rise rounded-xl border p-3.5 shadow-[var(--shadow-sm)] transition-all duration-200 ${
+        settled ? 'opacity-60' : 'hover:shadow-[var(--shadow-md)]'
+      } ${isPast && !settled ? 'border-[var(--warn)]/45' : 'border-[var(--border)]'} bg-[var(--surface)]`}
     >
       <div className="flex items-start gap-3">
         <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colour }} aria-hidden />
@@ -55,7 +55,9 @@ export function BlockCard({
           {block.method !== 'work session' && (
             <p className="mt-0.5 text-xs uppercase tracking-wide text-[var(--faint)]">{block.method}</p>
           )}
-          <p className="mt-1.5 text-sm text-[var(--muted)]">{block.why}</p>
+          <p className="mt-2 border-l-2 border-[var(--border)] pl-2.5 text-sm leading-relaxed text-[var(--muted)]">
+            {block.why}
+          </p>
 
           {settled ? (
             <p className="mt-2 text-xs text-[var(--faint)]">
@@ -97,19 +99,19 @@ export function BlockCard({
             <div className="mt-2 flex flex-wrap gap-2">
               <button
                 onClick={() => onComplete('done', block.minutes)}
-                className="rounded bg-[var(--accent)] px-2.5 py-1 text-sm font-medium text-white"
+                className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-[var(--accent-ink)] transition-transform active:scale-[0.97]"
               >
                 Done
               </button>
               <button
                 onClick={() => setAskingPartial(true)}
-                className="rounded border border-[var(--border)] px-2.5 py-1 text-sm"
+                className="rounded-lg border border-[var(--border-strong)] px-3 py-1.5 text-sm transition-colors hover:bg-[var(--raised)] active:scale-[0.97]"
               >
                 Partly
               </button>
               <button
                 onClick={() => onComplete('skipped', null)}
-                className="rounded px-2.5 py-1 text-sm text-[var(--muted)]"
+                className="rounded-lg px-3 py-1.5 text-sm text-[var(--muted)] transition-colors hover:text-[var(--ink)]"
               >
                 Skipped
               </button>

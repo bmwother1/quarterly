@@ -18,25 +18,30 @@ export const metadata = {
 export default function Landing() {
   return (
     <main className="mx-auto max-w-2xl px-5 py-14 sm:py-20">
-      <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-        Your week, planned around the life you actually have.
+      <p className="rise mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-xs text-[var(--muted)]">
+        <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" aria-hidden />
+        Built at the University of Washington
+      </p>
+      <h1 className="rise text-[2rem] font-semibold leading-[1.1] sm:text-[2.75rem]">
+        Your week, planned around the life you{' '}
+        <span className="text-[var(--accent)]">actually</span> have.
       </h1>
-      <p className="mt-4 text-lg text-[var(--muted)]">
+      <p className="rise mt-5 text-lg leading-relaxed text-[var(--muted)]">
         Quarterly lays out when to do your work, not just what&rsquo;s due. It knows about your
         job, your sleep and the things you do every week, and it rebuilds the plan when you fall
         behind. Free for students.
       </p>
 
-      <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+      <div className="rise mt-8 flex flex-col gap-3 sm:flex-row">
         <Link
           href="/setup"
-          className="rounded-lg bg-[var(--accent)] px-5 py-3 text-center font-medium text-white"
+          className="rounded-xl bg-[var(--accent)] px-5 py-3.5 text-center font-medium text-[var(--accent-ink)] shadow-[var(--shadow-md)] transition-transform active:scale-[0.98]"
         >
           Build my week
         </Link>
         <Link
           href="/canvas"
-          className="rounded-lg border border-[var(--border)] px-5 py-3 text-center font-medium"
+          className="rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-5 py-3.5 text-center font-medium transition-colors hover:bg-[var(--raised)] active:scale-[0.98]"
         >
           Connect Canvas
         </Link>
@@ -46,7 +51,7 @@ export default function Landing() {
         No account. Nothing to install. Your data stays in this browser.
       </p>
 
-      <section className="mt-14 space-y-8">
+      <section className="mt-16 grid gap-px overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--border)] sm:grid-cols-2">
         <Item title="It plans the hours, not just the list">
           A to-do list tells you what&rsquo;s due. Quarterly works out when each piece actually
           happens, in sessions long enough to be worth sitting down for, around the time you
@@ -70,7 +75,7 @@ export default function Landing() {
         </Item>
       </section>
 
-      <section className="mt-14 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
+      <section className="mt-14 rounded-xl border border-[var(--accent)]/25 bg-[var(--accent-soft)] p-5">
         <h2 className="font-medium">If it&rsquo;s summer, start with your week</h2>
         <p className="mt-2 text-sm text-[var(--muted)]">
           Canvas feeds only carry 30 days back and a year forward, and instructors publish
@@ -104,11 +109,13 @@ export default function Landing() {
   );
 }
 
+/** A card in the feature grid. The 1px gaps come from the parent's background
+ *  showing through, which gives clean hairlines without border-collapse games. */
 function Item({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div>
+    <div className="bg-[var(--surface)] p-5 transition-colors hover:bg-[var(--raised)]">
       <h2 className="font-medium">{title}</h2>
-      <p className="mt-1.5 text-[var(--muted)]">{children}</p>
+      <p className="mt-1.5 text-sm leading-relaxed text-[var(--muted)]">{children}</p>
     </div>
   );
 }

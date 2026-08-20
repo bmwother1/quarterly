@@ -70,7 +70,7 @@ export default function WeekPage() {
     >
       <header className="mb-8 flex flex-wrap items-baseline justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">This week</h1>
+          <h1 className="text-2xl font-semibold">This week</h1>
           <p className="mt-1 text-sm text-[var(--muted)]">
             {planned.length} blocks · {(planned.reduce((s, b) => s + b.minutes, 0) / 60).toFixed(1)}h planned
           </p>
@@ -116,7 +116,7 @@ export default function WeekPage() {
           <div className="mb-8 flex flex-wrap items-center gap-3">
             <button
               onClick={() => replan(new Date())}
-              className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white"
+              className="rounded-xl bg-[var(--accent)] px-4 py-2.5 text-sm font-medium text-[var(--accent-ink)] shadow-[var(--shadow-sm)] transition-transform active:scale-[0.98]"
             >
               {state.lastPlannedAt ? 'Replan from now' : 'Plan my week'}
             </button>
@@ -155,10 +155,10 @@ export default function WeekPage() {
               <button
                 key={v}
                 onClick={() => setView(v)}
-                className={`rounded-full px-3 py-1 ${
+                className={`rounded-full px-3.5 py-1.5 transition-colors ${
                   view === v
-                    ? 'bg-[var(--accent-soft)] text-[var(--accent)]'
-                    : 'text-[var(--muted)]'
+                    ? 'bg-[var(--accent)] text-[var(--accent-ink)]'
+                    : 'text-[var(--muted)] hover:text-[var(--ink)]'
                 }`}
               >
                 {v === 'grid' ? 'Calendar' : 'List'}

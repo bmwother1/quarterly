@@ -9,6 +9,41 @@ record of what was tried and abandoned is worth more than a tidy file.
 
 ---
 
+## 2026-08-19 · Installable web app, not React Native
+
+**Decided:** ship as a PWA. Manifest, generated icons, standalone display, safe
+area handling. It installs to the home screen, opens without browser chrome, and
+gets its own icon and splash.
+
+**Why:** it is most of what "it's an app" means to a student, it ships from the
+codebase that already exists, and it took under an hour against a month or more
+for a second native codebase. One place to fix a bug, no app store review, and a
+change is live in 13 seconds.
+
+**Rejected:** React Native, and any wrapper that produces a second codebase.
+
+**Revisit when:** something genuinely needs native — push notifications at a
+specific time, background sync, or a widget. A nudge at 9pm is the most likely
+trigger, and it's worth noting that's a real product feature rather than a
+technical itch. Not before people are actually using it.
+
+---
+
+## 2026-08-19 · Design tokens carry depth, and motion is real but small
+
+**Decided:** three layered surface tokens rather than one, two shadow levels, a
+single shared easing curve, and one 0.32s entrance animation.
+
+**Why:** "make it look professional" is not a library you install. It's
+typography that tightens as it scales, consistent focus states, tap targets that
+don't flash grey on iOS, tabular numbers that don't reflow, and depth that
+separates a designed interface from a form. All of it is tokens and a stylesheet.
+
+**The one rule:** everything respects `prefers-reduced-motion`. Animation is a
+finish, not a personality.
+
+---
+
 ## 2026-08-19 · The repo is public
 
 **Decided:** `bmwother1/quarterly` is public.

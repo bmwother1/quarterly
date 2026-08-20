@@ -1,59 +1,111 @@
 @import "tailwindcss";
 
 /*
- * One palette, defined once, working in both themes. Students open this at
- * 11pm as often as at 9am, so dark mode is not an afterthought.
+ * One palette, defined once, working in both themes. Students open this at 11pm
+ * as often as at 9am, so dark mode is not an afterthought.
+ *
+ * The surface tokens are layered rather than flat: --surface sits on --bg, and
+ * --raised sits on --surface. Depth is what separates an interface that looks
+ * designed from one that looks like a form, and it costs nothing but a second
+ * shade.
  */
 :root {
-  --bg: #fbfaf9;
+  --bg: #faf9f7;
   --surface: #ffffff;
-  --border: #e7e3de;
-  --ink: #1a1815;
-  --muted: #6b6560;
+  --raised: #ffffff;
+  --border: #e6e1db;
+  --border-strong: #d5cec5;
+  --ink: #191714;
+  --muted: #6b645c;
   --faint: #97918a;
   --accent: #b4531f;
-  --accent-soft: #fdf3ec;
+  --accent-ink: #ffffff;
+  --accent-soft: #fdf2ea;
   --warn: #c02a1e;
   --ok: #2f6b43;
+
+  --shadow-sm: 0 1px 2px rgb(25 23 20 / 0.05);
+  --shadow-md: 0 2px 4px rgb(25 23 20 / 0.04), 0 8px 20px -8px rgb(25 23 20 / 0.10);
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #14120f;
-    --surface: #1c1a16;
-    --border: #302c26;
-    --ink: #f0ece6;
-    --muted: #a29a90;
-    --faint: #6f675e;
+    --bg: #121110;
+    --surface: #1b1917;
+    --raised: #232120;
+    --border: #2e2b28;
+    --border-strong: #423e3a;
+    --ink: #f2eee9;
+    --muted: #a49c93;
+    --faint: #6f675f;
     --accent: #e0894f;
-    --accent-soft: #241a12;
+    --accent-ink: #1a1512;
+    --accent-soft: #251a12;
     --warn: #f2604a;
+    --ok: #5cbd85;
+
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-md: 0 2px 4px rgb(0 0 0 / 0.3), 0 12px 28px -10px rgb(0 0 0 / 0.6);
   }
 }
 
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
+  --color-raised: var(--raised);
   --color-border: var(--border);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-faint: var(--faint);
   --color-accent: var(--accent);
-  --color-accent-soft: var(--accent-soft);
   --color-warn: var(--warn);
 }
 
 body {
   background: var(--bg);
   color: var(--ink);
-  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-family: var(--font-geist-sans), ui-sans-serif, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* Installed as a PWA there is no browser chrome, so the notch and the home
+     indicator are the app's problem to avoid. */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
-/* Respect a reduced-motion preference rather than animating regardless. */
+/* Headings get tighter tracking as they get larger. Default tracking on a 36px
+   heading is the single most common reason a page reads as unfinished. */
+h1 { letter-spacing: -0.022em; }
+h2 { letter-spacing: -0.014em; }
+
+/* One visible focus treatment everywhere, rather than the browser default in
+   some places and nothing in others. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Tap targets on iOS shouldn't flash grey. */
+button, a { -webkit-tap-highlight-color: transparent; }
+
+/* Numbers that change should not reflow the layout around them. */
+.tabular-nums { font-variant-numeric: tabular-nums; }
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Content arrives rather than appearing. Short enough not to feel slow. */
+.rise { animation: rise 0.32s var(--ease) both; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }
