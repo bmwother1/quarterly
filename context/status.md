@@ -61,3 +61,43 @@ list:
 - Does anyone outside this project describe the 9pm decision problem unprompted?
 - What is the business model? Free for students is the acquisition strategy, not
   a revenue plan, and nothing has been decided beyond that.
+
+---
+
+## The plan to September 30 (42 days)
+
+Sequencing note that changes the obvious order: **push notifications need a
+server-side subscription store and a scheduled job, so Supabase comes first.**
+Notifications are the higher-value feature but they cannot be built standalone.
+
+### Now → Sunday Aug 23 · prove it survives a real week
+- Brydon uses it himself, every day, with his actual schedule. Whether he still
+  opens it on day five is the closest available proxy for week-4 retention.
+- Confirm drag-to-move works with a real pointer. Implemented but unverified.
+- Five interviews. Past behaviour only, product not shown.
+
+### Aug 24 → Aug 30 · the data layer
+- Supabase: accounts, sync, and the first thing that actually measures retention.
+- Learned energy pattern: replace the self-declared dropdown with observed
+  completion rate by hour. Better data than a self-report, and it is already
+  being collected.
+- Ten more interviews. Fifteen total by month end.
+
+### Aug 31 → Sept 13 · the retention features
+- Push notifications. One a day, always carrying the block's reason.
+  Report, never command. No streaks.
+- Google Calendar two-way sync, so Quarterly stops being a second calendar.
+
+### Sept 14 → Sept 22 · feature freeze
+- No new features. Onboarding, empty states, bugs, and the first-run experience
+  only. Every feature added inside two weeks of launch ships untested by a real
+  student.
+
+### Sept 23 → Sept 30 · recruit
+- Thirty students onboarded before instruction begins.
+- The workload chart is the pitch: show someone their own quarter as a chart.
+
+### The one number that decides everything
+Week-4 retention, measured from Sept 30. Under 25% and nothing else matters.
+Over 40% and there is something real here. Nothing measures it until Supabase
+ships, which is the real reason it is first.

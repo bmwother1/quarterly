@@ -249,6 +249,46 @@ list:
 
 ---
 
+## The plan to September 30 (42 days)
+
+Sequencing note that changes the obvious order: **push notifications need a
+server-side subscription store and a scheduled job, so Supabase comes first.**
+Notifications are the higher-value feature but they cannot be built standalone.
+
+### Now → Sunday Aug 23 · prove it survives a real week
+- Brydon uses it himself, every day, with his actual schedule. Whether he still
+  opens it on day five is the closest available proxy for week-4 retention.
+- Confirm drag-to-move works with a real pointer. Implemented but unverified.
+- Five interviews. Past behaviour only, product not shown.
+
+### Aug 24 → Aug 30 · the data layer
+- Supabase: accounts, sync, and the first thing that actually measures retention.
+- Learned energy pattern: replace the self-declared dropdown with observed
+  completion rate by hour. Better data than a self-report, and it is already
+  being collected.
+- Ten more interviews. Fifteen total by month end.
+
+### Aug 31 → Sept 13 · the retention features
+- Push notifications. One a day, always carrying the block's reason.
+  Report, never command. No streaks.
+- Google Calendar two-way sync, so Quarterly stops being a second calendar.
+
+### Sept 14 → Sept 22 · feature freeze
+- No new features. Onboarding, empty states, bugs, and the first-run experience
+  only. Every feature added inside two weeks of launch ships untested by a real
+  student.
+
+### Sept 23 → Sept 30 · recruit
+- Thirty students onboarded before instruction begins.
+- The workload chart is the pitch: show someone their own quarter as a chart.
+
+### The one number that decides everything
+Week-4 retention, measured from Sept 30. Under 25% and nothing else matters.
+Over 40% and there is something real here. Nothing measures it until Supabase
+ships, which is the real reason it is first.
+
+---
+
 # Recent sessions
 
 ## 2026-08-19 · Claude Code · Landing page, privacy, and a deployment mess
@@ -300,78 +340,71 @@ demand, so the deep files cost nothing until they're needed.
 `context/decisions.md` and `context/learned.md`. Ask for them if a question
 turns on history this brief doesn't cover.*
 
-## 2026-08-19 · The repo is public
+## 2026-08-19 · A fixed event and a dated task are separate primitives
 
-**Decided:** `bmwother1/quarterly` is public.
+**Decided:** two ways to add a one-off, chosen with a single tap. "At a set
+time" creates a `FixedEvent` the scheduler works around. "Needs doing by"
+creates an `Assignment` the scheduler places.
 
-**Why:** the forcing reason was mechanical — Vercel's Hobby plan blocks Git
-deployments from a private repo when it can't verify the commit author has
-project access, and Hobby provides no way to grant it. Seven consecutive builds
-were blocked. Public repos skip that check entirely.
+**Why:** conflating them is what makes most planners annoying. A dentist
+appointment has its time already decided and the only correct behaviour is to
+never book over it. A task has a deadline and no time yet, and deciding when it
+happens is the entire product. One "add" box that guesses which you meant gets
+it wrong constantly.
 
-**Why it's the right call anyway:** the privacy page asks students to hand over a
-Canvas feed URL, which is a bearer credential for their whole schedule, and makes
-specific claims about what happens to it. "Read the code yourself" turns those
-claims from a promise into something checkable. That is worth more to the exact
-person deciding whether to trust this than code secrecy is.
+**What it did not need:** a new type for hand-entered work. That's an
+`Assignment` — it wants exactly the same treatment as anything from Canvas,
+split into sessions, ranked, placed, explained. Only its origin differs, and
+nothing downstream cares.
 
-**Rejected:** Vercel Pro at $20/month, which fixes the same problem by paying for
-it. Not warranted before a single retained user exists.
+## 2026-08-19 · A hand-moved block is pinned
 
-**Checked first:** full history scanned for credentials, env files and keys.
-Clean — the only matches were prose about passwords in the privacy copy.
+**Decided:** dragging a block sets `pinned`, and the planner treats pinned
+blocks like settled ones — kept across a replan and passed in as time already
+spent.
 
-**Revisit if:** the scheduler's scoring weights ever become genuinely
-proprietary. They aren't now, and the moat was never the code.
+**Why:** without it, dragging is theatre. The next replan puts the block back
+where the algorithm wanted it, and the app overrules the person using it. The
+scheduler is allowed to be opinionated about work the student hasn't touched;
+it is not allowed to argue with an explicit instruction.
 
-## 2026-08-18 · Ship with no signup, move to Supabase later
+## 2026-08-19 · A skip asks what it meant
 
-**Decided:** local-first with no account, behind a storage interface. Supabase
-becomes a second adapter rather than a rewrite.
+**Decided:** skipping offers "find another time" or "drop it" instead of just
+recording a skip.
 
-**Why the original argument changed:** the case for no-signup rested partly on
-auth being a burden for a first-time builder. It isn't — Brydon runs Supabase
-with RLS on another product. So the remaining argument is purely about the
-student: an account wall in front of something a classmate mentioned once is the
-single biggest drop-off point available.
+**Why:** a skip is ambiguous and the two meanings need opposite handling. "Not
+now" is work that still exists and should be rescheduled. "I'm not doing this"
+is work that should stop consuming the week. Guessing wrong in one direction
+makes the app nag about something abandoned; in the other it silently loses
+something that mattered. Asking costs one tap.
 
-**What it costs, and this is real:** no cross-device sync, and no usage data. The
-metric that decides this whole project is week-4 retention, and right now nothing
-measures it. That is why Supabase is next rather than eventually.
+## 2026-08-19 · Two-week planning horizon
 
-**Superseded:** the earlier "Open — needs a call" entry on this question.
+**Decided:** plan and display 14 days, with weekly quotas repeating per week and
+partial weeks scaled proportionally.
 
-## 2026-08-18 · No test framework, no build step in the domain layer
+**Why:** found by using it. A one-week horizon meant everything past Sunday was
+empty except the student's job, which reads as a broken app rather than an
+unplanned one — and it hides exactly the crunch week worth seeing coming.
 
-**Decided:** `node --test` with Node 24's native TypeScript execution. Zero test
-dependencies.
+## 2026-08-19 · Installable web app, not React Native
 
-**Why:** the domain layer runs unchanged in the terminal, in tests, and in the
-browser. `npm run week` prints a real planned week, which is a faster and more
-honest check on a scoring change than any assertion. Requires
-`allowImportingTsExtensions` and real `.ts` extensions on relative imports.
+**Decided:** ship as a PWA. Manifest, generated icons, standalone display, safe
+area handling. It installs to the home screen, opens without browser chrome, and
+gets its own icon and splash.
 
-## 2026-08-18 · Every scoring term is bounded
+**Why:** it is most of what "it's an app" means to a student, it ships from the
+codebase that already exists, and it took under an hour against a month or more
+for a second native codebase. One place to fix a bug, no app store review, and a
+change is live in 13 seconds.
 
-**Decided:** the roadmap's `urgency × weight × decay × fit × (1/confidence)`
-shape is kept, but each term is clamped.
+**Rejected:** React Native, and any wrapper that produces a second codebase.
 
-**Why:** an unbounded `1/confidence` means one assignment a student rated 0.05 on
-swamps five real deadlines and the schedule stops looking sane. Legibility beats
-optimality here — a student who can't see why a block is there won't follow it.
-
-## 2026-08-18 · Past-due Canvas items are surfaced, not scheduled
-
-**Decided:** `includeOverdue` defaults to false. Overdue work comes back in a
-separate `overdue` list for the student to confirm.
-
-**Why:** also found by building. The first real preview of a planned week was
-about 90% work from three weeks ago. A Canvas feed carries 30 days of history and
-says nothing about what was submitted, so scheduling it — at maximum urgency, by
-construction — buries the actual week under work already handed in.
-
-**Revisit when:** there's submission status from somewhere. The feed will never
-provide it.
+**Revisit when:** something genuinely needs native — push notifications at a
+specific time, background sync, or a widget. A nudge at 9pm is the most likely
+trigger, and it's worth noting that's a real product feature rather than a
+technical itch. Not before people are actually using it.
 
 ---
 
