@@ -198,6 +198,25 @@ export interface Commitment {
 
 export type CommitmentCategory = 'fitness' | 'project' | 'learning' | 'personal';
 
+/**
+ * A one-off thing at a fixed time. A dentist appointment, a concert, a shift
+ * swap, an exam sitting.
+ *
+ * Distinct from a `BusyBlock`, which recurs weekly, and from an `Assignment`,
+ * which is work that needs doing by some deadline and that the scheduler is
+ * free to place. This is neither: the time is decided, and the scheduler's only
+ * job is to not book over it.
+ */
+export interface FixedEvent {
+  id: string;
+  title: string;
+  /** ISO instants. The time is the point. */
+  start: string;
+  end: string;
+  note: string | null;
+  color: string;
+}
+
 /** Everything we persist for one student. */
 export interface PlanState {
   feedUrl: string | null;
@@ -206,5 +225,6 @@ export interface PlanState {
   assignments: Assignment[];
   availability: Availability;
   commitments: Commitment[];
+  events: FixedEvent[];
   blocks: StudyBlock[];
 }

@@ -8,6 +8,7 @@ import { DEFAULT_TZ } from '@/lib/time';
 import type { BusyBlock, Commitment, CommitmentCategory, EnergyPattern } from '@/lib/types';
 import { CATEGORY_DEMAND } from '@/lib/schedule/score';
 import { ThemePicker } from '@/components/theme-provider';
+import { AddItem } from '@/components/add-item';
 
 const TZ = DEFAULT_TZ;
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -23,7 +24,10 @@ function toHHMM(min: number): string {
 }
 
 export default function SetupPage() {
-  const { state, hydrated, updateAvailability, updateCommitments, replan, reset } = useQuarterly(TZ);
+  const {
+    state, hydrated, updateAvailability, updateCommitments, replan, reset,
+    addEvent, removeEvent, addTask,
+  } = useQuarterly(TZ);
   const router = useRouter();
   const [saved, setSaved] = useState<string | null>(null);
   const av = state.availability;
@@ -162,6 +166,19 @@ export default function SetupPage() {
       </Section>
 
       <CommitmentsSection commitments={state.commitments} onChange={updateCommitments} />
+
+      <Section
+        title="One-off things"
+        hint="Anything that happens once: an appointment, or a task with a deadline."
+      >
+        <AddItem
+          events={state.events}
+          onAddEvent={addEvent}
+          onRemoveEvent={removeEvent}
+          onAddTask={addTask}
+          tz={TZ}
+        />
+      </Section>
 
       <Section title="Colours" hint="Light and dark both follow your system setting; this picks the palette.">
         <ThemePicker />

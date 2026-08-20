@@ -59,7 +59,7 @@ export default function WeekPage() {
     );
   }
 
-  const hasInputs = state.assignments.length > 0 || state.commitments.length > 0;
+  const hasInputs = state.assignments.length > 0 || state.commitments.length > 0 || state.events.length > 0;
   const planned = state.blocks.filter((b) => b.status === 'planned');
 
   return (
@@ -173,6 +173,7 @@ export default function WeekPage() {
               <WeekGrid
                 days={days}
                 blocks={state.blocks}
+                events={state.events}
                 availability={state.availability}
                 tz={TZ}
                 colourFor={colourFor}

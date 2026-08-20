@@ -9,6 +9,25 @@ record of what was tried and abandoned is worth more than a tidy file.
 
 ---
 
+## 2026-08-19 · A fixed event and a dated task are separate primitives
+
+**Decided:** two ways to add a one-off, chosen with a single tap. "At a set
+time" creates a `FixedEvent` the scheduler works around. "Needs doing by"
+creates an `Assignment` the scheduler places.
+
+**Why:** conflating them is what makes most planners annoying. A dentist
+appointment has its time already decided and the only correct behaviour is to
+never book over it. A task has a deadline and no time yet, and deciding when it
+happens is the entire product. One "add" box that guesses which you meant gets
+it wrong constantly.
+
+**What it did not need:** a new type for hand-entered work. That's an
+`Assignment` — it wants exactly the same treatment as anything from Canvas,
+split into sessions, ranked, placed, explained. Only its origin differs, and
+nothing downstream cares.
+
+---
+
 ## 2026-08-19 · A hand-moved block is pinned
 
 **Decided:** dragging a block sets `pinned`, and the planner treats pinned

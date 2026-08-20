@@ -10,7 +10,7 @@
  * drop-off point in a product a classmate mentioned to them once.
  */
 
-import type { Assignment, Availability, Commitment, Course, StudyBlock } from './types.ts';
+import type { Assignment, Availability, Commitment, Course, FixedEvent, StudyBlock } from './types.ts';
 import type { UnscheduledItem } from './schedule/plan.ts';
 import { defaultAvailability } from './schedule/slots.ts';
 
@@ -19,6 +19,8 @@ export interface QuarterlyState {
   courses: Course[];
   assignments: Assignment[];
   commitments: Commitment[];
+  /** One-off things at fixed times: appointments, gigs, an exam sitting. */
+  events: FixedEvent[];
   availability: Availability;
   /** The current plan. Regenerated on demand, not derived on every render. */
   blocks: StudyBlock[];
@@ -51,6 +53,7 @@ export function emptyState(): QuarterlyState {
     courses: [],
     assignments: [],
     commitments: [],
+    events: [],
     availability: defaultAvailability(),
     blocks: [],
     unscheduled: [],

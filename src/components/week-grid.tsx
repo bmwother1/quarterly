@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import type { Availability, BusyBlock, StudyBlock } from '@/lib/types';
+import type { Availability, BusyBlock, FixedEvent, StudyBlock } from '@/lib/types';
 import { localParts, fmtTime, zonedInstant } from '@/lib/time';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -56,10 +56,12 @@ function busyFor(busy: BusyBlock[], weekday: number): Array<{ startMin: number; 
 }
 
 export function WeekGrid({
-  days, blocks, availability, tz, colourFor, selectedId, onSelect, onMove, todayKey,
+  days, blocks, events, availability, tz, colourFor, selectedId, onSelect, onMove, todayKey,
 }: {
   days: string[];
   blocks: StudyBlock[];
+  /** One-off fixed commitments, drawn alongside the recurring ones. */
+  events: FixedEvent[];
   availability: Availability;
   tz: string;
   colourFor: (group: string) => string;
@@ -216,6 +218,32 @@ export function WeekGrid({
                     </div>
                   );
                 })}
+
+                {/* One-off events: fixed, so drawn like the recurring commitments. */}
+                {events
+                  .filter((e) => localParts(new Date(e.start), tz).dateKey === dateKey)
+                  .map((e) => {
+                    const sMin = minuteOfDay(e.start, tz);
+                    const eMin = minuteOfDay(e.end, tz);
+                    const top = pct(Math.max(sMin, rangeStart));
+                    const height = ((Math.min(eMin, rangeEnd) - Math.max(sMin, rangeStart)) / span) * 100;
+                    if (height <= 0) return null;
+                    return (
+                      <div
+                        key={e.id}
+                        className="absolute inset-x-0.5 overflow-hidden rounded px-1 py-0.5"
+                        style={{
+                          top: `${top}%`,
+                          height: `${Math.max(2.5, height)}%`,
+                          background: `color-mix(in srgb, ${e.color} 28%, var(--surface))`,
+                          borderLeft: `3px solid ${e.color}`,
+                        }}
+                        title={`${e.title} · ${fmtTime(e.start, tz)}`}
+                      >
+                        <span className="block truncate text-[10px] font-medium leading-tight">{e.title}</span>
+                      </div>
+                    );
+                  })}
 
                 {/* Study blocks */}
                 {positioned.map(({ block, topPct, heightPct }) => {

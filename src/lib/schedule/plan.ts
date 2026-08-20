@@ -32,7 +32,7 @@
  *      decoration.
  */
 
-import type { Assignment, Availability, Commitment, StudyBlock, WorkKind } from '../types.ts';
+import type { Assignment, Availability, Commitment, FixedEvent, StudyBlock, WorkKind } from '../types.ts';
 import { DEFAULT_TZ, localParts, weekdayOf, zonedInstant } from '../time.ts';
 import { freeMinutesByDay, freeSlots } from './slots.ts';
 import {
@@ -101,6 +101,11 @@ export interface PlanOptions {
    * spent. The past is not free time.
    */
   existingBlocks?: StudyBlock[];
+  /**
+   * One-off commitments at fixed times. Treated exactly like hours already
+   * spent: the scheduler works around them and never books over them.
+   */
+  events?: FixedEvent[];
 }
 
 export interface UnscheduledItem {
@@ -214,6 +219,7 @@ const DEFAULTS: Required<PlanOptions> = {
   includeOverdue: false,
   commitments: [],
   existingBlocks: [],
+  events: [],
 };
 
 /**
@@ -489,8 +495,14 @@ export function planWeek(
     };
   });
 
-  // Hours already spent are not available to spend again.
-  for (const b of opts.existingBlocks) {
+  // Hours already spent, and hours already promised to something at a fixed
+  // time, are both unavailable for the same reason.
+  const occupied = [
+    ...opts.existingBlocks.map((b) => ({ start: b.start, end: b.end })),
+    ...opts.events.map((e) => ({ start: e.start, end: e.end })),
+  ];
+
+  for (const b of occupied) {
     const bStart = new Date(b.start).getTime();
     const bEnd = new Date(b.end).getTime();
     for (let i = openings.length - 1; i >= 0; i--) {

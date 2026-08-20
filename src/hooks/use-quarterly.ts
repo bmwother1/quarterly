@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useSyncExternalStore } from 'react';
-import type { Availability, Commitment } from '@/lib/types';
+import type { Assignment, Availability, Commitment, FixedEvent, WorkKind } from '@/lib/types';
 import { quarterlyStore, type QuarterlyState } from '@/lib/store';
 import { planWeek } from '@/lib/schedule/plan';
 import { applyCompletion, applyLearnedEstimates, dropRemaining, resetWeeklyTallies, type Completion } from '@/lib/schedule/complete';
@@ -51,6 +51,7 @@ export function useQuarterly(tz: string) {
         tz,
         commitments,
         existingBlocks: settled,
+        events: prev.events,
       });
 
       return {
@@ -101,7 +102,64 @@ export function useQuarterly(tz: string) {
     }));
   }, [mutate]);
 
+  /** A one-off at a fixed time. The scheduler works around it, never over it. */
+  const addEvent = useCallback((e: Omit<FixedEvent, 'id'>) => {
+    mutate((prev) => ({
+      ...prev,
+      events: [...prev.events, { ...e, id: `e-${Date.now()}` }]
+        .sort((a, b) => a.start.localeCompare(b.start)),
+    }));
+  }, [mutate]);
+
+  const removeEvent = useCallback((id: string) => {
+    mutate((prev) => ({ ...prev, events: prev.events.filter((e) => e.id !== id) }));
+  }, [mutate]);
+
+  /**
+   * A one-off piece of work with a deadline, entered by hand.
+   *
+   * Deliberately an `Assignment` rather than a new type: it needs exactly the
+   * same treatment as anything from Canvas — split into sessions, ranked,
+   * placed, explained. Only where it came from differs, and nothing downstream
+   * cares about that.
+   */
+  const addTask = useCallback((t: {
+    title: string; course: string; kind: WorkKind; due: string; estimatedMinutes: number;
+  }) => {
+    mutate((prev) => {
+      const assignment: Assignment = {
+        id: `t-${Date.now()}`,
+        title: t.title,
+        course: t.course || 'Personal',
+        courseFull: t.course || 'Personal',
+        kind: t.kind,
+        due: t.due,
+        allDay: false,
+        url: null,
+        estimatedMinutes: t.estimatedMinutes,
+        actualMinutes: 0,
+        status: 'todo',
+        weight: 0.05,
+        confidence: 0.5,
+        lastTouched: null,
+      };
+      return { ...prev, assignments: [...prev.assignments, assignment] };
+    });
+  }, [mutate]);
+
+  const removeTask = useCallback((id: string) => {
+    mutate((prev) => ({
+      ...prev,
+      assignments: prev.assignments.filter((a) => a.id !== id),
+      blocks: prev.blocks.filter((b) => b.assignmentId !== id),
+    }));
+  }, [mutate]);
+
   const reset = useCallback(() => quarterlyStore.clear(), []);
 
-  return { state, hydrated, mutate, replan, complete, drop, moveBlock, updateAvailability, updateCommitments, reset };
+  return {
+    state, hydrated, mutate, replan, complete, drop, moveBlock,
+    addEvent, removeEvent, addTask, removeTask,
+    updateAvailability, updateCommitments, reset,
+  };
 }

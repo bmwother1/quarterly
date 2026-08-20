@@ -253,3 +253,54 @@ describe('block identity', () => {
     assert.equal(new Set(ids).size, ids.length, `duplicate block ids: ${ids.join(', ')}`);
   });
 });
+
+describe('one-off fixed events', () => {
+  test('the scheduler never books over them', async () => {
+    // An appointment's time is already decided. The only job here is to not
+    // double-book it — the same treatment hours already spent get.
+    const { planWeek } = await import('../src/lib/schedule/plan.ts');
+    const { defaultAvailability } = await import('../src/lib/schedule/slots.ts');
+
+    const av = { ...defaultAvailability(), energy: 'steady' as const, maxDailyMinutes: 600 };
+    const monday = zonedInstant('2026-10-05', 8 * 60, TZ);
+
+    const dentist = {
+      id: 'ev1', title: 'Dentist', note: null, color: '#0891b2',
+      start: zonedInstant('2026-10-05', 10 * 60, TZ).toISOString(),
+      end: zonedInstant('2026-10-05', 11 * 60, TZ).toISOString(),
+    };
+
+    const filler = commitment({ id: 'f', title: 'Filler', sessionsPerWeek: 7, minutesPerSession: 60, maxPerDay: 1 });
+    const r = planWeek([], av, { now: monday, tz: TZ, commitments: [filler], events: [dentist] });
+
+    const evStart = new Date(dentist.start).getTime();
+    const evEnd = new Date(dentist.end).getTime();
+    assert.ok(r.blocks.length > 0, 'expected a plan around the appointment, not an empty one');
+    for (const b of r.blocks) {
+      const s = new Date(b.start).getTime();
+      const e = new Date(b.end).getTime();
+      assert.ok(e <= evStart || s >= evEnd, `"${b.title}" overlaps the dentist appointment`);
+    }
+  });
+
+  test('an all-day-length event still leaves other days usable', async () => {
+    const { planWeek } = await import('../src/lib/schedule/plan.ts');
+    const { defaultAvailability } = await import('../src/lib/schedule/slots.ts');
+
+    const av = { ...defaultAvailability(), energy: 'steady' as const, maxDailyMinutes: 600 };
+    const monday = zonedInstant('2026-10-05', 8 * 60, TZ);
+
+    const wedding = {
+      id: 'ev2', title: 'Wedding', note: null, color: '#e11d48',
+      start: zonedInstant('2026-10-06', 8 * 60, TZ).toISOString(),
+      end: zonedInstant('2026-10-06', 22 * 60, TZ).toISOString(),
+    };
+
+    const filler = commitment({ id: 'f', title: 'Filler', sessionsPerWeek: 5, minutesPerSession: 60, maxPerDay: 1 });
+    const r = planWeek([], av, { now: monday, tz: TZ, commitments: [filler], events: [wedding] });
+
+    const onWeddingDay = r.blocks.filter((b) => b.start.startsWith('2026-10-06'));
+    assert.equal(onWeddingDay.length, 0, 'the whole day was taken');
+    assert.ok(r.blocks.length > 0, 'other days should still be planned');
+  });
+});
