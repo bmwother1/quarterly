@@ -9,6 +9,32 @@ record of what was tried and abandoned is worth more than a tidy file.
 
 ---
 
+## 2026-08-19 · Offline, and one step of undo
+
+**Decided:** a service worker that caches the app shell, and one level of undo on
+the three actions that destroy something.
+
+**Why offline:** everything already lives in localStorage, so the only reason
+the app fails without a signal is that the page can't load. That's a small fix
+for a real case — campus wifi — and the service worker is needed for push later
+regardless, so it's on the path either way.
+
+**The one rule in it:** `/api/` is never cached. That response is derived from a
+Canvas feed URL, which is a bearer credential for a whole schedule, and a cached
+copy sitting in a shared browser is exactly the leak the design avoids.
+
+**Why undo:** there is no server copy and no version history, so a mistaken
+"drop it" is permanent — and the app deliberately asks people to make quick
+judgements about their week. One step covers the realistic case without
+pretending to be a document editor.
+
+**Not verified:** service worker registration is blocked in the automated
+browser used for testing here, the same way pointer drags were. The script
+serves correctly and the code fails safe, but it needs a human check: load the
+app, turn on airplane mode, reload.
+
+---
+
 ## 2026-08-19 · The calendar renders before there's anything in it
 
 **Decided:** the week grid always renders, empty or not. Only the controls that

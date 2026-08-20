@@ -6,6 +6,7 @@ import { useQuarterly } from '@/hooks/use-quarterly';
 import { BlockCard } from '@/components/block-card';
 import { WeekGrid } from '@/components/week-grid';
 import { Sheet, AddButton } from '@/components/sheet';
+import { UndoBar } from '@/components/undo-bar';
 import { AddItem } from '@/components/add-item';
 import { DEFAULT_TZ, addDays, fmtDay, fmtTime, localParts } from '@/lib/time';
 import { missedBlocks } from '@/lib/schedule/complete';
@@ -17,7 +18,7 @@ const TZ = DEFAULT_TZ;
 export default function WeekPage() {
   const {
     state, hydrated, replan, complete, drop, moveBlock,
-    addEvent, removeEvent, addTask,
+    addEvent, removeEvent, addTask, undo, undoLabel, dismissUndo,
   } = useQuarterly(TZ);
   // Fixed at mount so every render agrees on "now" — reading the clock during
   // render is impure and drifts between the server and client passes.
@@ -320,6 +321,8 @@ export default function WeekPage() {
           </div>
           )}
         </>
+
+      <UndoBar label={undoLabel} onUndo={undo} onDismiss={dismissUndo} />
 
       {/* Before anything is set up the page has one job — get you set up. A
           floating + there is a second, competing call to action. */}

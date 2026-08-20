@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useSyncExternalStore } from 'react';
+import { useCallback, useRef, useState, useSyncExternalStore } from 'react';
 import type { Assignment, Availability, Commitment, FixedEvent, WorkKind } from '@/lib/types';
 import { quarterlyStore, type QuarterlyState } from '@/lib/store';
 import { planWeek } from '@/lib/schedule/plan';
@@ -22,8 +22,40 @@ export function useQuarterly(tz: string) {
 
   const hydrated = state !== quarterlyStore.getServerSnapshot();
 
+  /**
+   * One step of undo, for the actions that destroy something.
+   *
+   * There is no server copy and no version history, so a mistaken "drop it" is
+   * permanent — and the app deliberately asks people to make quick judgements
+   * about their week. A single step covers the realistic case (you just tapped
+   * the wrong thing) without pretending to be a document editor.
+   */
+  const undoRef = useRef<{ state: QuarterlyState; label: string } | null>(null);
+  const [undoLabel, setUndoLabel] = useState<string | null>(null);
+
   const mutate = useCallback((fn: (prev: QuarterlyState) => QuarterlyState) => {
     quarterlyStore.set(fn(quarterlyStore.getSnapshot()));
+  }, []);
+
+  /** Mutate, remembering the state before it so it can be put back. */
+  const mutateUndoable = useCallback((label: string, fn: (prev: QuarterlyState) => QuarterlyState) => {
+    const before = quarterlyStore.getSnapshot();
+    undoRef.current = { state: before, label };
+    setUndoLabel(label);
+    quarterlyStore.set(fn(before));
+  }, []);
+
+  const undo = useCallback(() => {
+    const held = undoRef.current;
+    if (!held) return;
+    undoRef.current = null;
+    setUndoLabel(null);
+    quarterlyStore.set(held.state);
+  }, []);
+
+  const dismissUndo = useCallback(() => {
+    undoRef.current = null;
+    setUndoLabel(null);
   }, []);
 
   /**
@@ -85,10 +117,19 @@ export function useQuarterly(tz: string) {
     mutate((prev) => ({ ...prev, commitments: fn(prev.commitments) }));
   }, [mutate]);
 
+  /** Removing a weekly commitment throws away its history too, so it's undoable. */
+  const removeCommitment = useCallback((id: string) => {
+    mutateUndoable('Commitment removed', (prev) => ({
+      ...prev,
+      commitments: prev.commitments.filter((c) => c.id !== id),
+      blocks: prev.blocks.filter((b) => b.commitmentId !== id || b.status !== 'planned'),
+    }));
+  }, [mutateUndoable]);
+
   /** "I'm not doing this at all" — stop it consuming the week. */
   const drop = useCallback((blockId: string) => {
-    mutate((prev) => ({ ...prev, ...dropRemaining(prev, blockId) }));
-  }, [mutate]);
+    mutateUndoable('Dropped', (prev) => ({ ...prev, ...dropRemaining(prev, blockId) }));
+  }, [mutateUndoable]);
 
   /** Move a block by hand and pin it, so the next replan leaves it alone. */
   const moveBlock = useCallback((blockId: string, startMs: number) => {
@@ -112,8 +153,11 @@ export function useQuarterly(tz: string) {
   }, [mutate]);
 
   const removeEvent = useCallback((id: string) => {
-    mutate((prev) => ({ ...prev, events: prev.events.filter((e) => e.id !== id) }));
-  }, [mutate]);
+    mutateUndoable('Event removed', (prev) => ({
+      ...prev,
+      events: prev.events.filter((e) => e.id !== id),
+    }));
+  }, [mutateUndoable]);
 
   /**
    * A one-off piece of work with a deadline, entered by hand.
@@ -148,12 +192,12 @@ export function useQuarterly(tz: string) {
   }, [mutate]);
 
   const removeTask = useCallback((id: string) => {
-    mutate((prev) => ({
+    mutateUndoable('Task removed', (prev) => ({
       ...prev,
       assignments: prev.assignments.filter((a) => a.id !== id),
       blocks: prev.blocks.filter((b) => b.assignmentId !== id),
     }));
-  }, [mutate]);
+  }, [mutateUndoable]);
 
   /** Replace everything, from an imported backup. */
   const replaceAll = useCallback((next: QuarterlyState) => {
@@ -164,6 +208,7 @@ export function useQuarterly(tz: string) {
 
   return {
     state, hydrated, mutate, replan, complete, drop, moveBlock, replaceAll,
+    undo, undoLabel, dismissUndo, removeCommitment,
     addEvent, removeEvent, addTask, removeTask,
     updateAvailability, updateCommitments, reset,
   };

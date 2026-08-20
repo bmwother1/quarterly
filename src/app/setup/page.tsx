@@ -6,6 +6,7 @@ import { useQuarterly } from '@/hooks/use-quarterly';
 import { DEFAULT_TZ } from '@/lib/time';
 import type { BusyBlock, Commitment, CommitmentCategory, EnergyPattern } from '@/lib/types';
 import { CATEGORY_DEMAND } from '@/lib/schedule/score';
+import { UndoBar } from '@/components/undo-bar';
 
 const TZ = DEFAULT_TZ;
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -21,7 +22,10 @@ function toHHMM(min: number): string {
 }
 
 export default function SetupPage() {
-  const { state, hydrated, updateAvailability, updateCommitments, replan } = useQuarterly(TZ);
+  const {
+    state, hydrated, updateAvailability, updateCommitments, replan,
+    removeCommitment, undo, undoLabel, dismissUndo,
+  } = useQuarterly(TZ);
   const router = useRouter();
   const [saved, setSaved] = useState<string | null>(null);
   const av = state.availability;
@@ -155,7 +159,13 @@ export default function SetupPage() {
         </div>
       </Section>
 
-      <CommitmentsSection commitments={state.commitments} onChange={updateCommitments} />
+      <CommitmentsSection
+        commitments={state.commitments}
+        onChange={updateCommitments}
+        onRemove={removeCommitment}
+      />
+
+      <UndoBar label={undoLabel} onUndo={undo} onDismiss={dismissUndo} />
 
       
 
@@ -272,10 +282,11 @@ function WorkSection({
 }
 
 function CommitmentsSection({
-  commitments, onChange,
+  commitments, onChange, onRemove,
 }: {
   commitments: Commitment[];
   onChange: (fn: (prev: Commitment[]) => Commitment[]) => void;
+  onRemove: (id: string) => void;
 }) {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<CommitmentCategory>('fitness');
@@ -325,7 +336,7 @@ function CommitmentsSection({
                 {c.sessionsPerWeek}× {c.minutesPerSession}m
               </span>
               <button
-                onClick={() => onChange((prev) => prev.filter((x) => x.id !== c.id))}
+                onClick={() => onRemove(c.id)}
                 className="shrink-0 text-[var(--faint)] underline underline-offset-4"
               >
                 remove

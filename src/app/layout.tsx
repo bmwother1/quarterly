@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SiteHeader, SiteFooter } from "@/components/site-header";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ServiceWorker } from "@/components/service-worker";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -45,6 +46,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <ThemeProvider />
+        <ServiceWorker />
         <SiteHeader />
         <div className="flex-1">{children}</div>
         <SiteFooter />
