@@ -54,7 +54,14 @@ import {
 
 export interface PlanOptions {
   now?: Date;
-  /** How many days forward to plan. One week is the unit students actually think in. */
+  /**
+   * How many days forward to plan.
+   *
+   * Two weeks, not one. A one-week horizon means the moment you look past
+   * Sunday the calendar is empty except for your job, which reads as broken
+   * rather than as "not planned yet" — and it hides exactly the crunch week you
+   * most need to see coming.
+   */
   days?: number;
   tz?: string;
   /** Share of each day's free time deliberately left empty. Life happens. */
@@ -196,7 +203,7 @@ interface Span {
 
 const DEFAULTS: Required<PlanOptions> = {
   now: new Date(),
-  days: 7,
+  days: 14,
   tz: DEFAULT_TZ,
   bufferFraction: 0.2,
   maxConsecutiveCourseMinutes: 120,
@@ -284,47 +291,88 @@ function buildSessions(a: Assignment, opts: Required<PlanOptions>): Pending[] {
 function buildCommitmentSessions(c: Commitment, opts: Required<PlanOptions>): Pending[] {
   if (!c.active) return [];
 
-  const remaining = Math.max(0, c.sessionsPerWeek - c.doneThisWeek);
-  if (remaining === 0) return [];
-
-  // Days left in the week, counting today. Monday-anchored.
   const today = localParts(opts.now, opts.tz);
-  const daysLeftInWeek = 7 - today.weekday;
-  const endOfWeek = zonedInstant(addDaysKey(today.dateKey, daysLeftInWeek - 1), 23 * 60 + 59, opts.tz);
-
-  // Don't plan beyond the requested horizon either.
   const horizonEnd = new Date(opts.now.getTime() + opts.days * 86_400_000);
-  const placeBy = endOfWeek < horizonEnd ? endOfWeek : horizonEnd;
+  const out: Pending[] = [];
 
-  const priority = commitmentPriority(
-    { remaining, daysLeftInWeek, importance: c.importance, lastDoneAt: c.lastDoneAt },
-    opts.now,
-  );
+  // A quota resets weekly, so each week in the horizon gets its own set of
+  // sessions with its own deadline. Planning only the current week leaves every
+  // day past Sunday empty, which reads as a broken app rather than an unplanned
+  // one.
+  let weekOffset = 0;
+  let index = 0;
 
-  const minutes = clamp(c.minutesPerSession, MIN_SESSION_MINUTES, opts.maxSessionMinutes);
+  while (weekOffset <= 8) {
+    // Days remaining in this week, counting today for the current week.
+    const daysLeftInWeek = weekOffset === 0 ? 7 - today.weekday : 7;
+    const weekStartKey = weekOffset === 0
+      ? today.dateKey
+      : addDaysKey(today.dateKey, (7 - today.weekday) + (weekOffset - 1) * 7);
 
-  return Array.from({ length: remaining }, (_, i) => ({
-    key: c.id,
-    title: c.title,
-    group: c.title,
-    kind: 'other' as WorkKind,
-    demand: c.demand,
-    assignment: null,
-    commitment: c,
-    index: i + 1,
-    count: remaining,
-    minutes,
-    dueAt: placeBy,
-    placeBy,
-    priority,
-    // A "five times a week" habit means five days, not five sessions on Sunday.
-    separateDays: c.maxPerDay <= 1,
-    minMinutes: clamp(c.minSessionMinutes || MIN_SESSION_MINUTES, MIN_SESSION_MINUTES, minutes),
-    bufferAfterMinutes: Math.max(0, c.bufferAfterMinutes ?? 0),
-    windowStartMin: c.windowStartMin,
-    windowEndMin: c.windowEndMin,
-    placed: null,
-  }));
+    const weekStart = weekOffset === 0 ? opts.now : zonedInstant(weekStartKey, 0, opts.tz);
+    if (weekStart >= horizonEnd) break;
+
+    // Clamp to the horizon rather than skipping the week outright. Skipping is
+    // what a short horizon used to do, and it produced an empty plan from a
+    // student who simply asked for the next three days.
+    const weekEnd = zonedInstant(addDaysKey(weekStartKey, daysLeftInWeek - 1), 23 * 60 + 59, opts.tz);
+    const placeBy = weekEnd < horizonEnd ? weekEnd : horizonEnd;
+
+    // Only the current week knows what's already been done. A later week that
+    // is only partly inside the horizon gets a proportional share rather than a
+    // full quota — otherwise a horizon ending on Monday morning generates a
+    // whole week of runs for a six-hour sliver.
+    let remaining: number;
+    if (weekOffset === 0) {
+      remaining = Math.max(0, c.sessionsPerWeek - c.doneThisWeek);
+    } else {
+      const daysInHorizon = Math.min(
+        daysLeftInWeek,
+        (horizonEnd.getTime() - weekStart.getTime()) / 86_400_000,
+      );
+      remaining = Math.round(c.sessionsPerWeek * (daysInHorizon / 7));
+    }
+
+    if (remaining > 0) {
+      const priority = commitmentPriority(
+        { remaining, daysLeftInWeek, importance: c.importance, lastDoneAt: c.lastDoneAt },
+        opts.now,
+      );
+      // Future weeks are genuinely less pressing than this one.
+      const decayed = priority / (1 + weekOffset * 0.6);
+      const minutes = clamp(c.minutesPerSession, MIN_SESSION_MINUTES, opts.maxSessionMinutes);
+
+      for (let i = 0; i < remaining; i++) {
+        index += 1;
+        out.push({
+          key: c.id,
+          title: c.title,
+          group: c.title,
+          kind: 'other' as WorkKind,
+          demand: c.demand,
+          assignment: null,
+          commitment: c,
+          index,
+          count: 0,          // filled in below, once the total is known
+          minutes,
+          dueAt: placeBy,
+          placeBy,
+          priority: decayed,
+          separateDays: c.maxPerDay <= 1,
+          minMinutes: clamp(c.minSessionMinutes || MIN_SESSION_MINUTES, MIN_SESSION_MINUTES, minutes),
+          bufferAfterMinutes: Math.max(0, c.bufferAfterMinutes ?? 0),
+          windowStartMin: c.windowStartMin,
+          windowEndMin: c.windowEndMin,
+          placed: null,
+        });
+      }
+    }
+
+    weekOffset += 1;
+  }
+
+  for (const p of out) p.count = out.length;
+  return out;
 }
 
 /** YYYY-MM-DD plus n days. Local to this module to avoid a circular import. */

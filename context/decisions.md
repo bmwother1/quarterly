@@ -9,6 +9,43 @@ record of what was tried and abandoned is worth more than a tidy file.
 
 ---
 
+## 2026-08-19 · A hand-moved block is pinned
+
+**Decided:** dragging a block sets `pinned`, and the planner treats pinned
+blocks like settled ones — kept across a replan and passed in as time already
+spent.
+
+**Why:** without it, dragging is theatre. The next replan puts the block back
+where the algorithm wanted it, and the app overrules the person using it. The
+scheduler is allowed to be opinionated about work the student hasn't touched;
+it is not allowed to argue with an explicit instruction.
+
+---
+
+## 2026-08-19 · A skip asks what it meant
+
+**Decided:** skipping offers "find another time" or "drop it" instead of just
+recording a skip.
+
+**Why:** a skip is ambiguous and the two meanings need opposite handling. "Not
+now" is work that still exists and should be rescheduled. "I'm not doing this"
+is work that should stop consuming the week. Guessing wrong in one direction
+makes the app nag about something abandoned; in the other it silently loses
+something that mattered. Asking costs one tap.
+
+---
+
+## 2026-08-19 · Two-week planning horizon
+
+**Decided:** plan and display 14 days, with weekly quotas repeating per week and
+partial weeks scaled proportionally.
+
+**Why:** found by using it. A one-week horizon meant everything past Sunday was
+empty except the student's job, which reads as a broken app rather than an
+unplanned one — and it hides exactly the crunch week worth seeing coming.
+
+---
+
 ## 2026-08-19 · Installable web app, not React Native
 
 **Decided:** ship as a PWA. Manifest, generated icons, standalone display, safe

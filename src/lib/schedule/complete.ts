@@ -20,6 +20,17 @@ import { localParts } from '../time.ts';
 
 export type Completion = 'done' | 'skipped' | 'partial';
 
+/**
+ * What a skip means. Asking is the point.
+ *
+ * A skip is ambiguous and the two meanings need opposite handling: "not now,
+ * find me another slot" is work that still exists, and "I'm not doing this" is
+ * work that should stop consuming the week. Guessing either way is wrong — one
+ * makes the app nag about something abandoned, the other silently loses
+ * something that mattered.
+ */
+export type SkipIntent = 'reschedule' | 'drop';
+
 export interface ApplyResult {
   blocks: StudyBlock[];
   assignments: Assignment[];
@@ -172,4 +183,38 @@ export function resetWeeklyTallies(
 function weekKey(dateKey: string, weekday: number): string {
   const [y, m, d] = dateKey.split('-').map(Number);
   return new Date(Date.UTC(y, m - 1, d - weekday)).toISOString().slice(0, 10);
+}
+
+/**
+ * Drop the remaining work for whatever a block belonged to.
+ *
+ * For coursework that means marking the assignment done so it stops being
+ * planned. For a commitment it means counting this week's session as spent, so
+ * the quota isn't chased for the rest of the week. Neither pretends the work
+ * happened; both stop the app arguing about it.
+ */
+export function dropRemaining(
+  state: { blocks: StudyBlock[]; assignments: Assignment[]; commitments: Commitment[] },
+  blockId: string,
+): ApplyResult {
+  const block = state.blocks.find((b) => b.id === blockId);
+  if (!block) return { ...state };
+
+  const blocks = state.blocks.filter(
+    (b) => b.id === blockId || b.status !== 'planned' ||
+      (b.assignmentId !== block.assignmentId || block.assignmentId === null) &&
+      (b.commitmentId !== block.commitmentId || block.commitmentId === null),
+  );
+
+  const assignments = state.assignments.map((a) =>
+    a.id === block.assignmentId ? { ...a, status: 'dropped' as const } : a,
+  );
+
+  const commitments = state.commitments.map((c) =>
+    c.id === block.commitmentId
+      ? { ...c, doneThisWeek: Math.min(c.sessionsPerWeek, c.doneThisWeek + 1) }
+      : c,
+  );
+
+  return { blocks, assignments, commitments };
 }

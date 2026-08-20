@@ -4,7 +4,7 @@ import { useCallback, useSyncExternalStore } from 'react';
 import type { Availability, Commitment } from '@/lib/types';
 import { quarterlyStore, type QuarterlyState } from '@/lib/store';
 import { planWeek } from '@/lib/schedule/plan';
-import { applyCompletion, applyLearnedEstimates, resetWeeklyTallies, type Completion } from '@/lib/schedule/complete';
+import { applyCompletion, applyLearnedEstimates, dropRemaining, resetWeeklyTallies, type Completion } from '@/lib/schedule/complete';
 
 /**
  * The one place component state and stored state meet.
@@ -42,7 +42,9 @@ export function useQuarterly(tz: string) {
       // History is kept; only blocks still marked 'planned' are replaced. The
       // settled ones are handed to the planner so it works around them rather
       // than double-booking hours that were already spent.
-      const settled = prev.blocks.filter((b) => b.status !== 'planned');
+      // Settled *and* hand-placed blocks survive. Moving a block by hand only
+      // means something if the scheduler then works around it.
+      const settled = prev.blocks.filter((b) => b.status !== 'planned' || b.pinned);
 
       const result = planWeek(assignments, prev.availability, {
         now: from,
@@ -82,7 +84,24 @@ export function useQuarterly(tz: string) {
     mutate((prev) => ({ ...prev, commitments: fn(prev.commitments) }));
   }, [mutate]);
 
+  /** "I'm not doing this at all" — stop it consuming the week. */
+  const drop = useCallback((blockId: string) => {
+    mutate((prev) => ({ ...prev, ...dropRemaining(prev, blockId) }));
+  }, [mutate]);
+
+  /** Move a block by hand and pin it, so the next replan leaves it alone. */
+  const moveBlock = useCallback((blockId: string, startMs: number) => {
+    mutate((prev) => ({
+      ...prev,
+      blocks: prev.blocks.map((b) => {
+        if (b.id !== blockId) return b;
+        const end = new Date(startMs + b.minutes * 60_000).toISOString();
+        return { ...b, start: new Date(startMs).toISOString(), end, pinned: true };
+      }).sort((a, b) => a.start.localeCompare(b.start)),
+    }));
+  }, [mutate]);
+
   const reset = useCallback(() => quarterlyStore.clear(), []);
 
-  return { state, hydrated, mutate, replan, complete, updateAvailability, updateCommitments, reset };
+  return { state, hydrated, mutate, replan, complete, drop, moveBlock, updateAvailability, updateCommitments, reset };
 }

@@ -13,15 +13,18 @@ import type { Completion } from '@/lib/schedule/complete';
  * block is there won't do it.
  */
 export function BlockCard({
-  block, tz, colour, onComplete, isPast,
+  block, tz, colour, onComplete, onDrop, isPast,
 }: {
   block: StudyBlock;
   tz: string;
   colour: string;
   onComplete: (outcome: Completion, minutes: number | null) => void;
+  /** "I'm not doing this at all" — stop planning it. */
+  onDrop: () => void;
   isPast: boolean;
 }) {
   const [askingPartial, setAskingPartial] = useState(false);
+  const [askingSkip, setAskingSkip] = useState(false);
   const [partialMinutes, setPartialMinutes] = useState(String(Math.round(block.minutes / 2)));
 
   const settled = block.status !== 'planned';
@@ -50,6 +53,11 @@ export function BlockCard({
 
           <p className={`mt-0.5 font-medium ${settled ? 'line-through decoration-[var(--faint)]' : ''}`}>
             {block.course === block.title ? block.title : `${block.course} · ${block.title}`}
+            {block.pinned && (
+              <span className="ml-2 align-middle text-[10px] font-normal uppercase tracking-wide text-[var(--accent)]">
+                moved by you
+              </span>
+            )}
           </p>
 
           {block.method !== 'work session' && (
@@ -63,8 +71,36 @@ export function BlockCard({
             <p className="mt-2 text-xs text-[var(--faint)]">
               {block.status === 'done' && `Done · ${block.actualMinutes ?? block.minutes} min logged`}
               {block.status === 'partial' && `Partial · ${block.actualMinutes ?? 0} min logged`}
-              {block.status === 'skipped' && 'Skipped'}
+              {block.status === 'skipped' && 'Skipped · replan to move it'}
             </p>
+          ) : askingSkip ? (
+            <div className="mt-2">
+              <p className="text-sm text-[var(--muted)]">Skipping this one. Still need to do it?</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  onClick={() => { onComplete('skipped', null); setAskingSkip(false); }}
+                  className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-[var(--accent-ink)] active:scale-[0.97]"
+                >
+                  Find another time
+                </button>
+                <button
+                  onClick={() => { onDrop(); setAskingSkip(false); }}
+                  className="rounded-lg border border-[var(--border-strong)] px-3 py-1.5 text-sm active:scale-[0.97]"
+                >
+                  Drop it
+                </button>
+                <button
+                  onClick={() => setAskingSkip(false)}
+                  className="px-2 text-sm text-[var(--faint)] underline underline-offset-4"
+                >
+                  cancel
+                </button>
+              </div>
+              <p className="mt-2 text-xs text-[var(--faint)]">
+                &ldquo;Find another time&rdquo; keeps it in the queue — press Replan and it moves.
+                &ldquo;Drop it&rdquo; stops it taking up your week.
+              </p>
+            </div>
           ) : askingPartial ? (
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <label className="text-sm text-[var(--muted)]">
@@ -110,7 +146,7 @@ export function BlockCard({
                 Partly
               </button>
               <button
-                onClick={() => onComplete('skipped', null)}
+                onClick={() => setAskingSkip(true)}
                 className="rounded-lg px-3 py-1.5 text-sm text-[var(--muted)] transition-colors hover:text-[var(--ink)]"
               >
                 Skipped

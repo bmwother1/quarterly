@@ -18,10 +18,6 @@ export const metadata = {
 export default function Landing() {
   return (
     <main className="mx-auto max-w-2xl px-5 py-14 sm:py-20">
-      <p className="rise mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-xs text-[var(--muted)]">
-        <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" aria-hidden />
-        Built at the University of Washington
-      </p>
       <h1 className="rise text-[2rem] font-semibold leading-[1.1] sm:text-[2.75rem]">
         Your week, planned around the life you{' '}
         <span className="text-[var(--accent)]">actually</span> have.
@@ -101,9 +97,8 @@ export default function Landing() {
       </section>
 
       <p className="mt-10 text-sm text-[var(--faint)]">
-        Built at the University of Washington. Read the{' '}
-        <Link href="/privacy" className="underline underline-offset-4">privacy page</Link> to see
-        exactly what is and isn&rsquo;t stored.
+        Read the <Link href="/privacy" className="underline underline-offset-4">privacy page</Link>{' '}
+        to see exactly what is and isn&rsquo;t stored.
       </p>
     </main>
   );

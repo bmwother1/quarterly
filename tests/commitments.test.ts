@@ -95,9 +95,29 @@ describe('scheduling recurring commitments', () => {
   });
 
   test('schedules the week\'s remaining sessions', () => {
-    const r = planWeek([], workingWeek(), { now: MONDAY, tz: TZ, commitments: [runs] });
+    // Pinned to one week so this tests the quota, not the horizon.
+    const r = planWeek([], workingWeek(), { now: MONDAY, tz: TZ, days: 7, commitments: [runs] });
     const mine = r.blocks.filter((b) => b.commitmentId === 'run');
     assert.equal(mine.length, 5, `expected 5 runs, got ${mine.length}`);
+  });
+
+  test('the quota repeats into the following week', () => {
+    // A one-week horizon leaves every day past Sunday empty except the student's
+    // job, which reads as a broken app rather than an unplanned one.
+    const r = planWeek([], workingWeek(), { now: MONDAY, tz: TZ, days: 14, commitments: [runs] });
+    const mine = r.blocks.filter((b) => b.commitmentId === 'run');
+    assert.ok(mine.length > 5, `expected next week's runs too, got ${mine.length}`);
+
+    const nextWeek = mine.filter((b) => new Date(b.start) >= zonedInstant('2026-10-12', 0, TZ));
+    assert.ok(nextWeek.length > 0, 'nothing was planned for the following week');
+  });
+
+  test('a horizon shorter than the week still plans something', () => {
+    // Regression: clamping the week to the horizon was originally a skip, so
+    // asking for the next three days produced an entirely empty plan.
+    const r = planWeek([], workingWeek(), { now: MONDAY, tz: TZ, days: 3, commitments: [runs] });
+    assert.ok(r.blocks.length > 0, 'a three-day horizon produced nothing');
+    assert.ok(r.blocks.every((b) => new Date(b.start) < new Date(MONDAY.getTime() + 3 * 86_400_000)));
   });
 
   test('puts them on five different days', () => {
@@ -116,7 +136,7 @@ describe('scheduling recurring commitments', () => {
 
   test('schedules nothing once the target is met', () => {
     const r = planWeek([], workingWeek(), {
-      now: MONDAY, tz: TZ, commitments: [{ ...runs, doneThisWeek: 5 }],
+      now: MONDAY, tz: TZ, days: 7, commitments: [{ ...runs, doneThisWeek: 5 }],
     });
     assert.equal(r.blocks.filter((b) => b.commitmentId === 'run').length, 0);
   });
@@ -283,14 +303,18 @@ describe('scheduling recurring commitments', () => {
     const av = workingWeek({ maxDailyMinutesByDay: [90, 90, 90, 90, 90, 300, 300] });
     const r = planWeek([], av, { now: MONDAY, tz: TZ, commitments: [filler] });
 
-    const byDay = new Map<number, number>();
+    // Group by calendar day, not weekday: over a two-week horizon there are two
+    // Mondays, and summing them together tests nothing real.
+    const byDate = new Map<string, { minutes: number; weekday: number }>();
     for (const b of r.blocks) {
-      const wd = localParts(new Date(b.start), TZ).weekday;
-      byDay.set(wd, (byDay.get(wd) ?? 0) + b.minutes);
+      const p = localParts(new Date(b.start), TZ);
+      const cur = byDate.get(p.dateKey) ?? { minutes: 0, weekday: p.weekday };
+      cur.minutes += b.minutes;
+      byDate.set(p.dateKey, cur);
     }
-    for (const [wd, minutes] of byDay) {
-      const cap = wd <= 4 ? 90 : 300;
-      assert.ok(minutes <= cap, `weekday ${wd} booked ${minutes} against a ${cap} ceiling`);
+    for (const [dateKey, { minutes, weekday }] of byDate) {
+      const cap = weekday <= 4 ? 90 : 300;
+      assert.ok(minutes <= cap, `${dateKey} booked ${minutes} against a ${cap} ceiling`);
     }
   });
 

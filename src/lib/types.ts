@@ -124,6 +124,13 @@ export interface StudyBlock {
   status: 'planned' | 'done' | 'skipped' | 'partial';
   /** Minutes actually spent, once reported. */
   actualMinutes: number | null;
+  /**
+   * The student moved this block by hand, so the scheduler must leave it where
+   * it is. Without this, dragging a block is pointless: the next replan puts it
+   * straight back where the algorithm wanted it, and the app overrules the
+   * person using it.
+   */
+  pinned?: boolean;
 }
 
 export interface Course {

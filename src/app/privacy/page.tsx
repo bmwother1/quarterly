@@ -99,7 +99,7 @@ export default function Privacy() {
 
       <Section title="Contact">
         <p>
-          Quarterly is built by a student at the University of Washington. Questions or concerns:{' '}
+          Questions or concerns:{' '}
           <a href="mailto:bmwother1@gmail.com" className="underline underline-offset-4">
             bmwother1@gmail.com
           </a>

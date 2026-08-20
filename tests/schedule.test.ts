@@ -321,8 +321,18 @@ describe('the planner', () => {
 
     assert.ok(result.unscheduled.length > 0, 'a 60-minute-a-day week cannot absorb a full quarter');
     for (const u of result.unscheduled) {
-      assert.ok(u.reason.length > 0);
-      assert.ok(!result.blocks.some((b) => b.assignmentId === u.assignmentId && b.minutes >= u.minutes));
+      assert.ok(u.reason.length > 0, 'every leftover needs a stated reason');
+
+      // The real invariant: a reported leftover is genuinely not fully planned.
+      const a = assignments.find((x) => x.id === u.assignmentId);
+      if (!a) continue;
+      const planned = result.blocks
+        .filter((b) => b.assignmentId === u.assignmentId)
+        .reduce((s, b) => s + b.minutes, 0);
+      assert.ok(
+        planned < a.estimatedMinutes,
+        `"${u.title}" was reported short but ${planned} of ${a.estimatedMinutes} minutes are planned`,
+      );
     }
   });
 

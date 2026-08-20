@@ -12,7 +12,7 @@ import type { StudyBlock } from '@/lib/types';
 const TZ = DEFAULT_TZ;
 
 export default function WeekPage() {
-  const { state, hydrated, replan, complete } = useQuarterly(TZ);
+  const { state, hydrated, replan, complete, drop, moveBlock } = useQuarterly(TZ);
   // Fixed at mount so every render agrees on "now" — reading the clock during
   // render is impure and drifts between the server and client passes.
   const [now] = useState(() => new Date());
@@ -26,9 +26,11 @@ export default function WeekPage() {
     return (group: string) => map.get(group) ?? 'var(--accent)';
   }, [state.courses, state.commitments]);
 
+  // Fourteen days, matching the planner's horizon. Showing seven while planning
+  // fourteen is what made next week look empty.
   const days = useMemo(() => {
     const start = localParts(now, TZ).dateKey;
-    return Array.from({ length: 7 }, (_, i) => addDays(start, i));
+    return Array.from({ length: 14 }, (_, i) => addDays(start, i));
   }, [now]);
 
   const byDay = useMemo(() => {
@@ -176,6 +178,7 @@ export default function WeekPage() {
                 colourFor={colourFor}
                 selectedId={selectedId}
                 onSelect={(id) => setSelectedId((cur) => (cur === id ? null : id))}
+                onMove={moveBlock}
                 todayKey={localParts(now, TZ).dateKey}
               />
 
@@ -186,6 +189,7 @@ export default function WeekPage() {
                   colour={colourFor(selected.course)}
                   isPast={new Date(selected.end) < now}
                   onComplete={(outcome, minutes) => complete(selected.id, outcome, minutes)}
+                  onDrop={() => { drop(selected.id); setSelectedId(null); }}
                 />
               ) : (
                 <p className="text-sm text-[var(--faint)]">
@@ -198,7 +202,7 @@ export default function WeekPage() {
 
           {view === 'list' && (
           <div className="space-y-8">
-            {days.map((dateKey) => {
+            {days.slice(0, 7).map((dateKey) => {
               const blocks = byDay.get(dateKey) ?? [];
               const total = blocks.filter((b) => b.status === 'planned').reduce((s, b) => s + b.minutes, 0);
               const isToday = dateKey === localParts(now, TZ).dateKey;
@@ -229,6 +233,7 @@ export default function WeekPage() {
                           colour={colourFor(b.course)}
                           isPast={new Date(b.end) < now}
                           onComplete={(outcome, minutes) => complete(b.id, outcome, minutes)}
+                          onDrop={() => drop(b.id)}
                         />
                       ))}
                     </div>
