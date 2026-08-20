@@ -56,7 +56,8 @@ function busyFor(busy: BusyBlock[], weekday: number): Array<{ startMin: number; 
 }
 
 export function WeekGrid({
-  days, blocks, events, availability, tz, colourFor, selectedId, onSelect, onMove, todayKey,
+  days, blocks, events, availability, tz, colourFor, selectedId, onSelect, onMove,
+  onSelectEvent, selectedEventId, todayKey,
 }: {
   days: string[];
   blocks: StudyBlock[];
@@ -69,6 +70,9 @@ export function WeekGrid({
   onSelect: (id: string) => void;
   /** Called with the new start instant once a block is dropped. */
   onMove: (blockId: string, startMs: number) => void;
+  /** Tapping a one-off event. Everything on the calendar should be tappable. */
+  onSelectEvent: (id: string) => void;
+  selectedEventId: string | null;
   todayKey: string;
 }) {
   const gridRef = useRef<HTMLDivElement>(null);
@@ -228,10 +232,14 @@ export function WeekGrid({
                     const top = pct(Math.max(sMin, rangeStart));
                     const height = ((Math.min(eMin, rangeEnd) - Math.max(sMin, rangeStart)) / span) * 100;
                     if (height <= 0) return null;
+                    const chosen = e.id === selectedEventId;
                     return (
-                      <div
+                      <button
                         key={e.id}
-                        className="absolute inset-x-0.5 overflow-hidden rounded px-1 py-0.5"
+                        onClick={() => onSelectEvent(e.id)}
+                        className={`absolute inset-x-0.5 overflow-hidden rounded px-1 py-0.5 text-left ${
+                          chosen ? 'ring-2 ring-[var(--ink)]' : ''
+                        }`}
                         style={{
                           top: `${top}%`,
                           height: `${Math.max(2.5, height)}%`,
@@ -241,7 +249,7 @@ export function WeekGrid({
                         title={`${e.title} · ${fmtTime(e.start, tz)}`}
                       >
                         <span className="block truncate text-[10px] font-medium leading-tight">{e.title}</span>
-                      </div>
+                      </button>
                     );
                   })}
 

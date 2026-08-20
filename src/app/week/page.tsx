@@ -7,7 +7,7 @@ import { BlockCard } from '@/components/block-card';
 import { WeekGrid } from '@/components/week-grid';
 import { Sheet, AddButton } from '@/components/sheet';
 import { AddItem } from '@/components/add-item';
-import { DEFAULT_TZ, addDays, fmtDay, localParts } from '@/lib/time';
+import { DEFAULT_TZ, addDays, fmtDay, fmtTime, localParts } from '@/lib/time';
 import { missedBlocks } from '@/lib/schedule/complete';
 import { nextNotice } from '@/lib/notify';
 import type { StudyBlock } from '@/lib/types';
@@ -25,6 +25,7 @@ export default function WeekPage() {
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   const colourFor = useMemo(() => {
     const map = new Map<string, string>();
@@ -71,6 +72,10 @@ export default function WeekPage() {
   const selected = useMemo(
     () => state.blocks.find((b) => b.id === selectedId) ?? null,
     [state.blocks, selectedId],
+  );
+  const selectedEvent = useMemo(
+    () => state.events.find((e) => e.id === selectedEventId) ?? null,
+    [state.events, selectedEventId],
   );
 
   if (!hydrated) {
@@ -210,12 +215,45 @@ export default function WeekPage() {
                 tz={TZ}
                 colourFor={colourFor}
                 selectedId={selectedId}
-                onSelect={(id) => setSelectedId((cur) => (cur === id ? null : id))}
+                onSelect={(id) => {
+                  setSelectedId((cur) => (cur === id ? null : id));
+                  setSelectedEventId(null);
+                }}
                 onMove={moveBlock}
+                onSelectEvent={(id) => {
+                  setSelectedEventId((cur) => (cur === id ? null : id));
+                  setSelectedId(null);
+                }}
+                selectedEventId={selectedEventId}
                 todayKey={localParts(now, TZ).dateKey}
               />
 
-              {selected ? (
+              {selectedEvent ? (
+                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3.5 shadow-[var(--shadow-sm)]">
+                  <div className="flex items-start gap-3">
+                    <span
+                      className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ background: selectedEvent.color }}
+                      aria-hidden
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm text-[var(--muted)]">
+                        {fmtDay(selectedEvent.start, TZ)} · {fmtTime(selectedEvent.start, TZ)}–{fmtTime(selectedEvent.end, TZ)}
+                      </p>
+                      <p className="mt-0.5 font-medium">{selectedEvent.title}</p>
+                      <p className="mt-1.5 text-sm text-[var(--muted)]">
+                        Fixed, so nothing gets scheduled over it.
+                      </p>
+                      <button
+                        onClick={() => { removeEvent(selectedEvent.id); setSelectedEventId(null); }}
+                        className="mt-2.5 rounded-lg border border-[var(--warn)]/50 px-3 py-1.5 text-sm text-[var(--warn)]"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : selected ? (
                 <BlockCard
                   block={selected}
                   tz={TZ}
@@ -279,7 +317,9 @@ export default function WeekPage() {
         </>
       )}
 
-      <AddButton onClick={() => setAdding(true)} />
+      {/* Before anything is set up the page has one job — get you set up. A
+          floating + there is a second, competing call to action. */}
+      {hasInputs && <AddButton onClick={() => setAdding(true)} />}
 
       <Sheet open={adding} title="Add to your week" onClose={() => setAdding(false)}>
         <AddItem

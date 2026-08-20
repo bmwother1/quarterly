@@ -9,6 +9,23 @@ record of what was tried and abandoned is worth more than a tidy file.
 
 ---
 
+## 2026-08-19 · Everything on the calendar is tappable
+
+**Decided:** one-off events are buttons like study blocks. Tapping one shows its
+detail and a remove control.
+
+**Why:** removing the "one-off things" section from setup — correct, since the +
+replaces it — would otherwise have left events addable but not removable. The
+answer isn't a management list somewhere; it's that the calendar is where these
+things live, so the calendar is where you act on them. A thing you can see and
+not touch is a dead end.
+
+**Also:** the + is hidden until there's something to plan. On an empty week the
+page has one job, and a floating add button there is a second call to action
+competing with the one that matters.
+
+---
+
 ## 2026-08-19 · Frequent actions on the page you're already on
 
 **Decided:** a floating **+** on the calendar opens a sheet for a one-off event
