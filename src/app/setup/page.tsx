@@ -9,6 +9,8 @@ import type { BusyBlock, Commitment, CommitmentCategory, EnergyPattern } from '@
 import { CATEGORY_DEMAND } from '@/lib/schedule/score';
 import { ThemePicker } from '@/components/theme-provider';
 import { AddItem } from '@/components/add-item';
+import { Insights } from '@/components/insights';
+import { BackupControls } from '@/components/backup-controls';
 
 const TZ = DEFAULT_TZ;
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -26,7 +28,7 @@ function toHHMM(min: number): string {
 export default function SetupPage() {
   const {
     state, hydrated, updateAvailability, updateCommitments, replan, reset,
-    addEvent, removeEvent, addTask,
+    addEvent, removeEvent, addTask, replaceAll,
   } = useQuarterly(TZ);
   const router = useRouter();
   const [saved, setSaved] = useState<string | null>(null);
@@ -178,6 +180,28 @@ export default function SetupPage() {
           onAddTask={addTask}
           tz={TZ}
         />
+      </Section>
+
+      <Section
+        title="What your week says about you"
+        hint="Built from blocks you've actually marked done or skipped. Nothing changes unless you say so."
+      >
+        <Insights
+          blocks={state.blocks}
+          availability={av}
+          tz={TZ}
+          onAdoptPattern={(p) => {
+            updateAvailability((prev) => ({ ...prev, energy: p }));
+            flash('Updated from your own blocks');
+          }}
+        />
+      </Section>
+
+      <Section
+        title="Back up your data"
+        hint="Your schedule lives only in this browser. A backup is the only copy that survives clearing site data — or moves it to your phone."
+      >
+        <BackupControls state={state} onImport={replaceAll} onMessage={flash} />
       </Section>
 
       <Section title="Colours" hint="Light and dark both follow your system setting; this picks the palette.">

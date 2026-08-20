@@ -304,3 +304,55 @@ describe('one-off fixed events', () => {
     assert.ok(r.blocks.length > 0, 'other days should still be planned');
   });
 });
+
+describe('backup', () => {
+  test('a round trip preserves everything', async () => {
+    const { toBackup, fromBackup } = await import('../src/lib/backup.ts');
+    const { emptyState } = await import('../src/lib/store.ts');
+
+    const state = {
+      ...emptyState(),
+      commitments: [commitment({ id: 'run', title: 'Run' })],
+      blocks: [block({ id: 'b1', status: 'done' as const, actualMinutes: 45 })],
+    };
+
+    const r = fromBackup(JSON.stringify(toBackup(state)));
+    assert.ok(r.ok);
+    assert.equal(r.state.commitments[0].title, 'Run');
+    assert.equal(r.state.blocks[0].actualMinutes, 45);
+    assert.match(r.summary, /1 weekly commitments/);
+  });
+
+  test('a backup from an older build still loads', async () => {
+    // Merged over a fresh empty state, so a field added since the export was
+    // written can't come back undefined and crash a render.
+    const { fromBackup } = await import('../src/lib/backup.ts');
+    const old = JSON.stringify({
+      format: 'quarterly-backup', version: 1, exportedAt: '2026-08-01T00:00:00.000Z',
+      state: { courses: [], assignments: [], commitments: [], blocks: [], availability: { busy: [] } },
+    });
+    const r = fromBackup(old);
+    assert.ok(r.ok, r.ok ? '' : r.error);
+    assert.deepEqual(r.state.events, [], 'a field the old build never had should default, not vanish');
+  });
+
+  test('junk is refused with a reason, never half-loaded', async () => {
+    const { fromBackup } = await import('../src/lib/backup.ts');
+    for (const bad of ['not json', '{}', '[]', 'null', JSON.stringify({ format: 'something-else' })]) {
+      const r = fromBackup(bad);
+      assert.ok(!r.ok, `expected rejection of ${bad}`);
+      assert.ok(r.error.length > 10, 'a rejection has to say what went wrong');
+    }
+  });
+
+  test('a damaged backup is caught before it reaches a render', async () => {
+    const { fromBackup } = await import('../src/lib/backup.ts');
+    const damaged = JSON.stringify({
+      format: 'quarterly-backup', version: 1,
+      state: { commitments: 'not-a-list', availability: { busy: [] } },
+    });
+    const r = fromBackup(damaged);
+    assert.ok(!r.ok);
+    assert.match(r.error, /commitments/);
+  });
+});

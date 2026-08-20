@@ -155,10 +155,15 @@ export function useQuarterly(tz: string) {
     }));
   }, [mutate]);
 
+  /** Replace everything, from an imported backup. */
+  const replaceAll = useCallback((next: QuarterlyState) => {
+    quarterlyStore.set(next);
+  }, []);
+
   const reset = useCallback(() => quarterlyStore.clear(), []);
 
   return {
-    state, hydrated, mutate, replan, complete, drop, moveBlock,
+    state, hydrated, mutate, replan, complete, drop, moveBlock, replaceAll,
     addEvent, removeEvent, addTask, removeTask,
     updateAvailability, updateCommitments, reset,
   };

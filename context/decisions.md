@@ -9,6 +9,40 @@ record of what was tried and abandoned is worth more than a tidy file.
 
 ---
 
+## 2026-08-19 · Learned patterns are offered, never applied
+
+**Decided:** the app reads completion rate by hour, duration bias per course, and
+hours the student never finishes anything in — then *shows* them and offers a
+change. It does not silently rewrite settings.
+
+**Why:** two reasons, and the second matters more. A pattern from thin data is
+often wrong, so the eight-observation floor stays. And an app that quietly
+rewrites your settings based on its own reading of you is unsettling even when
+it is right. Describing behaviour and proposing is the difference between a tool
+and something that thinks it knows you.
+
+**The line held throughout:** describe behaviour, never character. "You rarely
+finish anything at 2pm" is a fact about blocks. "You're bad at afternoons" is a
+verdict about a person.
+
+---
+
+## 2026-08-19 · Export and import, before sync exists
+
+**Decided:** a downloadable JSON backup and a restore, with a confirmation step.
+
+**Why:** the privacy page tells students the truth — their schedule exists in one
+browser and clearing site data destroys it with no copy to ask for. That is an
+honest description of a real hazard, and leaving it unmitigated while sync is
+weeks away is the wrong trade. A backup also moves a schedule from laptop to
+phone today, which is most of what sync will do.
+
+**Import is forgiving about shape and strict about identity.** A file from a
+newer build may carry unknown fields, so it merges over a fresh empty state; a
+file that is not a Quarterly backup is refused outright rather than half-loaded.
+
+---
+
 ## 2026-08-19 · A fixed event and a dated task are separate primitives
 
 **Decided:** two ways to add a one-off, chosen with a single tap. "At a set
