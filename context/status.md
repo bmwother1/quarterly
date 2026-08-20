@@ -53,6 +53,10 @@ list:
   is the one to share, but turn protection off to avoid confusing yourself later.
 - **The interviews.** Ask what they did last Sunday. Don't show the product.
 - **Use it for a week.**
+- **Supabase project** — send the project URL and the *anon* key (never the
+  service_role key). Unblocks sync, retention measurement, and notification
+  delivery, which all depend on it.
+- **Google Cloud OAuth client** for the Calendar API.
 
 ## Open questions
 
@@ -73,7 +77,6 @@ Notifications are the higher-value feature but they cannot be built standalone.
 ### Now → Sunday Aug 23 · prove it survives a real week
 - Brydon uses it himself, every day, with his actual schedule. Whether he still
   opens it on day five is the closest available proxy for week-4 retention.
-- Confirm drag-to-move works with a real pointer. Implemented but unverified.
 - Five interviews. Past behaviour only, product not shown.
 
 ### Aug 24 → Aug 30 · the data layer

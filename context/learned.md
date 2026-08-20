@@ -51,6 +51,24 @@ gets a polite yes from everyone and teaches nothing. "Walk me through last Sunda
 
 ## From building
 
+### Drag needed three independent fixes, none of which a test would have caught (2026-08-19)
+
+Confirmed working by Brydon on a real pointer. Getting there took three fixes,
+each on its own enough to make the feature silently do nothing:
+
+- `ref={gridRef}` was never attached, because a `str.replace` in a patch script
+  matched nothing and reported success. The drop target always resolved to null.
+- The move handler read drag state from the render closure, so a fast drag was
+  handled before React committed the pointerdown render and bailed.
+- The browser started a text selection instead of a drag, which swallowed the
+  gesture entirely — no pointerup ever reached React.
+
+**Two lessons.** Pointer interactions are close to untestable through synthetic
+input; the honest move is to build them carefully and have a human confirm,
+rather than burning an hour proving it to a headless browser. And the first
+cause was the session's recurring theme again: an operation that reported
+success while doing nothing. Patch scripts now assert before writing.
+
 ### Success messages lie, three times in two days (2026-08-19)
 
 A pattern worth naming, because it has now cost real time.
