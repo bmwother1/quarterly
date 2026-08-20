@@ -9,6 +9,23 @@ record of what was tried and abandoned is worth more than a tidy file.
 
 ---
 
+## 2026-08-19 · The calendar renders before there's anything in it
+
+**Decided:** the week grid always renders, empty or not. Only the controls that
+need data — replan, the didn't-fit report, the drag hint — are conditional.
+
+**Why:** the page's identity should be obvious before it has content. A card
+saying "nothing to plan yet" tells you the state; a visible calendar tells you
+what this page *is* and what it will look like once you've set up.
+
+**What it caught:** the first copy pointed at "the shaded bands below," and on a
+genuinely fresh account there are none — default sleep is 23:00–07:00 and the
+grid shows 07:30–22:30, so nothing falls in view. Copy that describes something
+that isn't on screen is worse than no copy. It now says what will appear once
+you've told it about your classes and job.
+
+---
+
 ## 2026-08-19 · Everything on the calendar is tappable
 
 **Decided:** one-off events are buttons like study blocks. Tapping one shows its

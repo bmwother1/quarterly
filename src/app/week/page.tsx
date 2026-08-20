@@ -108,25 +108,24 @@ export default function WeekPage() {
       </header>
 
       {!hasInputs && (
-        <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
-          <h2 className="font-medium">Nothing to plan yet</h2>
+        <div className="mb-6 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+          <h2 className="font-medium">This is your week. Nothing in it yet.</h2>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            Connect Canvas for coursework, or add what you do every week — runs, project time, a
-            course you&rsquo;re working through. Either is enough to get a week.
+            Tell it about your classes, your job and your sleep, and they&rsquo;ll appear below as
+            time already spoken for. Study blocks get fitted around them.
           </p>
-          <div className="mt-3 flex gap-3 text-sm">
-            <Link href="/setup" className="rounded bg-[var(--accent)] px-3 py-1.5 font-medium text-white">
+          <div className="mt-3 flex flex-wrap gap-2 text-sm">
+            <Link href="/setup" className="rounded-lg bg-[var(--accent)] px-3.5 py-2 font-medium text-[var(--accent-ink)]">
               Set up my week
             </Link>
-            <Link href="/" className="rounded border border-[var(--border)] px-3 py-1.5">
+            <Link href="/canvas" className="rounded-lg border border-[var(--border-strong)] px-3.5 py-2">
               Connect Canvas
             </Link>
           </div>
         </div>
       )}
 
-      {hasInputs && (
-        <>
+      <>
           {missed.length > 0 && (
             <div className="mb-6 rounded-lg border border-[var(--warn)]/40 bg-[var(--accent-soft)] p-4">
               <h2 className="font-medium text-[var(--warn)]">
@@ -139,6 +138,7 @@ export default function WeekPage() {
             </div>
           )}
 
+          {hasInputs && (
           <div className="mb-8 flex flex-wrap items-center gap-3">
             <button
               onClick={() => replan(new Date())}
@@ -152,6 +152,7 @@ export default function WeekPage() {
               </span>
             )}
           </div>
+          )}
 
           {notice && (
             <div className="mb-6 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)]">
@@ -262,10 +263,14 @@ export default function WeekPage() {
                   onComplete={(outcome, minutes) => complete(selected.id, outcome, minutes)}
                   onDrop={() => { drop(selected.id); setSelectedId(null); }}
                 />
-              ) : (
+              ) : hasInputs ? (
                 <p className="text-sm text-[var(--faint)]">
                   Tap a block to see why it&rsquo;s there and mark it off. Shaded bands are the
                   hours you already gave away.
+                </p>
+              ) : (
+                <p className="text-sm text-[var(--faint)]">
+                  Your study blocks will appear here, fitted around the shaded hours.
                 </p>
               )}
             </div>
@@ -315,7 +320,6 @@ export default function WeekPage() {
           </div>
           )}
         </>
-      )}
 
       {/* Before anything is set up the page has one job — get you set up. A
           floating + there is a second, competing call to action. */}

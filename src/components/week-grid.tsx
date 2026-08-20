@@ -136,6 +136,8 @@ export function WeekGrid({
     return null;
   }
 
+  const isEmpty = blocks.length === 0 && events.length === 0;
+
   return (
     <div>
       <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--faint)]">
@@ -147,7 +149,7 @@ export function WeekGrid({
           />
           fixed commitments
         </span>
-        <span>tap a block for the reason, or drag it to move it</span>
+        {!isEmpty && <span>tap a block for the reason, or drag it to move it</span>}
         <span className="ml-auto">scroll sideways for next week</span>
       </div>
 
