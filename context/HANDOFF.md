@@ -1,13 +1,13 @@
 # Quarterly — project brief
 
-*Generated 2026-08-19 from the project's `context/` files by `npm run handoff`.
+*Generated 2026-08-20 from the project's `context/` files by `npm run handoff`.
 Don't edit this by hand; edit the source files and regenerate.*
 
 This is the standing context for Quarterly. It covers the person building it,
 what's being built, where it stands, and what has already been decided — so a
 conversation can start from here instead of from scratch.
 
-**42 days to launch** (September 30 2026).
+**41 days to launch** (September 30 2026).
 
 ---
 
@@ -197,8 +197,8 @@ compound within a course.
 
 This file describes the present. It gets rewritten, not appended to.
 
-Repo: `bmwother1/quarterly` (private). Live: `quarterly-alpha.vercel.app`,
-**currently serving a stale build** — see Blocked below.
+Repo: `bmwother1/quarterly` (**public**). Live and current at
+`quarterly-alpha.vercel.app`. Pushes to `main` auto-deploy.
 
 ---
 
@@ -232,12 +232,11 @@ list:
 
 ## Next, in order
 
-1. **Reconnect Vercel to GitHub.** The live site is stale. Five minutes.
-2. **Nineteen more interviews.** Nothing else on this list matters as much.
-3. **Use it himself for a full week.** The closest available proxy for retention.
-4. **Supabase** — sync, and the usage data that week-4 retention needs.
-5. **Syllabus parsing** — the one job an LLM genuinely belongs in.
-6. Tailwind build oddity: `max-w-*` utilities produced no CSS, so the calendar
+1. **Nineteen more interviews.** Nothing else on this list matters as much.
+2. **Use it himself for a full week.** The closest available proxy for retention.
+3. **Supabase** — sync, and the usage data that week-4 retention needs.
+4. **Syllabus parsing** — the one job an LLM genuinely belongs in.
+5. Tailwind build oddity: `max-w-*` utilities produced no CSS, so the calendar
    width is set inline. It will bite again on a class that matters more.
 
 ## Open questions
@@ -301,6 +300,30 @@ demand, so the deep files cost nothing until they're needed.
 `context/decisions.md` and `context/learned.md`. Ask for them if a question
 turns on history this brief doesn't cover.*
 
+## 2026-08-19 · The repo is public
+
+**Decided:** `bmwother1/quarterly` is public.
+
+**Why:** the forcing reason was mechanical — Vercel's Hobby plan blocks Git
+deployments from a private repo when it can't verify the commit author has
+project access, and Hobby provides no way to grant it. Seven consecutive builds
+were blocked. Public repos skip that check entirely.
+
+**Why it's the right call anyway:** the privacy page asks students to hand over a
+Canvas feed URL, which is a bearer credential for their whole schedule, and makes
+specific claims about what happens to it. "Read the code yourself" turns those
+claims from a promise into something checkable. That is worth more to the exact
+person deciding whether to trust this than code secrecy is.
+
+**Rejected:** Vercel Pro at $20/month, which fixes the same problem by paying for
+it. Not warranted before a single retained user exists.
+
+**Checked first:** full history scanned for credentials, env files and keys.
+Clean — the only matches were prose about passwords in the privacy copy.
+
+**Revisit if:** the scheduler's scoring weights ever become genuinely
+proprietary. They aren't now, and the moat was never the code.
+
 ## 2026-08-18 · Ship with no signup, move to Supabase later
 
 **Decided:** local-first with no account, behind a storage interface. Supabase
@@ -350,33 +373,12 @@ construction — buries the actual week under work already handed in.
 **Revisit when:** there's submission status from somewhere. The feed will never
 provide it.
 
-## 2026-08-18 · Tasks pick slots, not slots picking tasks
-
-**Decided:** rank work by everything that doesn't depend on timing, then let each
-piece choose the best hour still open to it.
-
-**Why:** this was found by building, not by planning. The obvious implementation
-— walk time forward, drop in whatever scores highest at each opening — passed 61
-of 62 tests. The failure was that a student who declared themselves an evening
-person still got exam prep at 8am. It wasn't a tuning problem: when slots pick
-tasks, the energy-fit term can only ever break ties between things competing for
-the same hour, and can never *move* work to a better one. The "tailored to the
-student" promise was structurally inert.
-
-**Rejected:** (a) leaving it and tuning the weights — the term had no mechanism
-to act through; (b) a two-pass version that deferred poor-fit placements and then
-back-filled — the second pass simply re-filled the slot the first pass declined.
-
-**Cost:** the inversion was 20× slower (15ms → 384ms). Fixed by precomputing the
-hour grid and keeping per-course spans sorted, back to ~21ms. The perf test
-ceiling is pinned at 150ms so this can't silently regress.
-
 ---
 
 # Currently waiting on Brydon
 
-- **Vercel → Settings → Git → connect `bmwother1/quarterly`.** Until then every
-  push is invisible. Also confirm Deployment Protection is off, and delete the
-  stray `quarterly` project the CLI created.
+- **Deployment Protection** is still on, so the `*-bmwother1s-projects.vercel.app`
+  URLs redirect to a Vercel login. `quarterly-alpha.vercel.app` is unaffected and
+  is the one to share, but turn protection off to avoid confusing yourself later.
 - **The interviews.** Ask what they did last Sunday. Don't show the product.
 - **Use it for a week.**

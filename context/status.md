@@ -4,8 +4,8 @@
 
 This file describes the present. It gets rewritten, not appended to.
 
-Repo: `bmwother1/quarterly` (private). Live: `quarterly-alpha.vercel.app`,
-**currently serving a stale build** — see Blocked below.
+Repo: `bmwother1/quarterly` (**public**). Live and current at
+`quarterly-alpha.vercel.app`. Pushes to `main` auto-deploy.
 
 ---
 
@@ -39,19 +39,18 @@ list:
 
 ## Next, in order
 
-1. **Reconnect Vercel to GitHub.** The live site is stale. Five minutes.
-2. **Nineteen more interviews.** Nothing else on this list matters as much.
-3. **Use it himself for a full week.** The closest available proxy for retention.
-4. **Supabase** — sync, and the usage data that week-4 retention needs.
-5. **Syllabus parsing** — the one job an LLM genuinely belongs in.
-6. Tailwind build oddity: `max-w-*` utilities produced no CSS, so the calendar
+1. **Nineteen more interviews.** Nothing else on this list matters as much.
+2. **Use it himself for a full week.** The closest available proxy for retention.
+3. **Supabase** — sync, and the usage data that week-4 retention needs.
+4. **Syllabus parsing** — the one job an LLM genuinely belongs in.
+5. Tailwind build oddity: `max-w-*` utilities produced no CSS, so the calendar
    width is set inline. It will bite again on a class that matters more.
 
 ## Blocked on Brydon
 
-- **Vercel → Settings → Git → connect `bmwother1/quarterly`.** Until then every
-  push is invisible. Also confirm Deployment Protection is off, and delete the
-  stray `quarterly` project the CLI created.
+- **Deployment Protection** is still on, so the `*-bmwother1s-projects.vercel.app`
+  URLs redirect to a Vercel login. `quarterly-alpha.vercel.app` is unaffected and
+  is the one to share, but turn protection off to avoid confusing yourself later.
 - **The interviews.** Ask what they did last Sunday. Don't show the product.
 - **Use it for a week.**
 

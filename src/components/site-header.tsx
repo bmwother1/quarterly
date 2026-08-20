@@ -53,6 +53,13 @@ export function SiteFooter() {
           <Link href="/privacy" className="underline underline-offset-4 hover:text-[var(--muted)]">
             Privacy
           </Link>
+          <a
+            href="https://github.com/bmwother1/quarterly"
+            className="underline underline-offset-4 hover:text-[var(--muted)]"
+            rel="noreferrer"
+          >
+            Source
+          </a>
         </nav>
       </div>
     </footer>

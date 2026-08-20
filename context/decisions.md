@@ -9,6 +9,32 @@ record of what was tried and abandoned is worth more than a tidy file.
 
 ---
 
+## 2026-08-19 · The repo is public
+
+**Decided:** `bmwother1/quarterly` is public.
+
+**Why:** the forcing reason was mechanical — Vercel's Hobby plan blocks Git
+deployments from a private repo when it can't verify the commit author has
+project access, and Hobby provides no way to grant it. Seven consecutive builds
+were blocked. Public repos skip that check entirely.
+
+**Why it's the right call anyway:** the privacy page asks students to hand over a
+Canvas feed URL, which is a bearer credential for their whole schedule, and makes
+specific claims about what happens to it. "Read the code yourself" turns those
+claims from a promise into something checkable. That is worth more to the exact
+person deciding whether to trust this than code secrecy is.
+
+**Rejected:** Vercel Pro at $20/month, which fixes the same problem by paying for
+it. Not warranted before a single retained user exists.
+
+**Checked first:** full history scanned for credentials, env files and keys.
+Clean — the only matches were prose about passwords in the privacy copy.
+
+**Revisit if:** the scheduler's scoring weights ever become genuinely
+proprietary. They aren't now, and the moat was never the code.
+
+---
+
 ## 2026-08-18 · Ship with no signup, move to Supabase later
 
 **Decided:** local-first with no account, behind a storage interface. Supabase

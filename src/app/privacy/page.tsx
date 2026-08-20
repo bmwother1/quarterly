@@ -103,7 +103,16 @@ export default function Privacy() {
           <a href="mailto:bmwother1@gmail.com" className="underline underline-offset-4">
             bmwother1@gmail.com
           </a>
-          . Ask and you&rsquo;ll get a straight answer about anything on this page.
+          . Every claim on this page is checkable against the{' '}
+          <a
+            href="https://github.com/bmwother1/quarterly"
+            rel="noreferrer"
+            className="underline underline-offset-4"
+          >
+            source code
+          </a>
+          , which is public for exactly that reason. Don&rsquo;t take our word for what happens to
+          your feed URL — go and read it.
         </p>
       </Section>
     </main>
