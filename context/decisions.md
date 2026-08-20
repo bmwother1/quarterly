@@ -9,6 +9,24 @@ record of what was tried and abandoned is worth more than a tidy file.
 
 ---
 
+## 2026-08-19 · Frequent actions on the page you're already on
+
+**Decided:** a floating **+** on the calendar opens a sheet for a one-off event
+or task. Set-once configuration moved to `/settings`. `/setup` is now just the
+shape of a week, with the explanatory prose cut hard.
+
+**Why:** setup had grown to ten sections of prose, and the single most frequent
+action — adding a one-off — was buried at the bottom of it. That is a lot of
+reading to perform a two-field task, and it is not how any calendar a student
+already uses behaves.
+
+**The general rule:** frequency decides placement. Daily actions belong on the
+screen you're already looking at; things you touch once belong behind a tap.
+Prose is the tell — when a section needs three sentences to explain itself, the
+label is usually wrong or the thing is in the wrong place.
+
+---
+
 ## 2026-08-19 · Learned patterns are offered, never applied
 
 **Decided:** the app reads completion rate by hour, duration bias per course, and

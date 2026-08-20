@@ -32,13 +32,16 @@ function todayKey(): string {
  * one you mean costs a single tap and removes all the ambiguity downstream.
  */
 export function AddItem({
-  events, onAddEvent, onRemoveEvent, onAddTask, tz = DEFAULT_TZ,
+  events, onAddEvent, onRemoveEvent, onAddTask, tz = DEFAULT_TZ, compact = false, onDone,
 }: {
   events: FixedEvent[];
   onAddEvent: (e: Omit<FixedEvent, 'id'>) => void;
   onRemoveEvent: (id: string) => void;
   onAddTask: (t: { title: string; course: string; kind: WorkKind; due: string; estimatedMinutes: number }) => void;
   tz?: string;
+  /** Inside a sheet: no explanatory prose, no list, close on submit. */
+  compact?: boolean;
+  onDone?: () => void;
 }) {
   const [mode, setMode] = useState<'event' | 'task'>('event');
   // Fixed at mount. Reading the clock during render is impure and can differ
@@ -79,6 +82,7 @@ export function AddItem({
 
     setTitle('');
     setCourse('');
+    onDone?.();
   }
 
   return (
@@ -97,13 +101,15 @@ export function AddItem({
         ))}
       </div>
 
-      <p className="text-sm text-[var(--muted)]">
-        {mode === 'event'
-          ? 'An appointment, a shift, a gig. The time is already decided, so the scheduler just works around it.'
-          : 'Something with a deadline but no time yet. The scheduler decides when it happens and splits it up.'}
-      </p>
+      {!compact && (
+        <p className="text-sm text-[var(--muted)]">
+          {mode === 'event'
+            ? 'An appointment, a shift, a gig. The time is already decided, so the scheduler works around it.'
+            : 'A deadline with no time yet. The scheduler decides when it happens.'}
+        </p>
+      )}
 
-      <div className="space-y-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+      <div className={compact ? 'space-y-3' : 'space-y-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4'}>
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -172,13 +178,11 @@ export function AddItem({
         </button>
 
         {mode === 'task' && (
-          <p className="text-xs text-[var(--faint)]">
-            Press Replan afterwards and it gets a slot.
-          </p>
+          <p className="text-xs text-[var(--faint)]">Replan afterwards and it gets a slot.</p>
         )}
       </div>
 
-      {upcoming.length > 0 && (
+      {!compact && upcoming.length > 0 && (
         <div>
           <h3 className="text-sm font-medium">Coming up</h3>
           <ul className="mt-2 divide-y divide-[var(--border)]">

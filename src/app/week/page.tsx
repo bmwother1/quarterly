@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useQuarterly } from '@/hooks/use-quarterly';
 import { BlockCard } from '@/components/block-card';
 import { WeekGrid } from '@/components/week-grid';
+import { Sheet, AddButton } from '@/components/sheet';
+import { AddItem } from '@/components/add-item';
 import { DEFAULT_TZ, addDays, fmtDay, localParts } from '@/lib/time';
 import { missedBlocks } from '@/lib/schedule/complete';
 import { nextNotice } from '@/lib/notify';
@@ -13,12 +15,16 @@ import type { StudyBlock } from '@/lib/types';
 const TZ = DEFAULT_TZ;
 
 export default function WeekPage() {
-  const { state, hydrated, replan, complete, drop, moveBlock } = useQuarterly(TZ);
+  const {
+    state, hydrated, replan, complete, drop, moveBlock,
+    addEvent, removeEvent, addTask,
+  } = useQuarterly(TZ);
   // Fixed at mount so every render agrees on "now" — reading the clock during
   // render is impure and drifts between the server and client passes.
   const [now] = useState(() => new Date());
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
 
   const colourFor = useMemo(() => {
     const map = new Map<string, string>();
@@ -93,10 +99,7 @@ export default function WeekPage() {
             {planned.length} blocks · {(planned.reduce((s, b) => s + b.minutes, 0) / 60).toFixed(1)}h planned
           </p>
         </div>
-        <nav className="flex gap-4 text-sm">
-          <Link href="/setup" className="text-[var(--muted)] underline underline-offset-4">Set up</Link>
-          <Link href="/" className="text-[var(--muted)] underline underline-offset-4">Canvas</Link>
-        </nav>
+
       </header>
 
       {!hasInputs && (
@@ -275,6 +278,20 @@ export default function WeekPage() {
           )}
         </>
       )}
+
+      <AddButton onClick={() => setAdding(true)} />
+
+      <Sheet open={adding} title="Add to your week" onClose={() => setAdding(false)}>
+        <AddItem
+          compact
+          events={state.events}
+          onAddEvent={addEvent}
+          onRemoveEvent={removeEvent}
+          onAddTask={addTask}
+          tz={TZ}
+          onDone={() => setAdding(false)}
+        />
+      </Sheet>
     </main>
   );
 }

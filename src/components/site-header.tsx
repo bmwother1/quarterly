@@ -7,6 +7,7 @@ const LINKS = [
   { href: '/week', label: 'This week' },
   { href: '/setup', label: 'Set up' },
   { href: '/canvas', label: 'Canvas' },
+  { href: '/settings', label: 'Settings' },
 ];
 
 /**

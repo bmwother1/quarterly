@@ -2,15 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useQuarterly } from '@/hooks/use-quarterly';
 import { DEFAULT_TZ } from '@/lib/time';
 import type { BusyBlock, Commitment, CommitmentCategory, EnergyPattern } from '@/lib/types';
 import { CATEGORY_DEMAND } from '@/lib/schedule/score';
-import { ThemePicker } from '@/components/theme-provider';
 import { AddItem } from '@/components/add-item';
-import { Insights } from '@/components/insights';
-import { BackupControls } from '@/components/backup-controls';
 
 const TZ = DEFAULT_TZ;
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -27,8 +23,8 @@ function toHHMM(min: number): string {
 
 export default function SetupPage() {
   const {
-    state, hydrated, updateAvailability, updateCommitments, replan, reset,
-    addEvent, removeEvent, addTask, replaceAll,
+    state, hydrated, updateAvailability, updateCommitments, replan,
+    addEvent, removeEvent, addTask,
   } = useQuarterly(TZ);
   const router = useRouter();
   const [saved, setSaved] = useState<string | null>(null);
@@ -78,19 +74,15 @@ export default function SetupPage() {
   return (
     <main className="mx-auto max-w-2xl px-5 py-10 sm:py-14">
       <header className="mb-8 flex flex-wrap items-baseline justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Set up your week</h1>
-        <nav className="flex gap-4 text-sm">
-          <Link href="/week" className="text-[var(--muted)] underline underline-offset-4">This week</Link>
-          <Link href="/" className="text-[var(--muted)] underline underline-offset-4">Canvas</Link>
-        </nav>
+        <h1 className="text-2xl font-semibold">Your week</h1>
+
       </header>
 
       <p className="mb-8 text-sm text-[var(--muted)]">
-        None of this needs Canvas. Your sleep, your job and the things you do every week are half
-        of what the scheduler needs, and they don&rsquo;t change when the quarter does.
+        Set once. None of it needs Canvas.
       </p>
 
-      <Section title="Sleep" hint="The scheduler will never touch these hours.">
+      <Section title="Sleep" hint="">
         <div className="flex flex-wrap gap-4">
           <Field label="Wake">
             <input
@@ -117,7 +109,7 @@ export default function SetupPage() {
         onSave={setWorkShift}
       />
 
-      <Section title="When you focus best" hint="Demanding work gets your sharper hours.">
+      <Section title="When you focus best" hint="">
         <div className="flex flex-wrap gap-2">
           {(['morning', 'evening', 'steady', 'bimodal'] as EnergyPattern[]).map((p) => (
             <button
@@ -137,7 +129,7 @@ export default function SetupPage() {
 
       <Section
         title="How much you'll actually do"
-        hint="A ceiling per day. Five hours after a full shift is a plan you abandon by Thursday."
+        hint="Hours per day. Be realistic — five after a full shift is a plan you abandon."
       >
         <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
           {DAYS.map((label, day) => {
@@ -171,7 +163,7 @@ export default function SetupPage() {
 
       <Section
         title="One-off things"
-        hint="Anything that happens once: an appointment, or a task with a deadline."
+        hint="Or use the + button on your calendar."
       >
         <AddItem
           events={state.events}
@@ -182,31 +174,11 @@ export default function SetupPage() {
         />
       </Section>
 
-      <Section
-        title="What your week says about you"
-        hint="Built from blocks you've actually marked done or skipped. Nothing changes unless you say so."
-      >
-        <Insights
-          blocks={state.blocks}
-          availability={av}
-          tz={TZ}
-          onAdoptPattern={(p) => {
-            updateAvailability((prev) => ({ ...prev, energy: p }));
-            flash('Updated from your own blocks');
-          }}
-        />
-      </Section>
+      
 
-      <Section
-        title="Back up your data"
-        hint="Your schedule lives only in this browser. A backup is the only copy that survives clearing site data — or moves it to your phone."
-      >
-        <BackupControls state={state} onImport={replaceAll} onMessage={flash} />
-      </Section>
+      
 
-      <Section title="Colours" hint="Light and dark both follow your system setting; this picks the palette.">
-        <ThemePicker />
-      </Section>
+      
 
       {saved && (
         <div
@@ -227,25 +199,7 @@ export default function SetupPage() {
         <span className="text-sm text-[var(--muted)]">takes you to the result</span>
       </div>
 
-      <div className="mt-10 border-t border-[var(--border)] pt-6">
-        <h2 className="font-medium">Delete everything</h2>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          Your schedule only exists in this browser, so this removes it for good. There is no
-          copy anywhere else.
-        </p>
-        <button
-          onClick={() => {
-            if (window.confirm('Delete your whole setup and plan? This cannot be undone.')) {
-              reset();
-              flash('Everything deleted');
-            }
-          }}
-          className="mt-3 rounded border border-[var(--warn)]/50 px-3 py-1.5 text-sm text-[var(--warn)]"
-        >
-          Delete my data
-        </button>
-      </div>
-    </main>
+   </main>
   );
 }
 
@@ -281,7 +235,7 @@ function WorkSection({
   const [selected, setSelected] = useState<number[]>(days.length ? days : [0, 1, 2, 3, 4]);
 
   return (
-    <Section title="Work, class or anything fixed" hint="Include your commute. It's time you don't have.">
+    <Section title="Work, class or anything fixed" hint="Include your commute.">
       {current && days.length > 0 && (
         <p className="mb-3 rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm">
           <span className="font-medium">{current.label}</span>
@@ -376,7 +330,7 @@ function CommitmentsSection({
   return (
     <Section
       title="Things you do every week"
-      hint="Runs, project hours, a course you're working through. No deadline, just a weekly target."
+      hint="Runs, project hours, a course. A weekly target, no deadline."
     >
       {commitments.length > 0 && (
         <ul className="mb-4 space-y-2">
