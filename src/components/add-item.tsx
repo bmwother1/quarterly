@@ -17,6 +17,18 @@ function toISO(date: string, time: string): string | null {
   return Number.isNaN(dt.getTime()) ? null : dt.toISOString();
 }
 
+/** An ISO instant as the YYYY-MM-DD a date input expects, in local time. */
+function localDateKey(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** The same instant as the HH:MM a time input expects. */
+function localTimeValue(iso: string): string {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
 function todayKey(): string {
   const n = new Date();
   return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
@@ -33,6 +45,7 @@ function todayKey(): string {
  */
 export function AddItem({
   events, onAddEvent, onRemoveEvent, onAddTask, tz = DEFAULT_TZ, compact = false, onDone,
+  editing = null, onUpdateEvent,
 }: {
   events: FixedEvent[];
   onAddEvent: (e: Omit<FixedEvent, 'id'>) => void;
@@ -42,15 +55,21 @@ export function AddItem({
   /** Inside a sheet: no explanatory prose, no list, close on submit. */
   compact?: boolean;
   onDone?: () => void;
+  /** When set, the form edits this event in place instead of creating one. */
+  editing?: FixedEvent | null;
+  onUpdateEvent?: (id: string, patch: Partial<Omit<FixedEvent, 'id'>>) => void;
 }) {
   const [mode, setMode] = useState<'event' | 'task'>('event');
   // Fixed at mount. Reading the clock during render is impure and can differ
   // between the server and client passes.
   const [mountedAt] = useState(() => Date.now());
-  const [title, setTitle] = useState('');
-  const [date, setDate] = useState(() => todayKey());
-  const [time, setTime] = useState('09:00');
-  const [durationMin, setDurationMin] = useState('60');
+  const [title, setTitle] = useState(() => editing?.title ?? '');
+  const [date, setDate] = useState(() => (editing ? localDateKey(editing.start) : todayKey()));
+  const [time, setTime] = useState(() => (editing ? localTimeValue(editing.start) : '09:00'));
+  const [durationMin, setDurationMin] = useState(() =>
+    editing
+      ? String(Math.round((new Date(editing.end).getTime() - new Date(editing.start).getTime()) / 60_000))
+      : '60');
   const [course, setCourse] = useState('');
   const [kind, setKind] = useState<WorkKind>('problem set');
 
@@ -65,6 +84,14 @@ export function AddItem({
     if (mode === 'event') {
       const startISO = toISO(date, time);
       if (!startISO) return;
+      const end = new Date(new Date(startISO).getTime() + minutes * 60_000).toISOString();
+
+      if (editing && onUpdateEvent) {
+        onUpdateEvent(editing.id, { title: title.trim(), start: startISO, end });
+        onDone?.();
+        return;
+      }
+
       onAddEvent({
         title: title.trim(),
         start: startISO,
@@ -87,7 +114,7 @@ export function AddItem({
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-1 text-sm">
+      <div className={`flex gap-1 text-sm ${editing ? 'hidden' : ''}`}>
         {(['event', 'task'] as const).map((m) => (
           <button
             key={m}
@@ -174,7 +201,7 @@ export function AddItem({
           disabled={!title.trim()}
           className="rounded-lg bg-[var(--accent)] px-3.5 py-2 text-sm font-medium text-[var(--accent-ink)] disabled:bg-transparent disabled:text-[var(--faint)] disabled:ring-1 disabled:ring-[var(--border)]"
         >
-          Add {mode === 'event' ? 'event' : 'task'}
+          {editing ? 'Save changes' : `Add ${mode === 'event' ? 'event' : 'task'}`}
         </button>
 
         {mode === 'task' && (

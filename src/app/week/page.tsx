@@ -18,7 +18,7 @@ const TZ = DEFAULT_TZ;
 export default function WeekPage() {
   const {
     state, hydrated, replan, complete, drop, moveBlock,
-    addEvent, removeEvent, addTask, undo, undoLabel, dismissUndo,
+    addEvent, updateEvent, removeEvent, addTask, undo, undoLabel, dismissUndo,
   } = useQuarterly(TZ);
   // Fixed at mount so every render agrees on "now" — reading the clock during
   // render is impure and drifts between the server and client passes.
@@ -26,6 +26,7 @@ export default function WeekPage() {
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   const colourFor = useMemo(() => {
@@ -77,6 +78,10 @@ export default function WeekPage() {
   const selectedEvent = useMemo(
     () => state.events.find((e) => e.id === selectedEventId) ?? null,
     [state.events, selectedEventId],
+  );
+  const editingEvent = useMemo(
+    () => state.events.find((e) => e.id === editingEventId) ?? null,
+    [state.events, editingEventId],
   );
 
   if (!hydrated) {
@@ -246,12 +251,20 @@ export default function WeekPage() {
                       <p className="mt-1.5 text-sm text-[var(--muted)]">
                         Fixed, so nothing gets scheduled over it.
                       </p>
-                      <button
-                        onClick={() => { removeEvent(selectedEvent.id); setSelectedEventId(null); }}
-                        className="mt-2.5 rounded-lg border border-[var(--warn)]/50 px-3 py-1.5 text-sm text-[var(--warn)]"
-                      >
-                        Remove
-                      </button>
+                      <div className="mt-2.5 flex flex-wrap gap-2">
+                        <button
+                          onClick={() => setEditingEventId(selectedEvent.id)}
+                          className="rounded-lg border border-[var(--border-strong)] px-3 py-1.5 text-sm"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => { removeEvent(selectedEvent.id); setSelectedEventId(null); }}
+                          className="rounded-lg border border-[var(--warn)]/50 px-3 py-1.5 text-sm text-[var(--warn)]"
+                        >
+                          Remove
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -338,6 +351,29 @@ export default function WeekPage() {
           tz={TZ}
           onDone={() => setAdding(false)}
         />
+      </Sheet>
+
+      <Sheet
+        open={editingEvent !== null}
+        title="Edit event"
+        onClose={() => setEditingEventId(null)}
+      >
+        {/* Keyed on the event so the form re-initialises from whichever one was
+            tapped, rather than keeping the values from the last edit. */}
+        {editingEvent && (
+          <AddItem
+            key={editingEvent.id}
+            compact
+            editing={editingEvent}
+            events={state.events}
+            onAddEvent={addEvent}
+            onUpdateEvent={updateEvent}
+            onRemoveEvent={removeEvent}
+            onAddTask={addTask}
+            tz={TZ}
+            onDone={() => { setEditingEventId(null); setSelectedEventId(null); }}
+          />
+        )}
       </Sheet>
     </main>
   );

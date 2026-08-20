@@ -152,6 +152,16 @@ export function useQuarterly(tz: string) {
     }));
   }, [mutate]);
 
+  /** Change an existing one-off. Editing beats delete-and-retype for a typo. */
+  const updateEvent = useCallback((id: string, patch: Partial<Omit<FixedEvent, 'id'>>) => {
+    mutate((prev) => ({
+      ...prev,
+      events: prev.events
+        .map((e) => (e.id === id ? { ...e, ...patch } : e))
+        .sort((a, b) => a.start.localeCompare(b.start)),
+    }));
+  }, [mutate]);
+
   const removeEvent = useCallback((id: string) => {
     mutateUndoable('Event removed', (prev) => ({
       ...prev,
@@ -209,7 +219,7 @@ export function useQuarterly(tz: string) {
   return {
     state, hydrated, mutate, replan, complete, drop, moveBlock, replaceAll,
     undo, undoLabel, dismissUndo, removeCommitment,
-    addEvent, removeEvent, addTask, removeTask,
+    addEvent, updateEvent, removeEvent, addTask, removeTask,
     updateAvailability, updateCommitments, reset,
   };
 }

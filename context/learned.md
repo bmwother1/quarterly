@@ -51,6 +51,19 @@ gets a polite yes from everyone and teaches nothing. "Walk me through last Sunda
 
 ## From building
 
+### Offline works, and the PWA is now doing real work (2026-08-19)
+
+Brydon confirmed the app loads in airplane mode after a service worker landed.
+Worth recording because it's the first thing the installable-app decision has
+actually bought beyond an icon: everything already lived in localStorage, so the
+only reason it failed without a signal was that the page couldn't load.
+
+Also the second feature this week that the automated browser could not verify —
+service worker registration is blocked there, exactly as pointer drags were. The
+pattern is clear enough to plan around: anything involving real device APIs or
+real pointers gets built carefully and confirmed by a human, rather than costing
+an hour of proving it to a headless browser.
+
 ### Drag needed three independent fixes, none of which a test would have caught (2026-08-19)
 
 Confirmed working by Brydon on a real pointer. Getting there took three fixes,
