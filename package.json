@@ -13,7 +13,8 @@
     "week": "node scripts/preview-week.ts",
     "check": "npm run typecheck && npm run lint && npm test",
     "handoff": "node scripts/handoff.ts",
-    "my-week": "node scripts/my-week.ts"
+    "my-week": "node scripts/my-week.ts",
+    "first-run": "node scripts/first-run.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

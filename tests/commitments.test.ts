@@ -128,8 +128,10 @@ describe('scheduling recurring commitments', () => {
   });
 
   test('counts sessions already done this week', () => {
+    // Scoped to one week: over a longer horizon the following week's full quota
+    // is also planned, which is correct and was what this used to miss.
     const r = planWeek([], workingWeek(), {
-      now: MONDAY, tz: TZ, commitments: [{ ...runs, doneThisWeek: 3 }],
+      now: MONDAY, tz: TZ, days: 7, commitments: [{ ...runs, doneThisWeek: 3 }],
     });
     assert.equal(r.blocks.filter((b) => b.commitmentId === 'run').length, 2);
   });
@@ -359,6 +361,63 @@ describe('scheduling recurring commitments', () => {
       const runEnergy = energyAt(localParts(new Date(run.start), TZ).hour, 'bimodal');
       const learnEnergy = energyAt(localParts(new Date(learn.start), TZ).hour, 'bimodal');
       assert.ok(learnEnergy >= runEnergy, 'the course should get the sharper hour, not the run');
+    }
+  });
+});
+
+describe('the first-run path', () => {
+  /** Default availability: sleep blocked, nothing else. What a new user has. */
+  const freeWeek = () => defaultAvailability();
+
+  /** A commitment exactly as /start creates one. */
+  const firstRun = (per: number, mins: number) => commitment({
+    id: 'first', title: 'Study for a class', category: 'learning',
+    sessionsPerWeek: per, minutesPerSession: mins, demand: 0.8, maxPerDay: 1,
+  });
+
+  test('signing up late in the week still produces a full plan', () => {
+    // The bug: a once-a-day habit asked for 4x a week on a Friday had only 3
+    // days left, so one session was arithmetically impossible — and that
+    // unplaceable session then blocked every session of every later week,
+    // because sessions run in order and it would never be "placed".
+    const friday = zonedInstant('2026-10-09', 8 * 60, TZ);
+    const r = planWeek([], freeWeek(), { now: friday, tz: TZ, commitments: [firstRun(4, 60)] });
+
+    assert.ok(r.blocks.length >= 7, `a Friday signup got only ${r.blocks.length} blocks`);
+    assert.equal(r.unscheduled.length, 0, 'an empty calendar should not report a shortfall');
+  });
+
+  test('a shortfall in one week does not kill the weeks after it', () => {
+    // The general form of the same bug, and the more dangerous one: any
+    // commitment that falls short once silently stops being scheduled forever.
+    const saturday = zonedInstant('2026-10-10', 8 * 60, TZ);
+    const r = planWeek([], freeWeek(), { now: saturday, tz: TZ, commitments: [firstRun(5, 60)] });
+
+    const nextWeek = r.blocks.filter((b) => new Date(b.start) >= zonedInstant('2026-10-12', 0, TZ));
+    assert.ok(nextWeek.length > 0, 'the following week was never planned');
+  });
+
+  test('a once-a-day habit is capped at the days actually left', () => {
+    // Not a preference — you cannot do four once-a-day sessions in two days.
+    // Reporting the difference as "didn't fit" is true and useless.
+    const saturday = zonedInstant('2026-10-10', 8 * 60, TZ);
+    const r = planWeek([], freeWeek(), { now: saturday, tz: TZ, days: 2, commitments: [firstRun(5, 60)] });
+
+    const thisWeekend = r.blocks.filter((b) => new Date(b.start) < zonedInstant('2026-10-12', 0, TZ));
+    const days = new Set(thisWeekend.map((b) => localParts(new Date(b.start), TZ).dateKey));
+    assert.ok(days.size <= 2, `${days.size} days used with only 2 remaining`);
+    assert.equal(thisWeekend.length, days.size, 'one a day means one a day');
+  });
+
+  test('every weekday start produces a usable week', () => {
+    // The most-travelled path in the product. It should never return an empty
+    // or near-empty plan on a calendar with nothing in it.
+    for (const day of ['2026-10-05', '2026-10-07', '2026-10-08', '2026-10-09', '2026-10-10', '2026-10-11']) {
+      const r = planWeek([], freeWeek(), {
+        now: zonedInstant(day, 8 * 60, TZ), tz: TZ, commitments: [firstRun(4, 60)],
+      });
+      assert.ok(r.blocks.length >= 5, `${day} start produced only ${r.blocks.length} blocks`);
+      assert.equal(r.unscheduled.length, 0, `${day} start reported a shortfall on an empty calendar`);
     }
   });
 });

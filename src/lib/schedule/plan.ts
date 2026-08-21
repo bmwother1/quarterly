@@ -331,6 +331,13 @@ function buildCommitmentSessions(c: Commitment, opts: Required<PlanOptions>): Pe
     let remaining: number;
     if (weekOffset === 0) {
       remaining = Math.max(0, c.sessionsPerWeek - c.doneThisWeek);
+
+      // A once-a-day habit cannot happen more times than there are days left.
+      // Signing up on a Friday and asking for four runs a week isn't a capacity
+      // problem the student can solve by freeing time up — it's arithmetic — so
+      // reporting the difference as "didn't fit" is technically true and
+      // useless. Cap it instead.
+      if (c.maxPerDay <= 1) remaining = Math.min(remaining, daysLeftInWeek);
     } else {
       const daysInHorizon = Math.min(
         daysLeftInWeek,
@@ -547,10 +554,13 @@ export function planWeek(
 
     const siblings = siblingsOf.get(p.key)!;
 
-    // Sessions of one assignment run in order, so this one starts after the
-    // previous one finished. Sessions are visited in index order because
-    // priority is shared across siblings and `index` is the final tiebreak.
-    const previous = siblings.find((q) => q.index === p.index - 1);
+    // Sessions run in order, but only within the deadline they share. Chaining
+    // across weeks was a silent killer: a commitment that fell one session short
+    // in week one blocked every session of every week after it, because the
+    // unplaceable session was never "previous.placed" and never would be.
+    const previous = siblings.find(
+      (q) => q.index === p.index - 1 && q.placeBy.getTime() === p.placeBy.getTime(),
+    );
     if (previous && !previous.placed) continue;
     const earliestMs = previous?.placed
       ? new Date(previous.placed.end).getTime() + breakMs

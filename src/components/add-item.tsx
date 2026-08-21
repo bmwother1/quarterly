@@ -140,6 +140,9 @@ export function AddItem({
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+          // A placeholder is not a label: it vanishes the moment you type, and
+          // screen readers treat it inconsistently.
+          aria-label={mode === 'event' ? 'Event name' : 'Task name'}
           placeholder={mode === 'event' ? 'Dentist' : 'FE exam registration'}
           className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm"
         />
@@ -149,6 +152,7 @@ export function AddItem({
             <input
               value={course}
               onChange={(e) => setCourse(e.target.value)}
+              aria-label="Course or label"
               placeholder="Course or label (optional)"
               className="min-w-0 flex-1 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm"
             />

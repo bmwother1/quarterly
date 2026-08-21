@@ -94,6 +94,7 @@ export default function Start() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') begin(); }}
+            aria-label="What you want to make time for"
             placeholder="Studying for CHEM 142"
             autoFocus
             className="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3.5 text-base outline-none placeholder:text-[var(--faint)] focus:border-[var(--accent)]"

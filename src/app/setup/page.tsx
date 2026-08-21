@@ -242,6 +242,7 @@ function WorkSection({
         <input
           value={label}
           onChange={(e) => setLabel(e.target.value)}
+          aria-label="What this commitment is called"
           placeholder="Masons Supply Co"
           className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-sm"
         />
@@ -350,6 +351,7 @@ function CommitmentsSection({
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+          aria-label="What you do every week"
           placeholder="Run 3 miles"
           className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-sm"
         />

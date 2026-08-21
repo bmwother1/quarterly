@@ -51,6 +51,32 @@ gets a polite yes from everyone and teaches nothing. "Walk me through last Sunda
 
 ## From building
 
+### The fast first run had two bugs, and the second was silent (2026-08-21)
+
+Written a script to print what a brand-new student actually gets from `/start`,
+because it's the most-travelled path in the product and the one where a bad
+result is least recoverable. It found both immediately.
+
+**Sign up on a Friday, ask for four times a week, get one "didn't fit" on an
+empty calendar.** A once-a-day habit can't happen four times in the three days
+left, so the shortfall was arithmetic rather than a capacity problem — true, and
+useless to be told.
+
+**Worse: that unplaceable session blocked every later week.** Sessions run in
+order, so session four never being placed meant sessions five through eight were
+skipped forever. Any commitment that fell short once silently stopped being
+scheduled, permanently. A Friday signup got 3 blocks where it should have had 9.
+
+**And one thing that looked like a bug and wasn't.** Every block landing at the
+same hour each day reads as broken, but it's the fit function working: it
+matches cognitive demand to available energy, so the same kind of work lands in
+the same band daily — and a consistent time is what makes a habit a habit. The
+check now says so instead of warning about it.
+
+**Method note:** the same approach as `npm run week` and `npm run my-week`.
+Three scripts now, each printing real output for a path that matters, and each
+has found a bug that no test was going to.
+
 ### Students describe this product's features when asked why they quit others (2026-08-20)
 
 From a competitive teardown of nine planner apps. Three findings, in order of
