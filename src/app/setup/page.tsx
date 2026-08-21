@@ -7,6 +7,7 @@ import { DEFAULT_TZ } from '@/lib/time';
 import type { BusyBlock, Commitment, CommitmentCategory, EnergyPattern } from '@/lib/types';
 import { CATEGORY_DEMAND } from '@/lib/schedule/score';
 import { UndoBar } from '@/components/undo-bar';
+import Link from 'next/link';
 
 const TZ = DEFAULT_TZ;
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -81,6 +82,51 @@ export default function SetupPage() {
       <p className="mb-8 text-sm text-[var(--muted)]">
         Set once. None of it needs Canvas.
       </p>
+
+      <Section
+        title="Course deadlines"
+        hint="Canvas can fill in your assignments so you don't type them."
+      >
+        {state.courses.length > 0 ? (
+          <div className="space-y-3">
+            <p className="text-sm">
+              <span className="font-medium">{state.courses.length} courses</span>{' '}
+              <span className="text-[var(--muted)]">
+                · {state.assignments.filter((a) => a.status === 'todo').length} assignments still ahead
+              </span>
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {state.courses.map((c) => (
+                <span
+                  key={c.code}
+                  className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-sm"
+                >
+                  {c.code}
+                </span>
+              ))}
+            </div>
+            <Link
+              href="/canvas"
+              className="inline-block rounded-lg border border-[var(--border-strong)] px-3.5 py-2 text-sm"
+            >
+              Refresh from Canvas
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-sm text-[var(--muted)]">
+              Not connected. Between quarters your feed is usually empty, so this is worth doing
+              once your courses go live.
+            </p>
+            <Link
+              href="/canvas"
+              className="inline-block rounded-lg bg-[var(--accent)] px-3.5 py-2 text-sm font-medium text-[var(--accent-ink)]"
+            >
+              Connect Canvas
+            </Link>
+          </div>
+        )}
+      </Section>
 
       <Section title="Sleep" hint="">
         <div className="flex flex-wrap gap-4">
