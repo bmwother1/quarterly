@@ -9,6 +9,44 @@ record of what was tried and abandoned is worth more than a tidy file.
 
 ---
 
+## 2026-08-21 · Import from any calendar; never write back
+
+**Decided:** one paste box at `/import` accepts Canvas, Google, Apple and
+Outlook. The server decides what a feed's contents mean from where it came
+from — Canvas produces assignments to schedule, everything else produces fixed
+events to schedule around. Quarterly does not publish a feed back out.
+
+**Why not write back, which was the obvious ask:** Google refreshes subscribed
+calendars every 12–24 hours and won't let you force it. For a static timetable
+that's fine; for a scheduler whose entire premise is that the plan changes when
+you fall behind, the copy in their calendar would routinely show a plan already
+replanned. Two sources of truth with the stale one being the calendar they
+actually check. Better to ship no write-sync than a wrong one.
+
+**Why not Google's API:** `calendar.events` is a sensitive scope requiring
+verification — video demo, written justification, Trust & Safety review — with
+real developers reporting five-plus weeks under review and no response. The
+roadmap had two-way Google sync in phase three, Aug 31 to Sept 13. It could not
+have landed, and building it first would have been how we found out.
+
+**What it actually needed:** recurrence. A Canvas feed is nearly all one-off
+deadlines so RRULE was ignored and nothing was lost. A personal calendar is the
+opposite — a timetable is *all* recurrence, and without expansion it imports as
+a single Tuesday lecture while the scheduler books over the rest of the term.
+
+**What it deliberately doesn't do:** monthly and yearly rules are counted and
+reported, never guessed at. Treating a monthly club meeting as weekly would put
+four times as much in a student's calendar as exists. All-day entries are
+dropped too — blacking out every hour of spring break is the opposite of the
+truth.
+
+**The security note:** widening the allowlist from one provider to four is
+exactly how the lookalike-domain bug gets reintroduced four more times.
+Suffix matching now lives in one place, and there's a test that tries
+`calendar.google.com.attacker.com` and its equivalent for every provider.
+
+---
+
 ## 2026-08-21 · A stacked bar, not a pie — and a validated palette
 
 **Decided:** the day view answers "where does this day go" with one horizontal

@@ -43,6 +43,9 @@ list:
 2. **Use it himself for a full week.** The closest available proxy for retention.
 3. **Supabase** — sync, and the usage data that week-4 retention needs.
 4. **Syllabus parsing** — the one job an LLM genuinely belongs in.
+5. **Google Calendar two-way sync is struck from the plan.** `calendar.events`
+   is a sensitive scope needing verification that runs five-plus weeks. Reading
+   any calendar in via its ICS link is shipped and covers most of the value.
 5. Tailwind build oddity: `max-w-*` utilities produced no CSS, so the calendar
    width is set inline. It will bite again on a class that matters more.
 

@@ -15,9 +15,14 @@ export interface IcsEvent {
   uid?: string;
   summary?: string;
   description?: string;
+  location?: string;
   url?: string;
   start?: { date: Date; allDay: boolean };
   end?: { date: Date; allDay: boolean };
+  /** Raw RRULE value. A personal calendar is mostly these. */
+  rrule?: string;
+  /** EXDATE instants — occurrences the owner deleted from the series. */
+  exceptions?: Date[];
 }
 
 /**
@@ -118,8 +123,17 @@ export function parseICS(raw: string, tz = DEFAULT_TZ): IcsEvent[] {
     else if (p.name === 'DESCRIPTION') cur.description = unescapeText(p.value);
     else if (p.name === 'URL') cur.url = p.value;
     else if (p.name === 'UID') cur.uid = p.value;
+    else if (p.name === 'LOCATION') cur.location = unescapeText(p.value);
     else if (p.name === 'DTSTART') cur.start = toDate(p.value, p.params, tz) ?? undefined;
     else if (p.name === 'DTEND') cur.end = toDate(p.value, p.params, tz) ?? undefined;
+    else if (p.name === 'RRULE') cur.rrule = p.value;
+    else if (p.name === 'EXDATE') {
+      // A cancelled occurrence of a repeating event. Comma-separated.
+      const dates = p.value.split(',')
+        .map((v) => toDate(v.trim(), p.params, tz)?.date)
+        .filter((d): d is Date => d instanceof Date);
+      cur.exceptions = [...(cur.exceptions ?? []), ...dates];
+    }
   }
 
   return events;

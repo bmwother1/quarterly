@@ -236,6 +236,9 @@ list:
 2. **Use it himself for a full week.** The closest available proxy for retention.
 3. **Supabase** — sync, and the usage data that week-4 retention needs.
 4. **Syllabus parsing** — the one job an LLM genuinely belongs in.
+5. **Google Calendar two-way sync is struck from the plan.** `calendar.events`
+   is a sensitive scope needing verification that runs five-plus weeks. Reading
+   any calendar in via its ICS link is shipped and covers most of the value.
 5. Tailwind build oddity: `max-w-*` utilities produced no CSS, so the calendar
    width is set inline. It will bite again on a class that matters more.
 
@@ -339,6 +342,93 @@ demand, so the deep files cost nothing until they're needed.
 `context/decisions.md` and `context/learned.md`. Ask for them if a question
 turns on history this brief doesn't cover.*
 
+## 2026-08-21 · Import from any calendar; never write back
+
+**Decided:** one paste box at `/import` accepts Canvas, Google, Apple and
+Outlook. The server decides what a feed's contents mean from where it came
+from — Canvas produces assignments to schedule, everything else produces fixed
+events to schedule around. Quarterly does not publish a feed back out.
+
+**Why not write back, which was the obvious ask:** Google refreshes subscribed
+calendars every 12–24 hours and won't let you force it. For a static timetable
+that's fine; for a scheduler whose entire premise is that the plan changes when
+you fall behind, the copy in their calendar would routinely show a plan already
+replanned. Two sources of truth with the stale one being the calendar they
+actually check. Better to ship no write-sync than a wrong one.
+
+**Why not Google's API:** `calendar.events` is a sensitive scope requiring
+verification — video demo, written justification, Trust & Safety review — with
+real developers reporting five-plus weeks under review and no response. The
+roadmap had two-way Google sync in phase three, Aug 31 to Sept 13. It could not
+have landed, and building it first would have been how we found out.
+
+**What it actually needed:** recurrence. A Canvas feed is nearly all one-off
+deadlines so RRULE was ignored and nothing was lost. A personal calendar is the
+opposite — a timetable is *all* recurrence, and without expansion it imports as
+a single Tuesday lecture while the scheduler books over the rest of the term.
+
+**What it deliberately doesn't do:** monthly and yearly rules are counted and
+reported, never guessed at. Treating a monthly club meeting as weekly would put
+four times as much in a student's calendar as exists. All-day entries are
+dropped too — blacking out every hour of spring break is the opposite of the
+truth.
+
+**The security note:** widening the allowlist from one provider to four is
+exactly how the lookalike-domain bug gets reintroduced four more times.
+Suffix matching now lives in one place, and there's a test that tries
+`calendar.google.com.attacker.com` and its equivalent for every provider.
+
+## 2026-08-21 · A stacked bar, not a pie — and a validated palette
+
+**Decided:** the day view answers "where does this day go" with one horizontal
+stacked bar. Tapping a day in the week grid or a bar in the workload chart opens
+it.
+
+**Why not the pie that was asked for:** part-to-whole is a stacked bar's job.
+Comparing segment lengths along one axis is a much easier read than comparing
+wedge angles, long course names have somewhere to sit, and the bar still works
+at 10px tall on a phone. The calendar column is also already a proportional
+picture of the day, so a pie of the same data would duplicate it.
+
+**The bigger finding:** the course colours, picked by eye months ago, failed a
+colourblind check. The original pink and green sat at ΔE 4.9 under
+deuteranopia against a ≥8 target — roughly one man in twelve could not tell two
+of their courses apart. Replaced with a set validated in both modes: worst
+adjacent CVD ΔE 9.1 light, 8.4 dark.
+
+**Two rules that keep it valid.** Hues are assigned in fixed order and never
+cycled into new ones — a ninth course reuses slot one rather than inventing a
+colour indistinguishable from an existing one. And colour follows the entity,
+not its position in a list, so removing a course never repaints the others.
+
+Three light steps fall below 3:1 contrast, so every segment carries a visible
+label. Colour is never the only encoding.
+
+## 2026-08-21 · An appointment beats a plan, including a pinned one
+
+**Decided:** adding or moving a one-off event resolves whatever it lands on,
+immediately. Blocks move; the event doesn't. Pinned blocks move too, and get
+named in a notice. Finished blocks are never touched.
+
+**Why the event wins:** an appointment has a real time in the world and a study
+block does not, so only one of the two *can* move. That isn't a judgement call.
+
+**Why pinned blocks move as well:** a pin means "the scheduler should stop
+arguing with me about this hour," which is a preference. An appointment is a
+fact. The fact wins — but silently overriding the one place the app promised to
+defer would be worse than the collision, so it says what it did: *"Moved
+Quarterly — you'd placed it where Dentist is."*
+
+**Why finished blocks don't move:** a completed block is a record of what
+happened, not a plan. Rewriting it to tidy the calendar is falsifying history.
+
+**Does auto-replanning here breach "replanning is explicit"?** No, and the
+distinction matters. That rule is about not absorbing your *failures* quietly —
+a missed block must never just vanish. Here the student has told the app about a
+new constraint, and reacting to an instruction they gave is cause and effect,
+not silent absorption. Same reasoning as the menu closing on click rather than
+on a path change.
+
 ## 2026-08-20 · Bottom tab bar, reversing the hamburger
 
 **Decided:** three tabs fixed to the bottom on phones, inline links on laptops.
@@ -379,60 +469,6 @@ three to five minutes.
 **Canvas stays out of it.** Feeds are empty in August by construction, and it
 asks for a credential to an entire schedule before the product has proven
 anything — the worst possible moment to ask.
-
-## 2026-08-20 · Sell surviving a bad week, not planning a good one
-
-**Decided:** the landing page leads with "a plan that survives you falling
-behind," and "no account needed" is a visible badge rather than a footnote.
-
-**Why:** research into why students abandon planners produced three sentences
-that describe this product's differentiators without knowing it exists — the
-maintenance burden exceeding the value, the mid-week collapse forcing manual
-rework or abandonment, and streaks punishing imperfection. The page was selling
-"plans your hours," which is the half every competitor also claims.
-
-Duolingo's largest measured onboarding lift (+20% DAU) came from putting value
-before account creation. Quarterly has no account at all, which is the strongest
-position in the category and was buried under a button.
-
-## 2026-08-19 · Offline, and one step of undo
-
-**Decided:** a service worker that caches the app shell, and one level of undo on
-the three actions that destroy something.
-
-**Why offline:** everything already lives in localStorage, so the only reason
-the app fails without a signal is that the page can't load. That's a small fix
-for a real case — campus wifi — and the service worker is needed for push later
-regardless, so it's on the path either way.
-
-**The one rule in it:** `/api/` is never cached. That response is derived from a
-Canvas feed URL, which is a bearer credential for a whole schedule, and a cached
-copy sitting in a shared browser is exactly the leak the design avoids.
-
-**Why undo:** there is no server copy and no version history, so a mistaken
-"drop it" is permanent — and the app deliberately asks people to make quick
-judgements about their week. One step covers the realistic case without
-pretending to be a document editor.
-
-**Not verified:** service worker registration is blocked in the automated
-browser used for testing here, the same way pointer drags were. The script
-serves correctly and the code fails safe, but it needs a human check: load the
-app, turn on airplane mode, reload.
-
-## 2026-08-19 · The calendar renders before there's anything in it
-
-**Decided:** the week grid always renders, empty or not. Only the controls that
-need data — replan, the didn't-fit report, the drag hint — are conditional.
-
-**Why:** the page's identity should be obvious before it has content. A card
-saying "nothing to plan yet" tells you the state; a visible calendar tells you
-what this page *is* and what it will look like once you've set up.
-
-**What it caught:** the first copy pointed at "the shaded bands below," and on a
-genuinely fresh account there are none — default sleep is 23:00–07:00 and the
-grid shows 07:30–22:30, so nothing falls in view. Copy that describes something
-that isn't on screen is worse than no copy. It now says what will appear once
-you've told it about your classes and job.
 
 ---
 

@@ -140,8 +140,8 @@ export default function WeekPage() {
             <Link href="/setup" className="rounded-lg bg-[var(--accent)] px-3.5 py-2 font-medium text-[var(--accent-ink)]">
               Set up my week
             </Link>
-            <Link href="/canvas" className="rounded-lg border border-[var(--border-strong)] px-3.5 py-2">
-              Connect Canvas
+            <Link href="/import" className="rounded-lg border border-[var(--border-strong)] px-3.5 py-2">
+              Import a calendar
             </Link>
           </div>
         </div>

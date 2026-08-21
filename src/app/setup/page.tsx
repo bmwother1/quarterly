@@ -84,8 +84,8 @@ export default function SetupPage() {
       </p>
 
       <Section
-        title="Course deadlines"
-        hint="Canvas can fill in your assignments so you don't type them."
+        title="Your other calendars"
+        hint="Canvas, Google, Apple or Outlook. Import once and the scheduler plans around it."
       >
         {state.courses.length > 0 ? (
           <div className="space-y-3">
@@ -106,10 +106,10 @@ export default function SetupPage() {
               ))}
             </div>
             <Link
-              href="/canvas"
+              href="/import"
               className="inline-block rounded-lg border border-[var(--border-strong)] px-3.5 py-2 text-sm"
             >
-              Refresh from Canvas
+              Import another calendar
             </Link>
           </div>
         ) : (
@@ -119,10 +119,10 @@ export default function SetupPage() {
               once your courses go live.
             </p>
             <Link
-              href="/canvas"
+              href="/import"
               className="inline-block rounded-lg bg-[var(--accent)] px-3.5 py-2 text-sm font-medium text-[var(--accent-ink)]"
             >
-              Connect Canvas
+              Import a calendar
             </Link>
           </div>
         )}

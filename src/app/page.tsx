@@ -36,10 +36,10 @@ export default function Landing() {
           Plan my week
         </Link>
         <Link
-          href="/canvas"
+          href="/import"
           className="rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-5 py-3.5 text-center font-medium transition-colors hover:bg-[var(--raised)] active:scale-[0.98]"
         >
-          Connect Canvas
+          Import my calendar
         </Link>
       </div>
 

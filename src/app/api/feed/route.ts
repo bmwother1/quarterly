@@ -1,7 +1,7 @@
 /**
- * POST /api/feed  →  { courses, assignments, workload }
+ * POST /api/feed  →  assignments (Canvas) or fixed events (any other calendar)
  *
- * The browser cannot fetch a Canvas feed directly: canvas.uw.edu sends no CORS
+ * The browser cannot fetch these directly: none of the providers send CORS
  * headers, so the request dies before it starts. This route does the fetch
  * server-side and returns parsed JSON.
  *
@@ -21,6 +21,8 @@ import { NextResponse } from 'next/server';
 import { looksLikeCalendar } from '@/lib/canvas/ics';
 import { assignmentsFromICS, coursesFrom, workloadByWeek } from '@/lib/canvas/interpret';
 import { validateFeedUrl } from '@/lib/canvas/feed-url';
+import { identifySource } from '@/lib/calendar/sources';
+import { eventsFromICS } from '@/lib/calendar/import';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
@@ -46,6 +48,7 @@ export async function POST(request: Request) {
     return NextResponse.json<FeedError>({ error: checked.error, hint: checked.hint }, { status: 400 });
   }
   const url = checked.url;
+  const provider = identifySource(url.hostname)?.label ?? 'That calendar';
 
   let text: string;
   try {
@@ -57,10 +60,10 @@ export async function POST(request: Request) {
 
     if (!res.ok) {
       return NextResponse.json<FeedError>({
-        error: `Canvas returned ${res.status}.`,
-        hint: res.status === 404
-          ? 'You probably copied the calendar page URL rather than the "Calendar Feed" link.'
-          : 'Try re-copying the feed link from Canvas.',
+        error: `${provider} returned ${res.status}.`,
+        hint: res.status === 404 || res.status === 400
+          ? 'That usually means the page address got copied instead of the iCal or ICS link.'
+          : `Try copying the link from ${provider} again.`,
       }, { status: 502 });
     }
 
@@ -76,7 +79,7 @@ export async function POST(request: Request) {
   } catch (e) {
     const timedOut = e instanceof Error && e.name === 'TimeoutError';
     return NextResponse.json<FeedError>({
-      error: timedOut ? 'Canvas took too long to respond.' : "Couldn't reach Canvas.",
+      error: timedOut ? `${provider} took too long to respond.` : `Couldn't reach ${provider}.`,
       hint: 'Check the link, then try again.',
     }, { status: 504 });
   }
@@ -84,12 +87,33 @@ export async function POST(request: Request) {
   if (!looksLikeCalendar(text)) {
     return NextResponse.json<FeedError>({
       error: 'That link returned a web page, not a calendar.',
-      hint: 'In Canvas go to Calendar, then click "Calendar Feed" in the right sidebar.',
+      hint: 'Look for the iCal or ICS address rather than the one in your browser bar.',
     }, { status: 422 });
+  }
+
+  // Where the feed came from decides what its contents mean. Canvas carries
+  // work with deadlines; a personal calendar carries time already spoken for.
+  const source = identifySource(url.hostname);
+
+  if (source?.produces === 'events') {
+    const { events, skippedRecurring } = eventsFromICS(text, {
+      tz: 'America/Los_Angeles',
+      from: new Date(),
+      days: 60,
+    });
+    return NextResponse.json({
+      kind: 'events' as const,
+      source: source.label,
+      events,
+      skippedRecurring,
+      fetchedAt: new Date().toISOString(),
+    });
   }
 
   const assignments = assignmentsFromICS(text);
   return NextResponse.json({
+    kind: 'assignments' as const,
+    source: source?.label ?? 'Canvas',
     assignments,
     courses: coursesFrom(assignments),
     workload: workloadByWeek(assignments),
@@ -122,6 +146,8 @@ export async function GET() {
     assignments,
     courses: coursesFrom(assignments),
     workload: workloadByWeek(assignments),
+    kind: 'assignments' as const,
+    source: 'Canvas',
     fetchedAt: new Date().toISOString(),
     demo: true,
   });

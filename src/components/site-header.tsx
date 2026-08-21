@@ -103,8 +103,8 @@ export function SiteHeader() {
               </Link>
             );
           })}
-          <Link href="/canvas" className="py-1 text-[var(--muted)] transition-colors hover:text-[var(--ink)]">
-            Canvas
+          <Link href="/import" className="py-1 text-[var(--muted)] transition-colors hover:text-[var(--ink)]">
+            Import
           </Link>
         </nav>
       </div>

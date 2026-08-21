@@ -6,6 +6,8 @@
  * server-side request forgery hole, and untested security logic is decoration.
  */
 
+import { identifySource } from '../calendar/sources.ts';
+
 /** Private, loopback, and link-local space. Never fetchable from a public route. */
 export function isForbiddenHost(host: string): boolean {
   const h = host.toLowerCase().replace(/^\[|\]$/g, '');
@@ -28,20 +30,16 @@ export function isForbiddenHost(host: string): boolean {
 }
 
 /**
- * Canvas is hosted per-institution: canvas.uw.edu, <school>.instructure.com,
- * canvas.<school>.edu. An allowlist keeps this from becoming a general-purpose
- * URL fetcher that anyone can point anywhere.
+ * A recognised calendar host: Canvas, Google, Apple or Outlook.
  *
- * Both rules are anchored to the *end* of the hostname, which is the only part
- * an attacker can't control. Matching "canvas." anywhere in the host looks
- * equivalent and is not: canvas.uw.edu.attacker.com contains it, and is a
- * domain someone can simply register. Suffix matching is the whole defence.
+ * Every rule is anchored to the *end* of the hostname, which is the only part
+ * an attacker can't control. Matching a provider name anywhere in the host
+ * looks equivalent and is not — `canvas.uw.edu.attacker.com` contains "canvas."
+ * and is a domain anyone can register. That bug happened once; suffix matching
+ * is the fix, and it now lives in one place for every provider.
  */
 export function isCanvasHost(host: string): boolean {
-  const h = host.toLowerCase();
-  if (h === 'instructure.com' || h.endsWith('.instructure.com')) return true;
-  // Self-hosted Canvas at a university: must be a canvas.* subdomain of a .edu.
-  return h.endsWith('.edu') && (h.startsWith('canvas.') || h.includes('.canvas.'));
+  return identifySource(host) !== null;
 }
 
 export type FeedUrlResult =
@@ -70,8 +68,8 @@ export function validateFeedUrl(raw: unknown): FeedUrlResult {
   if (isForbiddenHost(url.hostname) || !isCanvasHost(url.hostname)) {
     return {
       ok: false,
-      error: "That host isn't a Canvas server.",
-      hint: 'The link should look like https://canvas.uw.edu/feeds/calendars/user_....ics',
+      error: "That isn't a calendar link we recognise.",
+      hint: 'Canvas, Google Calendar, Apple Calendar and Outlook all work. Check you copied the iCal or ICS link, not the page address.',
     };
   }
 
