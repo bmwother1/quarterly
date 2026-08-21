@@ -1,6 +1,6 @@
 # Status
 
-**Updated: 2026-08-19** · 42 days to launch (September 30)
+**Updated: 2026-08-21** · 40 days to launch (September 30)
 
 This file describes the present. It gets rewritten, not appended to.
 
@@ -12,8 +12,9 @@ Repo: `bmwother1/quarterly` (**public**). Live and current at
 ## Right now
 
 The product is built and works. Engine, interface, deployment, privacy page,
-122 tests. A student can describe their week or connect Canvas, get a real plan
+A student can describe their week, or import Canvas, Google, Apple or Outlook, get a real plan
 as a calendar, check blocks off, and replan around what actually happened.
+170 tests.
 
 Two things are not true yet, and both matter more than anything on the Shipped
 list:
@@ -26,14 +27,15 @@ list:
 - **Scheduling engine** — scoring function, free-time discovery, constraint-aware
   placement, generated per-block explanations, honest reporting of what didn't
   fit. ~21ms for a full quarter, deterministic
-- **Canvas ingestion** — dependency-free iCal parser handling all three timestamp
-  shapes including floating times across DST; classification, durations, weights
+- **Calendar import** — one paste box for Canvas, Google, Apple and Outlook.
+  Dependency-free iCal parser handling all three timestamp shapes across DST,
+  plus recurrence expansion, which is what makes a personal timetable usable
 - **Recurring commitments** — weekly quotas with no deadline, so it works outside
   a quarter. This is what makes the product usable in August
 - **Feed route** — server-side fetch, host allowlist, private-range refusal,
   redirects off, size cap, timeout, URL never logged or stored
-- **Interface** — landing, Canvas intake with workload chart, setup, calendar
-  grid with busy time drawn in, check-off, explicit replanning
+- **Interface** — landing, two-question first run, import, setup, calendar grid,
+  day view, check-off, explicit replanning, conflict resolution, undo, offline
 - **Privacy page** written against the code, with a working delete control
 - **Persistence** — localStorage behind an interface, no signup
 
@@ -43,9 +45,6 @@ list:
 2. **Use it himself for a full week.** The closest available proxy for retention.
 3. **Supabase** — sync, and the usage data that week-4 retention needs.
 4. **Syllabus parsing** — the one job an LLM genuinely belongs in.
-5. **Google Calendar two-way sync is struck from the plan.** `calendar.events`
-   is a sensitive scope needing verification that runs five-plus weeks. Reading
-   any calendar in via its ICS link is shipped and covers most of the value.
 5. Tailwind build oddity: `max-w-*` utilities produced no CSS, so the calendar
    width is set inline. It will bite again on a class that matters more.
 
@@ -59,7 +58,14 @@ list:
 - **Supabase project** — send the project URL and the *anon* key (never the
   service_role key). Unblocks sync, retention measurement, and notification
   delivery, which all depend on it.
-- **Google Cloud OAuth client** for the Calendar API.
+
+## Struck from the plan
+
+- **Google Calendar two-way sync.** `calendar.events` is a sensitive scope whose
+  verification is running five-plus weeks for real developers, and writing back
+  via a subscription feed is worse than nothing because Google refreshes those
+  every 12–24 hours. Reading any calendar in via its ICS link shipped instead
+  and covers most of the value.
 
 ## Open questions
 
@@ -91,8 +97,9 @@ Notifications are the higher-value feature but they cannot be built standalone.
 
 ### Aug 31 → Sept 13 · the retention features
 - Push notifications. One a day, always carrying the block's reason.
-  Report, never command. No streaks.
-- Google Calendar two-way sync, so Quarterly stops being a second calendar.
+  Report, never command. No streaks. The decision logic and copy are already
+  written and tested; only delivery is waiting on Supabase.
+- Syllabus parsing, so a block can name the topic rather than just the course.
 
 ### Sept 14 → Sept 22 · feature freeze
 - No new features. Onboarding, empty states, bugs, and the first-run experience
