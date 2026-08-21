@@ -80,7 +80,9 @@ export function AddButton({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       aria-label="Add an event or task"
       className="fixed right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--accent)] text-[var(--accent-ink)] shadow-[var(--shadow-md)] transition-transform active:scale-95"
-      style={{ bottom: 'max(1.25rem, calc(env(safe-area-inset-bottom) + 0.75rem))' }}
+      // Sits above the phone tab bar; back down to the corner on a laptop,
+      // where there is no tab bar to clear.
+      style={{ bottom: 'calc(env(safe-area-inset-bottom) + var(--fab-lift))' }}
     >
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
         <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />

@@ -1,13 +1,13 @@
 # Quarterly — project brief
 
-*Generated 2026-08-20 from the project's `context/` files by `npm run handoff`.
+*Generated 2026-08-21 from the project's `context/` files by `npm run handoff`.
 Don't edit this by hand; edit the source files and regenerate.*
 
 This is the standing context for Quarterly. It covers the person building it,
 what's being built, where it stands, and what has already been decided — so a
 conversation can start from here instead of from scratch.
 
-**41 days to launch** (September 30 2026).
+**40 days to launch** (September 30 2026).
 
 ---
 
@@ -339,71 +339,100 @@ demand, so the deep files cost nothing until they're needed.
 `context/decisions.md` and `context/learned.md`. Ask for them if a question
 turns on history this brief doesn't cover.*
 
-## 2026-08-19 · A fixed event and a dated task are separate primitives
+## 2026-08-20 · Bottom tab bar, reversing the hamburger
 
-**Decided:** two ways to add a one-off, chosen with a single tap. "At a set
-time" creates a `FixedEvent` the scheduler works around. "Needs doing by"
-creates an `Assignment` the scheduler places.
+**Decided:** three tabs fixed to the bottom on phones, inline links on laptops.
+The hamburger built the day before is gone.
 
-**Why:** conflating them is what makes most planners annoying. A dentist
-appointment has its time already decided and the only correct behaviour is to
-never book over it. A task has a deadline and no time yet, and deciding when it
-happens is the entire product. One "add" box that guesses which you meant gets
-it wrong constantly.
+**Why, and this reverses a decision made on request:** the evidence is
+one-sided. Bottom tab bars lift engagement up to 58% over hidden menus, feature
+discovery rises 30%+ when apps switch, and users are 2–3× less likely to find
+anything behind a hamburger at all. Google measured a 76% usage increase from
+bottom-aligned navigation.
 
-**What it did not need:** a new type for hand-entered work. That's an
-`Assignment` — it wants exactly the same treatment as anything from Canvas,
-split into sessions, ranked, placed, explained. Only its origin differs, and
-nothing downstream cares.
+The ergonomic half decides it for this product specifically. A hamburger sits
+top-right, the hardest place to reach one-handed, and a student checking their
+next block on the walk to class has one thumb.
 
-## 2026-08-19 · A hand-moved block is pinned
+**Three tabs, not four.** Canvas is a once-ever setup action, so it lives inside
+Plan rather than spending a permanent tab.
 
-**Decided:** dragging a block sets `pinned`, and the planner treats pinned
-blocks like settled ones — kept across a replan and passed in as time already
-spent.
+**Superseded:** the hamburger menu from 2026-08-19.
 
-**Why:** without it, dragging is theatre. The next replan puts the block back
-where the algorithm wanted it, and the app overrules the person using it. The
-scheduler is allowed to be opinionated about work the student hasn't touched;
-it is not allowed to argue with an explicit instruction.
+## 2026-08-20 · First run is two questions
 
-## 2026-08-19 · A skip asks what it meant
+**Decided:** `/start` asks what you want to make time for and how often, then
+plans and drops you on the calendar. Everything else waits.
 
-**Decided:** skipping offers "find another time" or "drop it" instead of just
-recording a skip.
+**Why:** time-to-first-value should land inside 60–90 seconds; past ten minutes
+abandonment climbs steeply and past thirty it roughly triples. Motion's 2–4 week
+setup is its single most-cited complaint across three review sites. The previous
+route in was a five-section form — the same mistake in miniature.
 
-**Why:** a skip is ambiguous and the two meanings need opposite handling. "Not
-now" is work that still exists and should be rescheduled. "I'm not doing this"
-is work that should stop consuming the week. Guessing wrong in one direction
-makes the app nag about something abandoned; in the other it silently loses
-something that mattered. Asking costs one tap.
+Every setting except one already has a working default. The only input the
+scheduler genuinely cannot invent is something to schedule, so it's the only
+thing asked for.
 
-## 2026-08-19 · Two-week planning horizon
+**Measured:** two taps, three seconds, ten blocks on a real calendar. It was
+three to five minutes.
 
-**Decided:** plan and display 14 days, with weekly quotas repeating per week and
-partial weeks scaled proportionally.
+**Canvas stays out of it.** Feeds are empty in August by construction, and it
+asks for a credential to an entire schedule before the product has proven
+anything — the worst possible moment to ask.
 
-**Why:** found by using it. A one-week horizon meant everything past Sunday was
-empty except the student's job, which reads as a broken app rather than an
-unplanned one — and it hides exactly the crunch week worth seeing coming.
+## 2026-08-20 · Sell surviving a bad week, not planning a good one
 
-## 2026-08-19 · Installable web app, not React Native
+**Decided:** the landing page leads with "a plan that survives you falling
+behind," and "no account needed" is a visible badge rather than a footnote.
 
-**Decided:** ship as a PWA. Manifest, generated icons, standalone display, safe
-area handling. It installs to the home screen, opens without browser chrome, and
-gets its own icon and splash.
+**Why:** research into why students abandon planners produced three sentences
+that describe this product's differentiators without knowing it exists — the
+maintenance burden exceeding the value, the mid-week collapse forcing manual
+rework or abandonment, and streaks punishing imperfection. The page was selling
+"plans your hours," which is the half every competitor also claims.
 
-**Why:** it is most of what "it's an app" means to a student, it ships from the
-codebase that already exists, and it took under an hour against a month or more
-for a second native codebase. One place to fix a bug, no app store review, and a
-change is live in 13 seconds.
+Duolingo's largest measured onboarding lift (+20% DAU) came from putting value
+before account creation. Quarterly has no account at all, which is the strongest
+position in the category and was buried under a button.
 
-**Rejected:** React Native, and any wrapper that produces a second codebase.
+## 2026-08-19 · Offline, and one step of undo
 
-**Revisit when:** something genuinely needs native — push notifications at a
-specific time, background sync, or a widget. A nudge at 9pm is the most likely
-trigger, and it's worth noting that's a real product feature rather than a
-technical itch. Not before people are actually using it.
+**Decided:** a service worker that caches the app shell, and one level of undo on
+the three actions that destroy something.
+
+**Why offline:** everything already lives in localStorage, so the only reason
+the app fails without a signal is that the page can't load. That's a small fix
+for a real case — campus wifi — and the service worker is needed for push later
+regardless, so it's on the path either way.
+
+**The one rule in it:** `/api/` is never cached. That response is derived from a
+Canvas feed URL, which is a bearer credential for a whole schedule, and a cached
+copy sitting in a shared browser is exactly the leak the design avoids.
+
+**Why undo:** there is no server copy and no version history, so a mistaken
+"drop it" is permanent — and the app deliberately asks people to make quick
+judgements about their week. One step covers the realistic case without
+pretending to be a document editor.
+
+**Not verified:** service worker registration is blocked in the automated
+browser used for testing here, the same way pointer drags were. The script
+serves correctly and the code fails safe, but it needs a human check: load the
+app, turn on airplane mode, reload.
+
+## 2026-08-19 · The calendar renders before there's anything in it
+
+**Decided:** the week grid always renders, empty or not. Only the controls that
+need data — replan, the didn't-fit report, the drag hint — are conditional.
+
+**Why:** the page's identity should be obvious before it has content. A card
+saying "nothing to plan yet" tells you the state; a visible calendar tells you
+what this page *is* and what it will look like once you've set up.
+
+**What it caught:** the first copy pointed at "the shaded bands below," and on a
+genuinely fresh account there are none — default sleep is 23:00–07:00 and the
+grid shows 07:30–22:30, so nothing falls in view. Copy that describes something
+that isn't on screen is worse than no copy. It now says what will appear once
+you've told it about your classes and job.
 
 ---
 

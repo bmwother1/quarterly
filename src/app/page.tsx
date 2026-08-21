@@ -19,21 +19,21 @@ export default function Landing() {
   return (
     <main className="mx-auto max-w-2xl px-5 py-14 sm:py-20">
       <h1 className="rise text-[2rem] font-semibold leading-[1.1] sm:text-[2.75rem]">
-        Your week, planned around the life you{' '}
-        <span className="text-[var(--accent)]">actually</span> have.
+        A plan that survives you{' '}
+        <span className="text-[var(--accent)]">falling behind</span>.
       </h1>
       <p className="rise mt-5 text-lg leading-relaxed text-[var(--muted)]">
-        Quarterly lays out when to do your work, not just what&rsquo;s due. It knows about your
-        job, your sleep and the things you do every week, and it rebuilds the plan when you fall
-        behind. Free for students.
+        Every planner works until the week goes wrong. Quarterly is built for the Wednesday when
+        it does: mark what you actually did, and it rebuilds the rest around what&rsquo;s left.
+        Free for students.
       </p>
 
       <div className="rise mt-8 flex flex-col gap-3 sm:flex-row">
         <Link
-          href="/setup"
+          href="/start"
           className="rounded-xl bg-[var(--accent)] px-5 py-3.5 text-center font-medium text-[var(--accent-ink)] shadow-[var(--shadow-md)] transition-transform active:scale-[0.98]"
         >
-          Build my week
+          Plan my week
         </Link>
         <Link
           href="/canvas"
@@ -43,11 +43,21 @@ export default function Landing() {
         </Link>
       </div>
 
-      <p className="mt-3 text-sm text-[var(--faint)]">
-        No account. Nothing to install. Your data stays in this browser.
+      <p className="rise mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+        <span className="rounded-full bg-[var(--accent-soft)] px-2.5 py-1 font-medium text-[var(--accent)]">
+          No account needed
+        </span>
+        <span className="text-[var(--faint)]">
+          Nothing to install. Takes about 30 seconds.
+        </span>
       </p>
 
       <section className="mt-16 grid gap-px overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--border)] sm:grid-cols-2">
+        <Item title="Fall behind and it rebuilds around you">
+          Mark what you did, skipped or half-did, then replan from right now. Most planners make
+          you redo the whole week by hand, which is the moment people quietly stop using them.
+        </Item>
+
         <Item title="It plans the hours, not just the list">
           A to-do list tells you what&rsquo;s due. Quarterly works out when each piece actually
           happens, in sessions long enough to be worth sitting down for, around the time you
@@ -63,11 +73,6 @@ export default function Landing() {
         <Item title="It tells you when the week doesn&rsquo;t fit">
           Most planners quietly overbook you and let Thursday find out. Quarterly shows you what
           it couldn&rsquo;t fit and why, while you can still do something about it.
-        </Item>
-
-        <Item title="Fall behind and it rebuilds around you">
-          Mark what you did, skipped or half-did, then replan from right now. Nothing moves on
-          its own — a schedule that silently reshuffles is one that always says you&rsquo;re fine.
         </Item>
       </section>
 

@@ -28,7 +28,8 @@ export function UndoBar({
     <div
       role="status"
       className="rise fixed inset-x-0 z-40 mx-auto flex w-fit items-center gap-3 rounded-full border border-[var(--border)] bg-[var(--ink)] px-4 py-2.5 text-sm text-[var(--bg)] shadow-[var(--shadow-md)]"
-      style={{ bottom: 'max(5.5rem, calc(env(safe-area-inset-bottom) + 5rem))' }}
+      // Above the + which is itself above the tab bar.
+      style={{ bottom: 'calc(env(safe-area-inset-bottom) + var(--fab-lift) + 4rem)' }}
     >
       <span>{label}</span>
       <button

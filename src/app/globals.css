@@ -28,6 +28,10 @@
   --shadow-md: 0 2px 4px rgb(25 23 20 / 0.04), 0 8px 20px -8px rgb(25 23 20 / 0.10);
 
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* How far the floating + sits off the bottom. Larger on a phone, where it has
+     to clear the tab bar. */
+  --fab-lift: 5.5rem;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -61,6 +65,10 @@
   --color-faint: var(--faint);
   --color-accent: var(--accent);
   --color-warn: var(--warn);
+}
+
+@media (min-width: 640px) {
+  :root { --fab-lift: 1.5rem; }
 }
 
 body {

@@ -9,6 +9,68 @@ record of what was tried and abandoned is worth more than a tidy file.
 
 ---
 
+## 2026-08-20 · Bottom tab bar, reversing the hamburger
+
+**Decided:** three tabs fixed to the bottom on phones, inline links on laptops.
+The hamburger built the day before is gone.
+
+**Why, and this reverses a decision made on request:** the evidence is
+one-sided. Bottom tab bars lift engagement up to 58% over hidden menus, feature
+discovery rises 30%+ when apps switch, and users are 2–3× less likely to find
+anything behind a hamburger at all. Google measured a 76% usage increase from
+bottom-aligned navigation.
+
+The ergonomic half decides it for this product specifically. A hamburger sits
+top-right, the hardest place to reach one-handed, and a student checking their
+next block on the walk to class has one thumb.
+
+**Three tabs, not four.** Canvas is a once-ever setup action, so it lives inside
+Plan rather than spending a permanent tab.
+
+**Superseded:** the hamburger menu from 2026-08-19.
+
+---
+
+## 2026-08-20 · First run is two questions
+
+**Decided:** `/start` asks what you want to make time for and how often, then
+plans and drops you on the calendar. Everything else waits.
+
+**Why:** time-to-first-value should land inside 60–90 seconds; past ten minutes
+abandonment climbs steeply and past thirty it roughly triples. Motion's 2–4 week
+setup is its single most-cited complaint across three review sites. The previous
+route in was a five-section form — the same mistake in miniature.
+
+Every setting except one already has a working default. The only input the
+scheduler genuinely cannot invent is something to schedule, so it's the only
+thing asked for.
+
+**Measured:** two taps, three seconds, ten blocks on a real calendar. It was
+three to five minutes.
+
+**Canvas stays out of it.** Feeds are empty in August by construction, and it
+asks for a credential to an entire schedule before the product has proven
+anything — the worst possible moment to ask.
+
+---
+
+## 2026-08-20 · Sell surviving a bad week, not planning a good one
+
+**Decided:** the landing page leads with "a plan that survives you falling
+behind," and "no account needed" is a visible badge rather than a footnote.
+
+**Why:** research into why students abandon planners produced three sentences
+that describe this product's differentiators without knowing it exists — the
+maintenance burden exceeding the value, the mid-week collapse forcing manual
+rework or abandonment, and streaks punishing imperfection. The page was selling
+"plans your hours," which is the half every competitor also claims.
+
+Duolingo's largest measured onboarding lift (+20% DAU) came from putting value
+before account creation. Quarterly has no account at all, which is the strongest
+position in the category and was buried under a button.
+
+---
+
 ## 2026-08-19 · Offline, and one step of undo
 
 **Decided:** a service worker that caches the app shell, and one level of undo on

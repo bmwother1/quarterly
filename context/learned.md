@@ -51,6 +51,31 @@ gets a polite yes from everyone and teaches nothing. "Walk me through last Sunda
 
 ## From building
 
+### Students describe this product's features when asked why they quit others (2026-08-20)
+
+From a competitive teardown of nine planner apps. Three findings, in order of
+how much they should change what gets built:
+
+**Bottom tab bars beat hamburgers, decisively.** Up to 58% more engagement,
+30%+ better feature discovery, users 2–3× less likely to find hidden items.
+Directly reversed a decision made the day before.
+
+**Time-to-value is the competitive game.** 60–90 seconds is the target; past
+thirty minutes abandonment roughly triples. Motion needs 2–4 weeks and it is
+their most-cited complaint. Shovel's headline is literally "Start Planning in
+Seconds."
+
+**Why students actually quit, in their words:** the maintenance burden exceeds
+the value; when the plan breaks mid-week you either rework it by hand or stop
+updating it; planners punish imperfection so a missed day ends the habit
+entirely. Those are three sentences describing replan, the honest "didn't fit"
+list, and the decision not to ship streaks — written by people who have never
+seen this app.
+
+**The marketing consequence:** the landing page was selling "plans your hours,"
+which every competitor also claims. What students report wanting is "survives
+you falling behind," which none of them claim.
+
 ### Offline works, and the PWA is now doing real work (2026-08-19)
 
 Brydon confirmed the app loads in airplane mode after a service worker landed.
