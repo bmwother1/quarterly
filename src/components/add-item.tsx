@@ -48,16 +48,17 @@ export function AddItem({
   editing = null, onUpdateEvent,
 }: {
   events: FixedEvent[];
-  onAddEvent: (e: Omit<FixedEvent, 'id'>) => void;
+  /** Returns a sentence naming what had to move, or null when nothing did. */
+  onAddEvent: (e: Omit<FixedEvent, 'id'>) => string | null | void;
   onRemoveEvent: (id: string) => void;
   onAddTask: (t: { title: string; course: string; kind: WorkKind; due: string; estimatedMinutes: number }) => void;
   tz?: string;
   /** Inside a sheet: no explanatory prose, no list, close on submit. */
   compact?: boolean;
-  onDone?: () => void;
+  onDone?: (moved?: string | null) => void;
   /** When set, the form edits this event in place instead of creating one. */
   editing?: FixedEvent | null;
-  onUpdateEvent?: (id: string, patch: Partial<Omit<FixedEvent, 'id'>>) => void;
+  onUpdateEvent?: (id: string, patch: Partial<Omit<FixedEvent, 'id'>>) => string | null | void;
 }) {
   const [mode, setMode] = useState<'event' | 'task'>('event');
   // Fixed at mount. Reading the clock during render is impure and can differ
@@ -87,18 +88,22 @@ export function AddItem({
       const end = new Date(new Date(startISO).getTime() + minutes * 60_000).toISOString();
 
       if (editing && onUpdateEvent) {
-        onUpdateEvent(editing.id, { title: title.trim(), start: startISO, end });
-        onDone?.();
+        const moved = onUpdateEvent(editing.id, { title: title.trim(), start: startISO, end });
+        onDone?.(moved ?? null);
         return;
       }
 
-      onAddEvent({
+      const moved = onAddEvent({
         title: title.trim(),
         start: startISO,
         end: new Date(new Date(startISO).getTime() + minutes * 60_000).toISOString(),
         note: null,
         color: EVENT_COLORS[events.length % EVENT_COLORS.length],
       });
+      setTitle('');
+      setCourse('');
+      onDone?.(moved ?? null);
+      return;
     } else {
       // A deadline with no time given means the end of that day, not midnight
       // starting it — the same rule Canvas all-day items get.
@@ -109,7 +114,7 @@ export function AddItem({
 
     setTitle('');
     setCourse('');
-    onDone?.();
+    onDone?.(null);
   }
 
   return (

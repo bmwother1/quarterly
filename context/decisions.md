@@ -9,6 +9,33 @@ record of what was tried and abandoned is worth more than a tidy file.
 
 ---
 
+## 2026-08-21 · An appointment beats a plan, including a pinned one
+
+**Decided:** adding or moving a one-off event resolves whatever it lands on,
+immediately. Blocks move; the event doesn't. Pinned blocks move too, and get
+named in a notice. Finished blocks are never touched.
+
+**Why the event wins:** an appointment has a real time in the world and a study
+block does not, so only one of the two *can* move. That isn't a judgement call.
+
+**Why pinned blocks move as well:** a pin means "the scheduler should stop
+arguing with me about this hour," which is a preference. An appointment is a
+fact. The fact wins — but silently overriding the one place the app promised to
+defer would be worse than the collision, so it says what it did: *"Moved
+Quarterly — you'd placed it where Dentist is."*
+
+**Why finished blocks don't move:** a completed block is a record of what
+happened, not a plan. Rewriting it to tidy the calendar is falsifying history.
+
+**Does auto-replanning here breach "replanning is explicit"?** No, and the
+distinction matters. That rule is about not absorbing your *failures* quietly —
+a missed block must never just vanish. Here the student has told the app about a
+new constraint, and reacting to an instruction they gave is cause and effect,
+not silent absorption. Same reasoning as the menu closing on click rather than
+on a path change.
+
+---
+
 ## 2026-08-20 · Bottom tab bar, reversing the hamburger
 
 **Decided:** three tabs fixed to the bottom on phones, inline links on laptops.

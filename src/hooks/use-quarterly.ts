@@ -5,6 +5,7 @@ import type { Assignment, Availability, Commitment, FixedEvent, WorkKind } from 
 import { quarterlyStore, type QuarterlyState } from '@/lib/store';
 import { planWeek } from '@/lib/schedule/plan';
 import { applyCompletion, applyLearnedEstimates, dropRemaining, resetWeeklyTallies, type Completion } from '@/lib/schedule/complete';
+import { collisionsWith, describeCollisions, releaseForEvents } from '@/lib/schedule/conflicts';
 
 /**
  * The one place component state and stored state meet.
@@ -65,6 +66,32 @@ export function useQuarterly(tz: string) {
    * means nothing ever feels missed, and a planner that always says you're fine
    * is one you stop believing.
    */
+  /**
+   * Rebuild the plan inside a state update.
+   *
+   * Shared by the replan button and by adding an event, so a schedule produced
+   * either way goes through exactly the same path — there is no "quick" version
+   * that skips a constraint.
+   */
+  const planInto = useCallback((prev: QuarterlyState, from: Date): QuarterlyState => {
+    const commitments = resetWeeklyTallies(prev.commitments, prev.lastPlannedAt, from, tz);
+    const assignments = applyLearnedEstimates(prev.assignments);
+    const settled = prev.blocks.filter((b) => b.status !== 'planned' || b.pinned);
+
+    const result = planWeek(assignments, prev.availability, {
+      now: from, tz, commitments, existingBlocks: settled, events: prev.events,
+    });
+
+    return {
+      ...prev,
+      assignments,
+      commitments,
+      blocks: [...settled, ...result.blocks].sort((a, b) => a.start.localeCompare(b.start)),
+      unscheduled: result.unscheduled,
+      lastPlannedAt: from.toISOString(),
+    };
+  }, [tz]);
+
   const replan = useCallback((from: Date = new Date()) => {
     mutate((prev) => {
       // A new week zeroes the quotas, or last week's five runs mean no runs ever again.
@@ -143,24 +170,57 @@ export function useQuarterly(tz: string) {
     }));
   }, [mutate]);
 
-  /** A one-off at a fixed time. The scheduler works around it, never over it. */
-  const addEvent = useCallback((e: Omit<FixedEvent, 'id'>) => {
-    mutate((prev) => ({
-      ...prev,
-      events: [...prev.events, { ...e, id: `e-${Date.now()}` }]
-        .sort((a, b) => a.start.localeCompare(b.start)),
-    }));
-  }, [mutate]);
+  /**
+   * Add a one-off, and resolve whatever it lands on.
+   *
+   * Replanning is normally an explicit button, deliberately: a schedule that
+   * silently reshuffles means nothing ever feels missed. This doesn't breach
+   * that. The rule is about not absorbing your *failures* quietly — here the
+   * student has just told the app about a new constraint, and reacting to an
+   * instruction they gave is cause and effect, not silent absorption.
+   *
+   * Returns a sentence naming what moved, or null when nothing had to.
+   */
+  const addEvent = useCallback((e: Omit<FixedEvent, 'id'>): string | null => {
+    const event: FixedEvent = { ...e, id: `e-${Date.now()}` };
+    const before = quarterlyStore.getSnapshot();
+    const clashes = collisionsWith(before.blocks, [event]);
+
+    mutate((prev) => {
+      const withEvent: QuarterlyState = {
+        ...prev,
+        events: [...prev.events, event].sort((a, b) => a.start.localeCompare(b.start)),
+        // A pinned block still loses to an appointment — an event has a real
+        // time in the world and a study block doesn't — so release the pin and
+        // let the planner move it.
+        blocks: releaseForEvents(prev.blocks, [event]),
+      };
+      return clashes.length > 0 ? planInto(withEvent, new Date()) : withEvent;
+    });
+
+    return describeCollisions(clashes);
+  }, [mutate, planInto]);
 
   /** Change an existing one-off. Editing beats delete-and-retype for a typo. */
-  const updateEvent = useCallback((id: string, patch: Partial<Omit<FixedEvent, 'id'>>) => {
-    mutate((prev) => ({
-      ...prev,
-      events: prev.events
-        .map((e) => (e.id === id ? { ...e, ...patch } : e))
-        .sort((a, b) => a.start.localeCompare(b.start)),
-    }));
-  }, [mutate]);
+  const updateEvent = useCallback((id: string, patch: Partial<Omit<FixedEvent, 'id'>>): string | null => {
+    const before = quarterlyStore.getSnapshot();
+    const moved = before.events.find((e) => e.id === id);
+    const next = moved ? { ...moved, ...patch } : null;
+    const clashes = next ? collisionsWith(before.blocks, [next]) : [];
+
+    mutate((prev) => {
+      const updated: QuarterlyState = {
+        ...prev,
+        events: prev.events
+          .map((e) => (e.id === id ? { ...e, ...patch } : e))
+          .sort((a, b) => a.start.localeCompare(b.start)),
+        blocks: next ? releaseForEvents(prev.blocks, [next]) : prev.blocks,
+      };
+      return clashes.length > 0 ? planInto(updated, new Date()) : updated;
+    });
+
+    return describeCollisions(clashes);
+  }, [mutate, planInto]);
 
   const removeEvent = useCallback((id: string) => {
     mutateUndoable('Event removed', (prev) => ({

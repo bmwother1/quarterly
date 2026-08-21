@@ -27,6 +27,14 @@ export default function WeekPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [movedNotice, setMovedNotice] = useState<string | null>(null);
+
+  /** Say what the app did on the student's behalf, then get out of the way. */
+  function announce(moved?: string | null) {
+    if (!moved) return;
+    setMovedNotice(moved);
+    setTimeout(() => setMovedNotice((cur) => (cur === moved ? null : cur)), 6000);
+  }
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   const colourFor = useMemo(() => {
@@ -359,6 +367,16 @@ export default function WeekPage() {
           )}
         </>
 
+      {movedNotice && (
+        <div
+          role="status"
+          className="rise fixed inset-x-0 z-40 mx-auto w-fit max-w-[92vw] rounded-full border border-[var(--border)] bg-[var(--ink)] px-4 py-2.5 text-center text-sm text-[var(--bg)] shadow-[var(--shadow-md)]"
+          style={{ bottom: 'calc(env(safe-area-inset-bottom) + var(--fab-lift) + 4rem)' }}
+        >
+          {movedNotice}
+        </div>
+      )}
+
       <UndoBar label={undoLabel} onUndo={undo} onDismiss={dismissUndo} />
 
       {/* Before anything is set up the page has one job — get you set up. A
@@ -373,7 +391,7 @@ export default function WeekPage() {
           onRemoveEvent={removeEvent}
           onAddTask={addTask}
           tz={TZ}
-          onDone={() => setAdding(false)}
+          onDone={(moved) => { setAdding(false); announce(moved); }}
         />
       </Sheet>
 
@@ -395,7 +413,7 @@ export default function WeekPage() {
             onRemoveEvent={removeEvent}
             onAddTask={addTask}
             tz={TZ}
-            onDone={() => { setEditingEventId(null); setSelectedEventId(null); }}
+            onDone={(moved) => { setEditingEventId(null); setSelectedEventId(null); announce(moved); }}
           />
         )}
       </Sheet>
