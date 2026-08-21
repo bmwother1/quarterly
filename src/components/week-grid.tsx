@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRef, useState } from 'react';
 import type { Availability, BusyBlock, FixedEvent, StudyBlock } from '@/lib/types';
 import { localParts, fmtTime, zonedInstant } from '@/lib/time';
@@ -181,10 +182,15 @@ export function WeekGrid({
 
           return (
             <div key={dateKey} className="min-w-0 flex-1">
-              <div className={`pb-1 text-center text-xs ${isToday ? 'font-semibold text-[var(--accent)]' : 'text-[var(--muted)]'}`}>
+              <Link
+                href={`/day/${dateKey}`}
+                className={`block rounded pb-1 text-center text-xs transition-colors hover:bg-[var(--raised)] ${
+                  isToday ? 'font-semibold text-[var(--accent)]' : 'text-[var(--muted)] hover:text-[var(--ink)]'
+                }`}
+              >
                 {DAY_LABELS[weekday]}{' '}
                 <span className="text-[var(--faint)]">{Number(dateKey.slice(8))}</span>
-              </div>
+              </Link>
 
               <div
                 data-daycol={dateKey}

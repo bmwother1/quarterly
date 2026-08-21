@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import type { Assignment } from '@/lib/types';
 import { DEFAULT_TZ } from '@/lib/time';
 
@@ -31,7 +32,11 @@ export function WorkloadChart({ weeks }: { weeks: WorkloadWeek[] }) {
           timeZone: 'UTC', month: 'short', day: 'numeric',
         });
         return (
-          <div key={w.weekStart} className="flex items-center gap-3 text-sm">
+          <Link
+            key={w.weekStart}
+            href={`/day/${w.weekStart}`}
+            className="flex items-center gap-3 rounded text-sm transition-colors hover:bg-[var(--raised)]"
+          >
             <span className="w-16 shrink-0 tabular-nums text-[var(--faint)]">{label}</span>
             <div className="relative h-6 flex-1 overflow-hidden rounded-sm bg-[var(--border)]/40">
               <div
@@ -46,7 +51,7 @@ export function WorkloadChart({ weeks }: { weeks: WorkloadWeek[] }) {
             <span className="w-6 shrink-0 text-right tabular-nums text-[var(--muted)]">{w.count}</span>
             {w.hasExam && <span className="w-10 shrink-0 text-xs text-[var(--warn)]">exam</span>}
             {!w.hasExam && <span className="w-10 shrink-0" />}
-          </div>
+          </Link>
         );
       })}
       <p className="pt-2 text-xs text-[var(--faint)]">

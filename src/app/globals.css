@@ -32,6 +32,23 @@
   /* How far the floating + sits off the bottom. Larger on a phone, where it has
      to clear the tab bar. */
   --fab-lift: 5.5rem;
+
+  /* Series colours — validated for colourblind separation in both modes.
+     See src/lib/series.ts for why these specific values. */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+  --series-7: #4a3aa7;
+  --series-8: #e34948;
+
+  /* Context, not series: time the student isn't choosing how to spend. */
+  --ctx-sleep: #cfcac2;
+  --ctx-fixed: #8f8880;
+  --ctx-free:  #eae6e0;
+
 }
 
 @media (prefers-color-scheme: dark) {
@@ -52,6 +69,20 @@
 
     --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
     --shadow-md: 0 2px 4px rgb(0 0 0 / 0.3), 0 12px 28px -10px rgb(0 0 0 / 0.6);
+
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --series-6: #008300;
+    --series-7: #9085e9;
+    --series-8: #e66767;
+
+    --ctx-sleep: #33302c;
+    --ctx-fixed: #575049;
+    --ctx-free:  #232120;
+
   }
 }
 

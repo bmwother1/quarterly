@@ -9,6 +9,34 @@ record of what was tried and abandoned is worth more than a tidy file.
 
 ---
 
+## 2026-08-21 · A stacked bar, not a pie — and a validated palette
+
+**Decided:** the day view answers "where does this day go" with one horizontal
+stacked bar. Tapping a day in the week grid or a bar in the workload chart opens
+it.
+
+**Why not the pie that was asked for:** part-to-whole is a stacked bar's job.
+Comparing segment lengths along one axis is a much easier read than comparing
+wedge angles, long course names have somewhere to sit, and the bar still works
+at 10px tall on a phone. The calendar column is also already a proportional
+picture of the day, so a pie of the same data would duplicate it.
+
+**The bigger finding:** the course colours, picked by eye months ago, failed a
+colourblind check. The original pink and green sat at ΔE 4.9 under
+deuteranopia against a ≥8 target — roughly one man in twelve could not tell two
+of their courses apart. Replaced with a set validated in both modes: worst
+adjacent CVD ΔE 9.1 light, 8.4 dark.
+
+**Two rules that keep it valid.** Hues are assigned in fixed order and never
+cycled into new ones — a ninth course reuses slot one rather than inventing a
+colour indistinguishable from an existing one. And colour follows the entity,
+not its position in a list, so removing a course never repaints the others.
+
+Three light steps fall below 3:1 contrast, so every segment carries a visible
+label. Colour is never the only encoding.
+
+---
+
 ## 2026-08-21 · An appointment beats a plan, including a pinned one
 
 **Decided:** adding or moving a one-off event resolves whatever it lands on,
