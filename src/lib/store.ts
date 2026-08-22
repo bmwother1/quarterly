@@ -33,6 +33,16 @@ export interface QuarterlyState {
    */
   unscheduled: UnscheduledItem[];
   lastPlannedAt: string | null;
+  /**
+   * Steps the student explicitly declined. Kept apart from the data because
+   * "I have no fixed schedule" and "I haven't said yet" look identical in the
+   * data and mean opposite things.
+   */
+  skippedSteps?: Partial<Record<'work' | 'fixed' | 'sleep' | 'calendars', boolean>>;
+  /** Sleep always has a default, so this records that it was actually looked at. */
+  sleepConfirmed?: boolean;
+  /** Set once, when setup completes. Setup prompts never appear again after. */
+  wentLiveAt?: string | null;
   lastSyncedAt: string | null;
   /**
    * Deliberately absent: the Canvas feed URL.
@@ -58,6 +68,9 @@ export function emptyState(): QuarterlyState {
     blocks: [],
     unscheduled: [],
     lastPlannedAt: null,
+    skippedSteps: {},
+    sleepConfirmed: false,
+    wentLiveAt: null,
     lastSyncedAt: null,
   };
 }

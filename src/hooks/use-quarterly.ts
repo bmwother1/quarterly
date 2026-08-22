@@ -6,6 +6,7 @@ import { quarterlyStore, type QuarterlyState } from '@/lib/store';
 import { planWeek } from '@/lib/schedule/plan';
 import { applyCompletion, applyLearnedEstimates, dropRemaining, resetWeeklyTallies, type Completion } from '@/lib/schedule/complete';
 import { collisionsWith, describeCollisions, releaseForEvents } from '@/lib/schedule/conflicts';
+import { isLive, type StepId } from '@/lib/onboarding';
 
 /**
  * The one place component state and stored state meet.
@@ -274,6 +275,44 @@ export function useQuarterly(tz: string) {
     quarterlyStore.set(next);
   }, []);
 
+  /**
+   * Record that a setup step was deliberately declined.
+   *
+   * Skipping is an answer, not an absence — it's what lets a student with no
+   * fixed schedule ever be finished.
+   */
+  const skipStep = useCallback((id: StepId) => {
+    mutate((prev) => ({ ...prev, skippedSteps: { ...prev.skippedSteps, [id]: true } }));
+  }, [mutate]);
+
+  /** Un-skip, for the student who changes their mind from Settings. */
+  const unskipStep = useCallback((id: StepId) => {
+    mutate((prev) => {
+      const next = { ...prev.skippedSteps };
+      delete next[id];
+      return { ...prev, skippedSteps: next, wentLiveAt: null };
+    });
+  }, [mutate]);
+
+  const confirmSleep = useCallback(() => {
+    mutate((prev) => ({ ...prev, sleepConfirmed: true }));
+  }, [mutate]);
+
+  /**
+   * Stamp the moment setup completed.
+   *
+   * Kept as a stored timestamp rather than recomputed, so the transition can be
+   * celebrated exactly once and never re-fires if a student later removes a
+   * commitment and drops back below the bar.
+   */
+  const markLiveIfReady = useCallback(() => {
+    mutate((prev) => (
+      !prev.wentLiveAt && isLive(prev)
+        ? { ...prev, wentLiveAt: new Date().toISOString() }
+        : prev
+    ));
+  }, [mutate]);
+
   const reset = useCallback(() => quarterlyStore.clear(), []);
 
   return {
@@ -281,5 +320,6 @@ export function useQuarterly(tz: string) {
     undo, undoLabel, dismissUndo, removeCommitment,
     addEvent, updateEvent, removeEvent, addTask, removeTask,
     updateAvailability, updateCommitments, reset,
+    skipStep, unskipStep, confirmSleep, markLiveIfReady,
   };
 }
