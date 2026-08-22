@@ -1,13 +1,13 @@
 # Quarterly — project brief
 
-*Generated 2026-08-21 from the project's `context/` files by `npm run handoff`.
+*Generated 2026-08-22 from the project's `context/` files by `npm run handoff`.
 Don't edit this by hand; edit the source files and regenerate.*
 
 This is the standing context for Quarterly. It covers the person building it,
 what's being built, where it stands, and what has already been decided — so a
 conversation can start from here instead of from scratch.
 
-**40 days to launch** (September 30 2026).
+**39 days to launch** (September 30 2026).
 
 ---
 
@@ -197,109 +197,145 @@ compound within a course.
 
 This file describes the present. It gets rewritten, not appended to.
 
-Repo: `bmwother1/quarterly` (**public**). Live and current at
-`quarterly-alpha.vercel.app`. Pushes to `main` auto-deploy.
+Repo: `bmwother1/quarterly` (public). Live and current at
+`quarterly-alpha.vercel.app`. Pushes to `main` auto-deploy in about 20 seconds.
+181 tests. Node lives at `~/.local/node` and is on Brydon's PATH but not in a
+fresh agent shell — prefix `export PATH="$HOME/.local/node/bin:$PATH"`.
 
 ---
 
 ## Right now
 
-The product is built and works. Engine, interface, deployment, privacy page,
-A student can describe their week, or import Canvas, Google, Apple or Outlook, get a real plan
-as a calendar, check blocks off, and replan around what actually happened.
-170 tests.
+The product is finished enough to hand to a student. Import any calendar, get a
+planned week, check things off, replan when it falls apart. It installs to a
+phone, works offline, and resolves conflicts on its own.
 
-Two things are not true yet, and both matter more than anything on the Shipped
-list:
+Two things remain untrue, and both outrank everything on the shipped list:
 
-1. **Nobody has used it.** One interview, logged honestly as zero signal.
+1. **Nobody has used it but Brydon.** One interview, logged as zero signal.
 2. **Nothing measures retention**, which is the number that decides the project.
 
 ## Shipped
 
 - **Scheduling engine** — scoring function, free-time discovery, constraint-aware
-  placement, generated per-block explanations, honest reporting of what didn't
-  fit. ~21ms for a full quarter, deterministic
-- **Calendar import** — one paste box for Canvas, Google, Apple and Outlook.
-  Dependency-free iCal parser handling all three timestamp shapes across DST,
-  plus recurrence expansion, which is what makes a personal timetable usable
-- **Recurring commitments** — weekly quotas with no deadline, so it works outside
-  a quarter. This is what makes the product usable in August
-- **Feed route** — server-side fetch, host allowlist, private-range refusal,
-  redirects off, size cap, timeout, URL never logged or stored
-- **Interface** — landing, two-question first run, import, setup, calendar grid,
-  day view, check-off, explicit replanning, conflict resolution, undo, offline
+  placement, generated per-block reasons, honest reporting of what didn't fit.
+  ~21ms for a full quarter, deterministic, no LLM in the path
+- **Calendar import** — one paste box at `/import` for Canvas, Google, Apple and
+  Outlook, with recurrence expansion. Canvas produces assignments to schedule;
+  every other source produces fixed events to schedule around
+- **Recurring commitments** — weekly quotas with no deadline, which is what makes
+  the app usable outside a quarter
+- **Two-question first run** at `/start` — two taps, three seconds, ten blocks
+- **Interface** — landing, import, setup, week grid, day view with a validated
+  colourblind-safe palette, check-off, explicit replan, drag-to-move with
+  pinning, one-off events, undo, themes, offline, installable
+- **Conflict resolution** — an event dropped on planned work moves the work,
+  says what it moved, and never touches finished blocks
+- **Notification engine** — decision logic and copy written and tested, with a
+  banned-phrase list enforcing tone. Delivery is the only missing half
 - **Privacy page** written against the code, with a working delete control
-- **Persistence** — localStorage behind an interface, no signup
+- **Backup** — export and import JSON, since there is no server copy
+
+## In progress, not finished
+
+- **Onboarding completion model** (`src/lib/onboarding.ts`, committed as WIP).
+  Module, hook, store changes and 11 tests exist; **no page imports any of it**,
+  so it currently does nothing. To land: render `OnboardingShell`, replace the
+  `noFixedTime` banner on `/week` with it, confirm the resolved state survives a
+  reload.
 
 ## Next, in order
 
 1. **Nineteen more interviews.** Nothing else on this list matters as much.
-2. **Use it himself for a full week.** The closest available proxy for retention.
-3. **Supabase** — sync, and the usage data that week-4 retention needs.
-4. **Syllabus parsing** — the one job an LLM genuinely belongs in.
-5. Tailwind build oddity: `max-w-*` utilities produced no CSS, so the calendar
-   width is set inline. It will bite again on a class that matters more.
+2. **Use it for a full week.** The closest available proxy for retention.
+3. **Supabase** — sync, retention measurement, and notification delivery all
+   depend on it. Migration written and waiting at
+   `supabase/migrations/0001_init.sql`; client libraries installed.
+4. **Finish the onboarding model** above.
+5. **Syllabus parsing** — the one job an LLM genuinely belongs in.
+6. Tailwind oddity: `max-w-*` utilities produced no CSS, so the calendar width
+   is set inline. It will bite again on a class that matters more.
+
+## Owed to Brydon
+
+- **A business-side action plan** — what to do, how, and why, covering the
+  nineteen interviews, a distribution plan for thirty students, a real domain,
+  the Dempsey application, and the undecided revenue model. Asked for on
+  2026-08-21 and not delivered before the session ended. **Start here.**
 
 ## Struck from the plan
 
 - **Google Calendar two-way sync.** `calendar.events` is a sensitive scope whose
-  verification is running five-plus weeks for real developers, and writing back
-  via a subscription feed is worse than nothing because Google refreshes those
-  every 12–24 hours. Reading any calendar in via its ICS link shipped instead
-  and covers most of the value.
+  verification runs five-plus weeks, and writing back via a subscription feed is
+  worse than nothing because Google refreshes those every 12–24 hours. Reading
+  any calendar in via its ICS link shipped instead and covers most of the value.
 
 ## Open questions
 
-- Would a student who connected in week 0, saw an empty feed, and set up their
-  week by hand come back when the quarter starts?
 - Does anyone outside this project describe the 9pm decision problem unprompted?
-- What is the business model? Free for students is the acquisition strategy, not
-  a revenue plan, and nothing has been decided beyond that.
+- Would a student who connected in week 0 and saw an empty feed come back?
+- What is the business model? Free for students is an acquisition strategy, not
+  a revenue plan, and nothing has been decided.
 
 ---
 
-## The plan to September 30 (42 days)
+## The plan to September 30
 
-Sequencing note that changes the obvious order: **push notifications need a
-server-side subscription store and a scheduled job, so Supabase comes first.**
-Notifications are the higher-value feature but they cannot be built standalone.
+Sequencing note: **push notifications need a server-side subscription store and
+a scheduled job, so Supabase comes first** even though notifications are the
+higher-value feature.
 
-### Now → Sunday Aug 23 · prove it survives a real week
-- Brydon uses it himself, every day, with his actual schedule. Whether he still
-  opens it on day five is the closest available proxy for week-4 retention.
+### Now → Aug 23 · prove it survives a real week
+- Use it daily, with the real schedule.
 - Five interviews. Past behaviour only, product not shown.
 
 ### Aug 24 → Aug 30 · the data layer
-- Supabase: accounts, sync, and the first thing that actually measures retention.
-- Learned energy pattern: replace the self-declared dropdown with observed
-  completion rate by hour. Better data than a self-report, and it is already
-  being collected.
+- Supabase: accounts, sync, and the first thing that measures retention.
+- Learned energy pattern: replace the declared dropdown with observed completion
+  rate by hour. The data is already being collected and read.
 - Ten more interviews. Fifteen total by month end.
 
 ### Aug 31 → Sept 13 · the retention features
 - Push notifications. One a day, always carrying the block's reason.
-  Report, never command. No streaks. The decision logic and copy are already
-  written and tested; only delivery is waiting on Supabase.
-- Syllabus parsing, so a block can name the topic rather than just the course.
+- Syllabus parsing, so a block names the topic rather than just the course.
 
 ### Sept 14 → Sept 22 · feature freeze
-- No new features. Onboarding, empty states, bugs, and the first-run experience
-  only. Every feature added inside two weeks of launch ships untested by a real
-  student.
+- Onboarding, empty states and bugs only. Anything added inside two weeks of
+  launch ships without a real student having touched it.
 
 ### Sept 23 → Sept 30 · recruit
-- Thirty students onboarded before instruction begins.
-- The workload chart is the pitch: show someone their own quarter as a chart.
+- Thirty students before instruction begins.
+- Brydon is Sponsorship Lead of a 51-person solar vehicle team. That is more
+  people than the target, in one room, with authority already established.
 
 ### The one number that decides everything
-Week-4 retention, measured from Sept 30. Under 25% and nothing else matters.
-Over 40% and there is something real here. Nothing measures it until Supabase
-ships, which is the real reason it is first.
+Week-4 retention from Sept 30. Under 25% and nothing else matters. Over 40% and
+there is something real. Nothing measures it until Supabase ships.
 
 ---
 
 # Recent sessions
+
+## 2026-08-21 · Claude Code · Import anything, and a day view
+
+Four things landed. Two bugs in the first-run path, found by writing a script
+that prints what a stranger actually gets from `/start` — one of which silently
+stopped a commitment being scheduled forever after a single shortfall. Conflict
+resolution, so an appointment dropped on planned work moves the work and says so.
+A day view, whose palette work turned up that the course colours failed a
+colourblind check. And calendar import for Canvas, Google, Apple and Outlook,
+which needed recurrence expansion to be worth anything.
+
+Two roadmap items were struck on evidence: Google's calendar API needs a
+five-week verification, and writing a plan back into Google Calendar is worse
+than nothing because subscriptions refresh every 12–24 hours.
+
+Also found Canvas had become unreachable on a phone — the tab bar dropped it on
+the reasoning that it belonged inside Plan, and it was never put inside Plan. A
+commit message that was true about intent and false about the code.
+
+Ended with a business-side action plan requested and not delivered. It is
+recorded at the top of the owed section in `status.md`.
 
 ## 2026-08-19 · Claude Code · Landing page, privacy, and a deployment mess
 
@@ -334,13 +370,6 @@ restarts at 1. The calendar never drew the work schedule at all.
 
 Brydon's own week became the fixture, and the off-season case caught a bug four
 weeks before a student would have.
-
-## 2026-08-18 · Claude Code · The context system
-
-Built this `context/` system, a `/wrap` skill to maintain it, and `npm run
-handoff` to generate a paste-ready brief for Cowork chats. Root `CLAUDE.md`
-rewritten as a short always-loaded index that routes to everything else on
-demand, so the deep files cost nothing until they're needed.
 
 ---
 
@@ -482,11 +511,9 @@ anything — the worst possible moment to ask.
 
 # Currently waiting on Brydon
 
-- **Deployment Protection** is still on, so the `*-bmwother1s-projects.vercel.app`
-  URLs redirect to a Vercel login. `quarterly-alpha.vercel.app` is unaffected and
-  is the one to share, but turn protection off to avoid confusing yourself later.
+- **Supabase project** — send the project URL and the *anon* key. Never the
+  service_role key. Five minutes, unblocks three features.
 - **The interviews.** Ask what they did last Sunday. Don't show the product.
-- **Use it for a week.**
-- **Supabase project** — send the project URL and the *anon* key (never the
-  service_role key). Unblocks sync, retention measurement, and notification
-  delivery, which all depend on it.
+- **Deployment Protection** is still on, so `*-bmwother1s-projects.vercel.app`
+  redirects to a Vercel login. `quarterly-alpha.vercel.app` is unaffected and is
+  the one to share, but turn it off to avoid confusing yourself later.

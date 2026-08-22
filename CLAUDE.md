@@ -36,14 +36,17 @@ export PATH="$HOME/.local/node/bin:$PATH"
 
 ```
 npm run dev        the web app
-npm test           66 tests, ~700ms, no framework
+npm test           181 tests, no framework
 npm run check      typecheck + lint + tests
-npm run week       print a real planned week to the terminal
+npm run week       print a planned week from a Canvas feed
+npm run my-week    print Brydon's real week — the off-season case
+npm run first-run  print what a brand-new student gets from /start
 npm run handoff    regenerate the Cowork brief
 ```
 
-`npm run week -- --busy --energy evening` is the fastest way to judge a change to
-the scheduler. Read the output, not just the tests.
+**Those three print-a-real-week scripts have each found a bug no test caught.**
+Run them after any scheduler change and read the output. Tests confirm what you
+already thought to check; the expensive bugs live in what you didn't.
 
 ## Standing rules
 

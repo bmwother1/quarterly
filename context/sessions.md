@@ -9,6 +9,27 @@ delete them.
 
 ---
 
+## 2026-08-21 · Claude Code · Import anything, and a day view
+
+Four things landed. Two bugs in the first-run path, found by writing a script
+that prints what a stranger actually gets from `/start` — one of which silently
+stopped a commitment being scheduled forever after a single shortfall. Conflict
+resolution, so an appointment dropped on planned work moves the work and says so.
+A day view, whose palette work turned up that the course colours failed a
+colourblind check. And calendar import for Canvas, Google, Apple and Outlook,
+which needed recurrence expansion to be worth anything.
+
+Two roadmap items were struck on evidence: Google's calendar API needs a
+five-week verification, and writing a plan back into Google Calendar is worse
+than nothing because subscriptions refresh every 12–24 hours.
+
+Also found Canvas had become unreachable on a phone — the tab bar dropped it on
+the reasoning that it belonged inside Plan, and it was never put inside Plan. A
+commit message that was true about intent and false about the code.
+
+Ended with a business-side action plan requested and not delivered. It is
+recorded at the top of the owed section in `status.md`.
+
 ## 2026-08-19 · Claude Code · Landing page, privacy, and a deployment mess
 
 Replaced the entry point. It opened with "paste your Canvas feed" in August,
