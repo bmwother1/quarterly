@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useQuarterly } from '@/hooks/use-quarterly';
+import { logEvent } from '@/supabase/events';
 import { WorkloadChart, CourseList } from '@/components/workload-chart';
 import { SOURCE_HELP } from '@/lib/calendar/sources';
 import { DEFAULT_TZ, fmtDay, fmtTime } from '@/lib/time';
@@ -62,6 +63,14 @@ export default function ImportPage() {
         lastSyncedAt: new Date().toISOString(),
       }));
       setImported(`${result.courses.length} courses and ${result.assignments.length} assignments`);
+      // Counts, never course codes. Whether an import produced anything is the
+      // question worth answering, and an empty Canvas feed in week 0 is the
+      // single most likely first experience of this product.
+      logEvent('feed_synced', {
+        courses: result.courses.length,
+        assignments: result.assignments.length,
+        empty: result.assignments.length === 0,
+      });
     } else {
       mutate((prev) => {
         // Re-importing the same calendar shouldn't double everything, so
@@ -71,6 +80,11 @@ export default function ImportPage() {
         return { ...prev, events: [...handAdded, ...result.events].sort((a, b) => a.start.localeCompare(b.start)) };
       });
       setImported(`${result.events.length} events from ${result.source}`);
+      logEvent('feed_synced', {
+        events: result.events.length,
+        skippedRecurring: result.skippedRecurring,
+        empty: result.events.length === 0,
+      });
     }
 
     replan(new Date());

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import { ensureProfile, syncOnSignIn } from '@/supabase/sync';
+import { ensureProfile, startAutoPush, syncOnSignIn } from '@/supabase/sync';
 import { logOpen } from '@/supabase/events';
 
 /**
@@ -29,15 +29,24 @@ export function SyncBoundary() {
     if (doneFor.current === userId) return;
     doneFor.current = userId;
 
+    let stopAutoPush: (() => void) | null = null;
+
     void (async () => {
       try {
         await ensureProfile(userId);
-        await syncOnSignIn(userId);
+        const outcome = await syncOnSignIn(userId);
+        // Only start pushing once the initial reconciliation has settled. A
+        // conflict means both copies still differ and neither has been chosen,
+        // so pushing would quietly resolve it in favour of this device, which
+        // is precisely what the conflict state exists to avoid.
+        if (outcome !== 'conflict') stopAutoPush = startAutoPush(userId);
       } catch {
         // Deliberately silent. Nothing here is worth interrupting a student for.
       }
       logOpen();
     })();
+
+    return () => { stopAutoPush?.(); };
   }, [userId, loading]);
 
   return null;

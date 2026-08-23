@@ -7,6 +7,7 @@ import { planWeek } from '@/lib/schedule/plan';
 import { applyCompletion, applyLearnedEstimates, dropRemaining, resetWeeklyTallies, type Completion } from '@/lib/schedule/complete';
 import { collisionsWith, describeCollisions, releaseForEvents } from '@/lib/schedule/conflicts';
 import { isLive, type StepId } from '@/lib/onboarding';
+import { logEvent } from '@/supabase/events';
 
 /**
  * The one place component state and stored state meet.
@@ -114,6 +115,15 @@ export function useQuarterly(tz: string) {
         events: prev.events,
       });
 
+      // Counts only. How many blocks a plan produced and how much didn't fit
+      // are the two numbers that say whether the scheduler is serving someone
+      // well, and neither reveals what the work is.
+      logEvent('planned', {
+        blocks: result.blocks.length,
+        unscheduled: result.unscheduled.length,
+        minutes: result.blocks.reduce((t, b) => t + b.minutes, 0),
+      });
+
       return {
         ...prev,
         assignments,
@@ -127,6 +137,12 @@ export function useQuarterly(tz: string) {
 
   const complete = useCallback((blockId: string, outcome: Completion, minutes: number | null) => {
     mutate((prev) => ({ ...prev, ...applyCompletion(prev, blockId, outcome, minutes, new Date()) }));
+    // The single most informative thing a student does. Whether planned work
+    // actually happens is the difference between a calendar and a scheduler.
+    logEvent(outcome === 'skipped' ? 'block_skipped' : 'block_done', {
+      minutes: minutes ?? 0,
+      partial: outcome === 'partial',
+    });
   }, [mutate]);
 
   /**
@@ -169,6 +185,9 @@ export function useQuarterly(tz: string) {
         return { ...b, start: new Date(startMs).toISOString(), end, pinned: true };
       }).sort((a, b) => a.start.localeCompare(b.start)),
     }));
+    // A move is the scheduler being told it got an hour wrong. Worth counting:
+    // a student correcting it constantly means the scoring function is off.
+    logEvent('block_moved');
   }, [mutate]);
 
   /**

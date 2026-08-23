@@ -13,7 +13,13 @@ import type { QuarterlyState } from './store.ts';
  * nobody will ever see costs a week the interviews need more.
  */
 
-export type SyncDirection = 'push' | 'pull' | 'nothing';
+/**
+ * `conflict` means both sides changed since they were last level. There is no
+ * merge, so the only honest answers are "pick one and lose the other" or "do
+ * nothing and say so". This picks the second: a sync that silently discards a
+ * week is far worse than one that doesn't happen.
+ */
+export type SyncDirection = 'push' | 'pull' | 'nothing' | 'conflict';
 
 export interface RemoteMeta {
   /** ISO timestamp of the server's last write. */
@@ -37,11 +43,19 @@ export function decideDirection(local: QuarterlyState, remote: RemoteMeta | null
   // failure this rule is written to prevent.
   if (!hasContent(local)) return remote.hasContent ? 'pull' : 'nothing';
 
-  // Both sides have something. The question is whether the server holds changes
-  // this device has never seen, which is what `lastSyncedAt` records.
   const seen = local.lastSyncedAt ? Date.parse(local.lastSyncedAt) : 0;
-  const remoteMovedSinceWeLooked = Date.parse(remote.updatedAt) > seen;
 
-  // Prefer the copy this device cannot reproduce over the one in front of us.
-  return remoteMovedSinceWeLooked ? 'pull' : 'push';
+  // Two independent questions, and conflating them was the original bug.
+  const remoteMoved = Date.parse(remote.updatedAt) > seen;
+  const localDirty = local.lastModifiedAt
+    ? Date.parse(local.lastModifiedAt) > seen
+    // No modification stamp at all means a state written before this field
+    // existed. Treat a week with content as dirty rather than assume it is
+    // disposable.
+    : true;
+
+  if (remoteMoved && localDirty) return 'conflict';
+  if (remoteMoved) return 'pull';
+  if (localDirty) return 'push';
+  return 'nothing';
 }

@@ -51,6 +51,16 @@ export interface QuarterlyState {
    * second from the first would re-show the notice on every reload.
    */
   liveNoticeSeen?: boolean;
+  /**
+   * When this device last changed the plan, as opposed to last talking to the
+   * server.
+   *
+   * Without it, "this device has edits the server hasn't seen" has to be
+   * inferred from `lastSyncedAt`, and a device that has never synced reads as
+   * infinitely old. That made a week built offline lose to any server copy,
+   * silently. The two timestamps answer different questions and both are needed.
+   */
+  lastModifiedAt?: string | null;
   lastSyncedAt: string | null;
   /**
    * Deliberately absent: the Canvas feed URL.
@@ -80,6 +90,7 @@ export function emptyState(): QuarterlyState {
     sleepConfirmed: false,
     wentLiveAt: null,
     liveNoticeSeen: false,
+    lastModifiedAt: null,
     lastSyncedAt: null,
   };
 }
@@ -143,7 +154,15 @@ export const quarterlyStore = {
     return SERVER_SNAPSHOT;
   },
 
-  set(next: QuarterlyState): void {
+  /**
+   * `touch: false` is for writes that are not a student changing their plan:
+   * recording a sync, or replacing local state with what the server sent. Left
+   * true they would mark the device dirty on every sync and it would never stop
+   * pushing.
+   */
+  set(next: QuarterlyState, opts: { touch?: boolean } = {}): void {
+    const touch = opts.touch !== false;
+    if (touch) next = { ...next, lastModifiedAt: new Date().toISOString() };
     cache = next;
     if (typeof window !== 'undefined') {
       try {

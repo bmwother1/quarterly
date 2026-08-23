@@ -56,9 +56,10 @@ export async function push(userId: string): Promise<boolean> {
 
   if (error) return false;
 
-  // Record that this device is now level with the server. Written without
-  // going through the store's mutate path so it doesn't read as a user edit.
-  quarterlyStore.set({ ...quarterlyStore.getSnapshot(), lastSyncedAt: now });
+  // `touch: false` because recording a sync is not a student editing their
+  // week. Left true, every push would mark the device dirty again and it would
+  // push forever.
+  quarterlyStore.set({ ...quarterlyStore.getSnapshot(), lastSyncedAt: now }, { touch: false });
   return true;
 }
 
@@ -66,10 +67,14 @@ export async function pull(userId: string): Promise<boolean> {
   const remote = await fetchRemote(userId);
   if (!remote) return false;
 
-  quarterlyStore.set({
-    ...remote.state,
-    lastSyncedAt: new Date().toISOString(),
-  });
+  const at = new Date().toISOString();
+  quarterlyStore.set(
+    // lastModifiedAt comes from the server copy's own history, not from the act
+    // of receiving it, or this device would immediately look dirty and push
+    // straight back over what it just pulled.
+    { ...remote.state, lastSyncedAt: at, lastModifiedAt: remote.state.lastModifiedAt ?? at },
+    { touch: false },
+  );
   return true;
 }
 
@@ -88,6 +93,8 @@ export async function syncOnSignIn(userId: string): Promise<SyncDirection> {
 
   if (decision === 'push') await push(userId);
   if (decision === 'pull') await pull(userId);
+  // 'conflict' deliberately does nothing. Both copies survive and the caller
+  // decides what to tell the student. Losing a week silently is not on the menu.
   return decision;
 }
 
@@ -108,4 +115,49 @@ export async function ensureProfile(userId: string): Promise<void> {
   await client
     .from('profile')
     .upsert({ id: userId, timezone }, { onConflict: 'id', ignoreDuplicates: true });
+}
+
+/**
+ * Keep the server copy current after sign-in.
+ *
+ * Without this the plan reaches Supabase once and starts going stale
+ * immediately, which makes the backup a lie: a student who loses their phone
+ * gets whatever their week looked like the moment they signed in.
+ *
+ * Debounced because the store fires on every keystroke in setup and every
+ * checkbox on the calendar. Two seconds of quiet is the signal that a student
+ * has finished doing a thing.
+ *
+ * Returns an unsubscribe function.
+ */
+export function startAutoPush(userId: string, quietMs = 2000): () => void {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let stopped = false;
+  let lastPushed: string | null = quarterlyStore.getSnapshot().lastModifiedAt ?? null;
+
+  const unsubscribe = quarterlyStore.subscribe(() => {
+    if (stopped) return;
+    const modified = quarterlyStore.getSnapshot().lastModifiedAt ?? null;
+    // A sync write bumps lastSyncedAt but not lastModifiedAt, so this is what
+    // stops the push from retriggering itself forever.
+    if (modified === lastPushed) return;
+
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      if (stopped) return;
+      const at = quarterlyStore.getSnapshot().lastModifiedAt ?? null;
+      lastPushed = at;
+      void push(userId).catch(() => {
+        // Failed pushes are not retried here. The next edit will try again, and
+        // sign-in reconciles properly. Retry loops against a dead network are
+        // how a battery disappears.
+      });
+    }, quietMs);
+  });
+
+  return () => {
+    stopped = true;
+    if (timer) clearTimeout(timer);
+    unsubscribe();
+  };
 }
