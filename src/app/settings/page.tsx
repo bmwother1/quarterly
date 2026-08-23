@@ -5,6 +5,7 @@ import { useQuarterly } from '@/hooks/use-quarterly';
 import { ThemePicker } from '@/components/theme-provider';
 import { Insights } from '@/components/insights';
 import { BackupControls } from '@/components/backup-controls';
+import { AccountPanel } from '@/components/account-panel';
 import { DEFAULT_TZ } from '@/lib/time';
 
 const TZ = DEFAULT_TZ;
@@ -39,6 +40,10 @@ export default function Settings() {
         <h1 className="text-2xl font-semibold">Settings</h1>
 
       </header>
+
+      <Section title="Account">
+        <AccountPanel lastSyncedAt={state.lastSyncedAt} tz={TZ} />
+      </Section>
 
       <Section title="Colours">
         <ThemePicker />
