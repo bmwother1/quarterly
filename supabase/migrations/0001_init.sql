@@ -105,3 +105,34 @@ join public.app_event e on e.user_id = p.id
 where e.kind = 'opened'
 group by 1, 2
 order by 1, 2;
+
+-- ─── explicit grants ───────────────────────────────────────────────
+-- The project is created with "automatically expose new tables" off, which is
+-- Supabase's own recommendation. Nothing in the public schema reaches PostgREST
+-- unless it is granted here, so this block is the complete list of what the
+-- browser can touch. That is the point: exposure you can read in one place
+-- beats exposure that happens by default.
+--
+-- RLS above decides *which rows*. These grants decide *which tables at all*.
+-- Both are needed; a grant without RLS exposes everyone's data, and RLS without
+-- a grant is a table nobody can reach.
+
+grant usage on schema public to authenticated;
+
+grant select, insert, update, delete on public.profile           to authenticated;
+grant select, insert, update, delete on public.plan_state        to authenticated;
+grant select, insert, update, delete on public.push_subscription to authenticated;
+
+-- Telemetry is append-only from the client. A student can write their own
+-- events and read them back; nothing offers a way to edit or delete history,
+-- because retention numbers you can rewrite are not measurements.
+grant select, insert on public.app_event to authenticated;
+grant usage on sequence public.app_event_id_seq to authenticated;
+
+-- `anon` is granted nothing. Every table here belongs to a specific student, so
+-- there is no such thing as a legitimate signed-out read.
+
+-- The retention view aggregates across all users. It is for Brydon in the SQL
+-- editor, never for the browser, and revoking is belt and braces on top of the
+-- project-level setting.
+revoke all on public.weekly_retention from anon, authenticated;

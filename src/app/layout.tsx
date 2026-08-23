@@ -4,6 +4,7 @@ import "./globals.css";
 import { SiteHeader, SiteFooter, TabBar } from "@/components/site-header";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ServiceWorker } from "@/components/service-worker";
+import { SyncBoundary } from "@/components/sync-boundary";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -47,6 +48,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <ThemeProvider />
         <ServiceWorker />
+        <SyncBoundary />
         <SiteHeader />
         <div className="flex-1">{children}</div>
         <SiteFooter />
