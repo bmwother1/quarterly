@@ -43,6 +43,14 @@ export interface QuarterlyState {
   sleepConfirmed?: boolean;
   /** Set once, when setup completes. Setup prompts never appear again after. */
   wentLiveAt?: string | null;
+  /**
+   * Whether the "you're set up" confirmation has been seen.
+   *
+   * Separate from `wentLiveAt` because the two answer different questions: one
+   * is when setup ended, the other is whether we've told them. Deriving the
+   * second from the first would re-show the notice on every reload.
+   */
+  liveNoticeSeen?: boolean;
   lastSyncedAt: string | null;
   /**
    * Deliberately absent: the Canvas feed URL.
@@ -71,6 +79,7 @@ export function emptyState(): QuarterlyState {
     skippedSteps: {},
     sleepConfirmed: false,
     wentLiveAt: null,
+    liveNoticeSeen: false,
     lastSyncedAt: null,
   };
 }

@@ -126,3 +126,53 @@ describe('when setup is finished', () => {
     }
   });
 });
+
+describe('leaving setup for good', () => {
+  test('going live is stamped once and survives falling back below the bar', () => {
+    // The bug this guards: a student finishes setup, then deletes the one
+    // commitment they had. `isLive` goes false. If prompts keyed off `isLive`
+    // rather than the stamp, setup would reappear for someone who finished it.
+    const s = completed();
+    assert.equal(isLive(s), true);
+
+    s.wentLiveAt = new Date().toISOString();
+    s.commitments = [];
+
+    assert.equal(isLive(s), false, 'the live *test* is allowed to go false');
+    assert.ok(s.wentLiveAt, 'but the stamp is what prompts key off, and it stays');
+  });
+
+  test('the live notice is tracked apart from the stamp', () => {
+    // Deriving "have we told them" from "are they live" re-shows the
+    // confirmation on every reload, which is the same nagging bug in new clothes.
+    const s = completed();
+    s.wentLiveAt = new Date().toISOString();
+    assert.notEqual(s.wentLiveAt, undefined);
+    assert.ok(!s.liveNoticeSeen, 'unseen by default');
+
+    s.liveNoticeSeen = true;
+    assert.ok(s.wentLiveAt && s.liveNoticeSeen, 'both can be true at once');
+  });
+
+  test('a student with nothing fixed can finish by saying so', () => {
+    // The original defect. No classes and no job is a real answer, and the app
+    // has to be able to hear it.
+    const s = emptyState();
+    s.commitments = [commitment()];
+    s.skippedSteps = { fixed: true };
+    s.sleepConfirmed = true;
+
+    assert.equal(isLive(s), true);
+    assert.equal(nextPrompt(s), null, 'nothing left to ask');
+  });
+
+  test('every unresolved step has somewhere to be answered', () => {
+    // Guards the prompt component: a step with no destination renders a button
+    // that goes nowhere. Keep this list in step with RESOLVE in setup-prompt.
+    const destinations = new Set(['work', 'fixed', 'sleep', 'calendars']);
+    for (const s of steps(emptyState())) {
+      assert.ok(destinations.has(s.id), `${s.id} needs a destination`);
+      assert.ok(s.skipLabel.length > 0, `${s.id} needs a way to decline`);
+    }
+  });
+});

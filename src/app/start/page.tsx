@@ -167,7 +167,7 @@ export default function Start() {
 
         <p className="text-center text-sm text-[var(--faint)]">
           No account. Nothing to install.{' '}
-          <Link href="/setup" className="underline underline-offset-4">
+          <Link href="/onboarding" className="underline underline-offset-4">
             Or set everything up properly
           </Link>
           .

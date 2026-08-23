@@ -8,6 +8,7 @@ import { WeekGrid } from '@/components/week-grid';
 import { Sheet, AddButton } from '@/components/sheet';
 import { UndoBar } from '@/components/undo-bar';
 import { AddItem } from '@/components/add-item';
+import { SetupPrompt } from '@/components/setup-prompt';
 import { DEFAULT_TZ, addDays, fmtDay, fmtTime, localParts } from '@/lib/time';
 import { missedBlocks } from '@/lib/schedule/complete';
 import { nextNotice } from '@/lib/notify';
@@ -19,6 +20,7 @@ export default function WeekPage() {
   const {
     state, hydrated, replan, complete, drop, moveBlock,
     addEvent, updateEvent, removeEvent, addTask, undo, undoLabel, dismissUndo,
+    skipStep, confirmSleep, markLiveIfReady, ackLive,
   } = useQuarterly(TZ);
   // Fixed at mount so every render agrees on "now" — reading the clock during
   // render is impure and drifts between the server and client passes.
@@ -102,13 +104,6 @@ export default function WeekPage() {
 
   const hasInputs = state.assignments.length > 0 || state.commitments.length > 0 || state.events.length > 0;
 
-  /**
-   * The cost of a two-question first run: the plan assumes you're free from
-   * morning to night, because nobody has said otherwise. That produces a
-   * confidently wrong week, which is worse than an empty one — so it gets said
-   * out loud until there's a class or shift on record.
-   */
-  const noFixedTime = !state.availability.busy.some((b) => b.kind === 'work' || b.kind === 'class');
   const planned = state.blocks.filter((b) => b.status === 'planned');
 
   return (
@@ -176,20 +171,14 @@ export default function WeekPage() {
           </div>
           )}
 
-          {hasInputs && noFixedTime && (
-            <div className="mb-6 rounded-xl border border-[var(--accent)]/30 bg-[var(--accent-soft)] p-4">
-              <h2 className="font-medium">This week assumes you&rsquo;re free all day.</h2>
-              <p className="mt-1 text-sm text-[var(--muted)]">
-                It doesn&rsquo;t know about your classes or your job yet, so the times below are a
-                guess. Two minutes fixes it.
-              </p>
-              <Link
-                href="/setup"
-                className="mt-3 inline-block rounded-lg bg-[var(--accent)] px-3.5 py-2 text-sm font-medium text-[var(--accent-ink)]"
-              >
-                Add my classes and work
-              </Link>
-            </div>
+          {hasInputs && (
+            <SetupPrompt
+              state={state}
+              skipStep={skipStep}
+              confirmSleep={confirmSleep}
+              markLiveIfReady={markLiveIfReady}
+              ackLive={ackLive}
+            />
           )}
 
           {notice && (

@@ -313,6 +313,10 @@ export function useQuarterly(tz: string) {
     ));
   }, [mutate]);
 
+  const ackLive = useCallback(() => {
+    mutate((prev) => (prev.liveNoticeSeen ? prev : { ...prev, liveNoticeSeen: true }));
+  }, [mutate]);
+
   const reset = useCallback(() => quarterlyStore.clear(), []);
 
   return {
@@ -320,6 +324,6 @@ export function useQuarterly(tz: string) {
     undo, undoLabel, dismissUndo, removeCommitment,
     addEvent, updateEvent, removeEvent, addTask, removeTask,
     updateAvailability, updateCommitments, reset,
-    skipStep, unskipStep, confirmSleep, markLiveIfReady,
+    skipStep, unskipStep, confirmSleep, markLiveIfReady, ackLive,
   };
 }
