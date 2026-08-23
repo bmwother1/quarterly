@@ -305,12 +305,24 @@ export function useQuarterly(tz: string) {
   }, [mutate]);
 
   /** Un-skip, for the student who changes their mind from Settings. */
-  const unskipStep = useCallback((id: StepId) => {
-    mutate((prev) => {
-      const next = { ...prev.skippedSteps };
-      delete next[id];
-      return { ...prev, skippedSteps: next, wentLiveAt: null };
-    });
+  /**
+   * Put a finished student back into setup.
+   *
+   * Being live is permanent by design: a student who says "I have no classes"
+   * must never be asked again. The cost of that is there was no way back in at
+   * all, which turns a deliberate decision into a trap the first time someone
+   * takes a job halfway through the quarter.
+   *
+   * Clears the answers, never the data. Commitments, availability and the plan
+   * all survive; what resets is whether the app considers the questions settled.
+   */
+  const reopenSetup = useCallback(() => {
+    mutate((prev) => ({
+      ...prev,
+      skippedSteps: {},
+      wentLiveAt: null,
+      liveNoticeSeen: false,
+    }));
   }, [mutate]);
 
   const confirmSleep = useCallback(() => {
@@ -343,6 +355,6 @@ export function useQuarterly(tz: string) {
     undo, undoLabel, dismissUndo, removeCommitment,
     addEvent, updateEvent, removeEvent, addTask, removeTask,
     updateAvailability, updateCommitments, reset,
-    skipStep, unskipStep, confirmSleep, markLiveIfReady, ackLive,
+    skipStep, reopenSetup, confirmSleep, markLiveIfReady, ackLive,
   };
 }

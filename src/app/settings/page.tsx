@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useQuarterly } from '@/hooks/use-quarterly';
 import { ThemePicker } from '@/components/theme-provider';
 import { Insights } from '@/components/insights';
@@ -18,7 +19,7 @@ const TZ = DEFAULT_TZ;
  * removes most of the reading.
  */
 export default function Settings() {
-  const { state, hydrated, updateAvailability, replaceAll, reset } = useQuarterly(TZ);
+  const { state, hydrated, updateAvailability, replaceAll, reset, reopenSetup } = useQuarterly(TZ);
   const [saved, setSaved] = useState<string | null>(null);
 
   function flash(text: string) {
@@ -67,6 +68,21 @@ export default function Settings() {
       >
         <BackupControls state={state} onImport={replaceAll} onMessage={flash} />
       </Section>
+
+      {state.wentLiveAt && (
+        <Section
+          title="Go through setup again"
+          hint="Your commitments, hours and plan all stay. This only reopens the questions."
+        >
+          <Link
+            href="/onboarding"
+            onClick={reopenSetup}
+            className="inline-block rounded-lg border border-[var(--border-strong)] px-3.5 py-2 text-sm"
+          >
+            Redo setup
+          </Link>
+        </Section>
+      )}
 
       <Section title="Delete everything" hint="There is no copy anywhere else.">
         <button
