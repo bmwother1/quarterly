@@ -166,6 +166,32 @@ interface Pending {
   dueAt: Date;
   /** Deadline used for placement. Differs from `dueAt` only for overdue work. */
   placeBy: Date;
+  /**
+   * Earliest this session may land.
+   *
+   * A weekly quota is a statement about a *particular* week, so a session
+   * belonging to week three needs a floor as well as a deadline. Without one it
+   * carries only `placeBy`, the early-bias in slot value drags it forward, and
+   * next month's runs pile into this week: a 5-a-week habit was landing 7 times
+   * in one week and showing up on every single day.
+   *
+   * Coursework is the opposite and keeps `now`. Doing an assignment early is
+   * always allowed, and often the point.
+   */
+  notBefore: Date;
+  /**
+   * Which session of *its own week* this is, and how much of that week is left.
+   *
+   * `index` counts across the whole plan, which is right for block ids and for
+   * ordering siblings and wrong for anything a student reads. Using it in the
+   * reason produced "6 of 5 this week" and "only 1 days left" on a block three
+   * weeks out. A quota is a claim about one week, so the numbers explaining it
+   * have to belong to that week too.
+   *
+   * Zero on coursework, which has a deadline rather than a quota.
+   */
+  weekSession: number;
+  weekDaysLeft: number;
   /** Slot-independent rank: how much this deserves time at all, before asking when. */
   priority: number;
   /** Sessions must land on separate days: exams, and anything done once a day. */
@@ -275,6 +301,9 @@ function buildSessions(a: Assignment, opts: Required<PlanOptions>): Pending[] {
     minutes: per,
     dueAt,
     placeBy,
+    notBefore: opts.now,
+    weekSession: 0,
+    weekDaysLeft: 0,
     priority,
     // Spacing exam prep across days is the entire point of spacing it.
     separateDays: a.kind === 'exam' || a.kind === 'quiz',
@@ -370,6 +399,12 @@ function buildCommitmentSessions(c: Commitment, opts: Required<PlanOptions>): Pe
           minutes,
           dueAt: placeBy,
           placeBy,
+          // The week this session is counted against. For the current week
+          // this is just now, so nothing changes for work due imminently.
+          notBefore: weekStart,
+          // Only the current week has sessions already behind it.
+          weekSession: (weekOffset === 0 ? c.doneThisWeek : 0) + i + 1,
+          weekDaysLeft: daysLeftInWeek,
           priority: decayed,
           separateDays: c.maxPerDay <= 1,
           minMinutes: clamp(c.minSessionMinutes || MIN_SESSION_MINUTES, MIN_SESSION_MINUTES, minutes),
@@ -562,9 +597,12 @@ export function planWeek(
       (q) => q.index === p.index - 1 && q.placeBy.getTime() === p.placeBy.getTime(),
     );
     if (previous && !previous.placed) continue;
-    const earliestMs = previous?.placed
-      ? new Date(previous.placed.end).getTime() + breakMs
-      : nowMs;
+    const earliestMs = Math.max(
+      previous?.placed
+        ? new Date(previous.placed.end).getTime() + breakMs
+        : nowMs,
+      p.notBefore.getTime(),
+    );
 
     const spaced = p.separateDays;
     const usedDays = new Set([
@@ -816,7 +854,7 @@ function explain(
   now: Date,
   tz: string,
 ): string {
-  if (p.commitment) return explainCommitment(p, now, tz);
+  if (p.commitment) return explainCommitment(p, now);
 
   const a = p.assignment!;
   const when = relativeDue(p.dueAt, now, tz);
@@ -847,25 +885,28 @@ function explain(
 }
 
 /** The quota story: what's left of this week's target, and how much week is left. */
-function explainCommitment(p: Pending, now: Date, tz: string): string {
+function explainCommitment(p: Pending, now: Date): string {
   const c = p.commitment!;
-  const done = c.doneThisWeek;
   const target = c.sessionsPerWeek;
-  const daysLeft = 7 - localParts(now, tz).weekday;
-  const remainingAfter = target - done - p.index;
+  const n = p.weekSession;
+  const daysLeft = p.weekDaysLeft;
+  const remainingAfter = target - n;
 
   if (c.lastDoneAt) {
     const since = Math.round((now.getTime() - new Date(c.lastDoneAt).getTime()) / 86_400_000);
     if (since >= 3) {
-      return `${done + p.index} of ${target} this week — it's been ${since} days since the last one.`;
+      return `${n} of ${target} this week, and it's been ${since} days since the last one.`;
     }
   }
 
+  // Only worth saying when the week is genuinely tight. Said about every block
+  // it becomes noise, and said about a block three weeks out it's false.
   if (remainingAfter > 0 && remainingAfter >= daysLeft - 1) {
-    return `${done + p.index} of ${target} this week, and only ${daysLeft} days left to fit the rest.`;
+    const days = daysLeft === 1 ? 'a day' : `${daysLeft} days`;
+    return `${n} of ${target} this week, with ${days} left to fit the rest.`;
   }
 
-  return `${done + p.index} of ${target} this week.`;
+  return `${n} of ${target} this week.`;
 }
 
 

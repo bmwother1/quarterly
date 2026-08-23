@@ -421,3 +421,67 @@ describe('the first-run path', () => {
     }
   });
 });
+
+describe('weekly quotas are weekly', () => {
+  /** Monday-anchored week key, matching the app's own weekday numbering. */
+  function weekOf(iso: string, tz: string): string {
+    const p = localParts(new Date(iso), tz);
+    const d = new Date(`${p.dateKey}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() - p.weekday);
+    return d.toISOString().slice(0, 10);
+  }
+
+  test('a 5-a-week habit never lands 6 times in one week', () => {
+    // The bug this guards: sessions carried a deadline but no floor, so the
+    // early-bias in slot value dragged later weeks' sessions forward. A 5-a-week
+    // run and a 4-a-week project both landed 7 times in one week, on every
+    // single day, which is what a student noticed before any test did.
+    const tz = 'America/Los_Angeles';
+    const run = commitment({ id: 'run', title: 'Run', sessionsPerWeek: 5, minutesPerSession: 30 });
+    const project = commitment({
+      id: 'proj', title: 'Project', sessionsPerWeek: 4, minutesPerSession: 60, category: 'project',
+    });
+
+    const plan = planWeek([], defaultAvailability(), {
+      tz, commitments: [run, project], now: new Date('2026-08-24T08:00:00-07:00'),
+    });
+
+    const counts = new Map<string, number>();
+    for (const b of plan.blocks) {
+      const key = `${b.course}|${weekOf(b.start, tz)}`;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+
+    for (const [key, n] of counts) {
+      const target = key.startsWith('Run') ? 5 : 4;
+      assert.ok(n <= target, `${key} got ${n} sessions against a target of ${target}`);
+    }
+  });
+
+  test('the reason counts within its own week, not across the plan', () => {
+    // "6 of 5 this week" was on real output. A block that cannot explain itself
+    // truthfully is worse than one with no explanation at all.
+    const tz = 'America/Los_Angeles';
+    const run = commitment({ id: 'run', title: 'Run', sessionsPerWeek: 5, minutesPerSession: 30 });
+
+    const plan = planWeek([], defaultAvailability(), {
+      tz, commitments: [run], now: new Date('2026-08-24T08:00:00-07:00'),
+    });
+
+    let checked = 0;
+    for (const b of plan.blocks) {
+      const m = b.why.match(/^(\d+) of (\d+) this week/);
+      if (!m) continue;
+      checked += 1;
+      const [, nth, target] = m;
+      assert.ok(
+        Number(nth) <= Number(target),
+        `a block explained itself as "${nth} of ${target} this week"`,
+      );
+    }
+
+    // Without this the loop passes by matching nothing, which is the same
+    // silent-success failure the reason bug was hiding behind in the first place.
+    assert.ok(checked > 5, `only ${checked} reasons were in the expected shape`);
+  });
+});
