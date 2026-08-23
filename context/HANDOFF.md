@@ -1,13 +1,13 @@
 # Quarterly — project brief
 
-*Generated 2026-08-22 from the project's `context/` files by `npm run handoff`.
+*Generated 2026-08-23 from the project's `context/` files by `npm run handoff`.
 Don't edit this by hand; edit the source files and regenerate.*
 
 This is the standing context for Quarterly. It covers the person building it,
 what's being built, where it stands, and what has already been decided — so a
 conversation can start from here instead of from scratch.
 
-**39 days to launch** (September 30 2026).
+**38 days to launch** (September 30 2026).
 
 ---
 
@@ -193,13 +193,14 @@ compound within a course.
 
 # Where things stand
 
-**Updated: 2026-08-21** · 40 days to launch (September 30)
+**Updated: 2026-08-22** · 39 days to launch (September 30)
 
 This file describes the present. It gets rewritten, not appended to.
 
 Repo: `bmwother1/quarterly` (public). Live and current at
-`quarterly-alpha.vercel.app`. Pushes to `main` auto-deploy in about 20 seconds.
-181 tests. Node lives at `~/.local/node` and is on Brydon's PATH but not in a
+`quarterly-alpha.vercel.app`. Pushes to `main` auto-deploy in about 20 seconds,
+confirmed working this session by watching a deploy land 27 seconds after a
+push. 185 tests. Node lives at `~/.local/node` and is on Brydon's PATH but not in a
 fresh agent shell — prefix `export PATH="$HOME/.local/node/bin:$PATH"`.
 
 ---
@@ -235,14 +236,21 @@ Two things remain untrue, and both outrank everything on the shipped list:
   banned-phrase list enforcing tone. Delivery is the only missing half
 - **Privacy page** written against the code, with a working delete control
 - **Backup** — export and import JSON, since there is no server copy
+- **Onboarding with an ending** — `/onboarding` is a five-step guided flow, and
+  the app now knows when a student is finished. One prompt at a time, every one
+  answerable in both directions, and once `wentLiveAt` is stamped setup prompts
+  never return. The account step is a labelled mock and is deliberately last
 
 ## In progress, not finished
 
-- **Onboarding completion model** (`src/lib/onboarding.ts`, committed as WIP).
-  Module, hook, store changes and 11 tests exist; **no page imports any of it**,
-  so it currently does nothing. To land: render `OnboardingShell`, replace the
-  `noFixedTime` banner on `/week` with it, confirm the resolved state survives a
-  reload.
+- **Three doors into configuration.** `/start`, `/onboarding` and `/setup` all
+  configure the same state. `/start` is the default and `/onboarding` is the
+  guided alternative; `/setup` is now only reachable from the nav and from
+  individual setup prompts. Two of the three should survive to launch and it is
+  not yet decided which.
+- **No way back into setup once live.** `unskipStep` exists and clears
+  `wentLiveAt`, but nothing in the UI calls it. A student who finishes and then
+  wants to redo it has no route.
 
 ## Next, in order
 
@@ -251,17 +259,20 @@ Two things remain untrue, and both outrank everything on the shipped list:
 3. **Supabase** — sync, retention measurement, and notification delivery all
    depend on it. Migration written and waiting at
    `supabase/migrations/0001_init.sql`; client libraries installed.
-4. **Finish the onboarding model** above.
-5. **Syllabus parsing** — the one job an LLM genuinely belongs in.
-6. Tailwind oddity: `max-w-*` utilities produced no CSS, so the calendar width
+4. **Syllabus parsing** — the one job an LLM genuinely belongs in.
+5. Tailwind oddity: `max-w-*` utilities produced no CSS, so the calendar width
    is set inline. It will bite again on a class that matters more.
 
 ## Owed to Brydon
 
-- **A business-side action plan** — what to do, how, and why, covering the
-  nineteen interviews, a distribution plan for thirty students, a real domain,
-  the Dempsey application, and the undecided revenue model. Asked for on
-  2026-08-21 and not delivered before the session ended. **Start here.**
+- **The business plan was written and is not yet filed.** It covers the
+  interviews, distribution to thirty students, the domain, Dempsey and the
+  revenue model, and it is sitting outside the repo rather than in `context/`.
+  Brydon parked the business side to focus on code; picking it back up means
+  filing it as `context/business.md` first.
+- **One correction it contains, since it affects a date in `learned.md`:** the
+  Dempsey application does not go in over winter break. It opens late February
+  and closes in early April, with four rounds after that.
 
 ## Struck from the plan
 
@@ -316,6 +327,30 @@ there is something real. Nothing measures it until Supabase ships.
 
 # Recent sessions
 
+## 2026-08-22 · Claude Code · Onboarding got an ending
+
+Wired up the completion model that had sat in the repo for three days as a
+module no page imported, so it did nothing at all. The `/week` banner that could
+only say one thing and had no way to be answered is gone, replaced by one prompt
+at a time that a student can answer in either direction. The app now has a real
+notion of **live**: once every required step is resolved the prompts stop
+permanently, including for someone who later deletes every commitment.
+
+Built `/onboarding`, a five-step guided flow on the `OnboardingShell` component
+that was written last week and never used. `/start` keeps its two questions and
+stays the default door; this is the other one.
+
+The session started on the business plan that was owed, and turned into code
+halfway through when a mentor's input arrived. The mentor asked for a signup
+flow first and a calendar flow second; the signup half was pushed back on and
+built last instead, as a labelled mock, because there are no accounts until
+Supabase lands and putting an identity wall in front of a three-second first run
+trades away the best-measured thing this product has.
+
+One bug found by looking rather than by a test, again: `autoFocus` scrolled the
+page 302px on load, so a student on a phone landed mid-form having never seen
+the heading or the progress bar.
+
 ## 2026-08-21 · Claude Code · Import anything, and a day view
 
 Four things landed. Two bugs in the first-run path, found by writing a script
@@ -355,22 +390,6 @@ anyone but Brydon. Neither failure announced itself.
 
 First interview happened. Logged as zero signal, with the reasons.
 
-## 2026-08-18 · Claude Code · Shipped it
-
-From engine to deployed product in one session. Feed route with a hardened URL
-guard, onboarding, setup, the calendar grid, check-off, explicit replanning,
-persistence. Live at quarterly-alpha.vercel.app, pushed to GitHub, 122 tests.
-
-Almost every bug this session was found by looking at the thing rather than by a
-failing test. The scheduler put a run at 11pm and was right by its own model. One
-daily ceiling stacked 4.6 hours onto a Tuesday after a nine-hour shift. Setup
-silently discarded saved work hours because handlers built updates from stale
-render closures. Block ids collided after a replan because the session index
-restarts at 1. The calendar never drew the work schedule at all.
-
-Brydon's own week became the fixture, and the off-season case caught a bug four
-weeks before a student would have.
-
 ---
 
 # Recent decisions
@@ -378,6 +397,43 @@ weeks before a student would have.
 *Older decisions and the full findings log stay in the repo, in
 `context/decisions.md` and `context/learned.md`. Ask for them if a question
 turns on history this brief doesn't cover.*
+
+## 2026-08-22 · The account step goes last, and setup is a phase you leave
+
+**Decided:** two things, from the same session.
+
+**First, an account is asked for at the end of onboarding, never at the front.**
+The mock at step five of `/onboarding` comes after there is a planned week on
+screen, and the ask is "keep this if you lose your phone" rather than "sign up
+to continue". Email link, no password field.
+
+**Why, given this reverses what was asked for:** the input was a signup flow
+followed by a calendar flow. The evidence points the other way. Time-to-value
+should land inside 60–90 seconds and abandonment roughly triples past thirty
+minutes; `/start` currently gets a student to a real week in three seconds. An
+identity wall in front of that trades the single best-measured advantage this
+product has for an email address that nothing can use until Supabase lands.
+Asked at the end, the same question has a reason a student can evaluate.
+
+**What would make it worth revisiting:** if sync turns out to be the thing
+students actually want, or if week-4 retention among account-holders is
+dramatically higher than among device-only users, the ask has earned a more
+prominent place. Not before there is data.
+
+**Second, being live is permanent.** Once `wentLiveAt` is stamped, setup prompts
+never render again, even for a student who later deletes every commitment and
+falls back below the bar that `isLive` tests for.
+
+**Why not just derive it:** because the honest answer to "do you have classes?"
+is sometimes "no". A model that recomputes readiness on every render nags that
+student forever, which was the original defect. Setup is a phase you leave, not
+a score you can drop below. `liveNoticeSeen` is tracked separately from
+`wentLiveAt` for the same reason: deriving "have we told them" from "are they
+live" re-shows the confirmation on every reload.
+
+**What it costs:** a student who genuinely wants to redo setup needs a route
+back in. `unskipStep` exists and clears `wentLiveAt`; nothing in the UI calls it
+yet. That is a real gap, and it is the deliberate kind.
 
 ## 2026-08-21 · Import from any calendar; never write back
 
@@ -486,27 +542,6 @@ Plan rather than spending a permanent tab.
 
 **Superseded:** the hamburger menu from 2026-08-19.
 
-## 2026-08-20 · First run is two questions
-
-**Decided:** `/start` asks what you want to make time for and how often, then
-plans and drops you on the calendar. Everything else waits.
-
-**Why:** time-to-first-value should land inside 60–90 seconds; past ten minutes
-abandonment climbs steeply and past thirty it roughly triples. Motion's 2–4 week
-setup is its single most-cited complaint across three review sites. The previous
-route in was a five-section form — the same mistake in miniature.
-
-Every setting except one already has a working default. The only input the
-scheduler genuinely cannot invent is something to schedule, so it's the only
-thing asked for.
-
-**Measured:** two taps, three seconds, ten blocks on a real calendar. It was
-three to five minutes.
-
-**Canvas stays out of it.** Feeds are empty in August by construction, and it
-asks for a credential to an entire schedule before the product has proven
-anything — the worst possible moment to ask.
-
 ---
 
 # Currently waiting on Brydon
@@ -514,6 +549,10 @@ anything — the worst possible moment to ask.
 - **Supabase project** — send the project URL and the *anon* key. Never the
   service_role key. Five minutes, unblocks three features.
 - **The interviews.** Ask what they did last Sunday. Don't show the product.
-- **Deployment Protection** is still on, so `*-bmwother1s-projects.vercel.app`
-  redirects to a Vercel login. `quarterly-alpha.vercel.app` is unaffected and is
-  the one to share, but turn it off to avoid confusing yourself later.
+- **Deployment Protection** is still on, set to
+  `all_except_custom_domains`. That means it never affected students and never
+  will: `quarterly-alpha.vercel.app` is public today and a custom domain will be
+  too. It only walls off raw deploy URLs from Brydon himself. Worth switching
+  off to stop wasting his own time, but it is not a launch item. Leave
+  `gitForkProtection` on, since it stops a forked PR building with the Supabase
+  keys once those exist.

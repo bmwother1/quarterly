@@ -51,6 +51,29 @@ gets a polite yes from everyone and teaches nothing. "Walk me through last Sunda
 
 ## From building
 
+### autoFocus scrolled the first onboarding screen past its own heading (2026-08-22)
+
+`autoFocus` on the step-one input scrolled the page 302px on load. Everything
+rendered correctly, every element had opacity 1 and visibility visible, and the
+page text contained all of it. It just wasn't where anyone would see it: a
+student on a phone landed in the middle of a form having never seen the heading,
+the blurb, or "Step 1 of 5".
+
+Found by taking a screenshot and noticing the top of the page was missing, then
+confirmed with `window.scrollY`. No test was going to catch this, because the
+DOM was correct and so was the component.
+
+**The fix has a trap in it.** Replacing `autoFocus` with
+`ref.current?.focus({ preventScroll: true })` in an effect looks right and does
+nothing, because the input does not exist on the first render: `hydrated` is
+false and the component returns a loading state. An effect keyed only on the
+step number fires once against a null ref and never runs again. `hydrated`
+belongs in the deps.
+
+**Why it's worth recording:** this is the session's recurring theme in yet
+another costume. Code that runs cleanly and is quietly wrong, and a fix that
+reports success while doing nothing.
+
 ### The fast first run had two bugs, and the second was silent (2026-08-21)
 
 Written a script to print what a brand-new student actually gets from `/start`,

@@ -9,6 +9,30 @@ delete them.
 
 ---
 
+## 2026-08-22 · Claude Code · Onboarding got an ending
+
+Wired up the completion model that had sat in the repo for three days as a
+module no page imported, so it did nothing at all. The `/week` banner that could
+only say one thing and had no way to be answered is gone, replaced by one prompt
+at a time that a student can answer in either direction. The app now has a real
+notion of **live**: once every required step is resolved the prompts stop
+permanently, including for someone who later deletes every commitment.
+
+Built `/onboarding`, a five-step guided flow on the `OnboardingShell` component
+that was written last week and never used. `/start` keeps its two questions and
+stays the default door; this is the other one.
+
+The session started on the business plan that was owed, and turned into code
+halfway through when a mentor's input arrived. The mentor asked for a signup
+flow first and a calendar flow second; the signup half was pushed back on and
+built last instead, as a labelled mock, because there are no accounts until
+Supabase lands and putting an identity wall in front of a three-second first run
+trades away the best-measured thing this product has.
+
+One bug found by looking rather than by a test, again: `autoFocus` scrolled the
+page 302px on load, so a student on a phone landed mid-form having never seen
+the heading or the progress bar.
+
 ## 2026-08-21 · Claude Code · Import anything, and a day view
 
 Four things landed. Two bugs in the first-run path, found by writing a script

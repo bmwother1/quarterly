@@ -1,12 +1,13 @@
 # Status
 
-**Updated: 2026-08-21** · 40 days to launch (September 30)
+**Updated: 2026-08-22** · 39 days to launch (September 30)
 
 This file describes the present. It gets rewritten, not appended to.
 
 Repo: `bmwother1/quarterly` (public). Live and current at
-`quarterly-alpha.vercel.app`. Pushes to `main` auto-deploy in about 20 seconds.
-181 tests. Node lives at `~/.local/node` and is on Brydon's PATH but not in a
+`quarterly-alpha.vercel.app`. Pushes to `main` auto-deploy in about 20 seconds,
+confirmed working this session by watching a deploy land 27 seconds after a
+push. 185 tests. Node lives at `~/.local/node` and is on Brydon's PATH but not in a
 fresh agent shell — prefix `export PATH="$HOME/.local/node/bin:$PATH"`.
 
 ---
@@ -42,14 +43,21 @@ Two things remain untrue, and both outrank everything on the shipped list:
   banned-phrase list enforcing tone. Delivery is the only missing half
 - **Privacy page** written against the code, with a working delete control
 - **Backup** — export and import JSON, since there is no server copy
+- **Onboarding with an ending** — `/onboarding` is a five-step guided flow, and
+  the app now knows when a student is finished. One prompt at a time, every one
+  answerable in both directions, and once `wentLiveAt` is stamped setup prompts
+  never return. The account step is a labelled mock and is deliberately last
 
 ## In progress, not finished
 
-- **Onboarding completion model** (`src/lib/onboarding.ts`, committed as WIP).
-  Module, hook, store changes and 11 tests exist; **no page imports any of it**,
-  so it currently does nothing. To land: render `OnboardingShell`, replace the
-  `noFixedTime` banner on `/week` with it, confirm the resolved state survives a
-  reload.
+- **Three doors into configuration.** `/start`, `/onboarding` and `/setup` all
+  configure the same state. `/start` is the default and `/onboarding` is the
+  guided alternative; `/setup` is now only reachable from the nav and from
+  individual setup prompts. Two of the three should survive to launch and it is
+  not yet decided which.
+- **No way back into setup once live.** `unskipStep` exists and clears
+  `wentLiveAt`, but nothing in the UI calls it. A student who finishes and then
+  wants to redo it has no route.
 
 ## Next, in order
 
@@ -58,9 +66,8 @@ Two things remain untrue, and both outrank everything on the shipped list:
 3. **Supabase** — sync, retention measurement, and notification delivery all
    depend on it. Migration written and waiting at
    `supabase/migrations/0001_init.sql`; client libraries installed.
-4. **Finish the onboarding model** above.
-5. **Syllabus parsing** — the one job an LLM genuinely belongs in.
-6. Tailwind oddity: `max-w-*` utilities produced no CSS, so the calendar width
+4. **Syllabus parsing** — the one job an LLM genuinely belongs in.
+5. Tailwind oddity: `max-w-*` utilities produced no CSS, so the calendar width
    is set inline. It will bite again on a class that matters more.
 
 ## Blocked on Brydon
@@ -68,16 +75,24 @@ Two things remain untrue, and both outrank everything on the shipped list:
 - **Supabase project** — send the project URL and the *anon* key. Never the
   service_role key. Five minutes, unblocks three features.
 - **The interviews.** Ask what they did last Sunday. Don't show the product.
-- **Deployment Protection** is still on, so `*-bmwother1s-projects.vercel.app`
-  redirects to a Vercel login. `quarterly-alpha.vercel.app` is unaffected and is
-  the one to share, but turn it off to avoid confusing yourself later.
+- **Deployment Protection** is still on, set to
+  `all_except_custom_domains`. That means it never affected students and never
+  will: `quarterly-alpha.vercel.app` is public today and a custom domain will be
+  too. It only walls off raw deploy URLs from Brydon himself. Worth switching
+  off to stop wasting his own time, but it is not a launch item. Leave
+  `gitForkProtection` on, since it stops a forked PR building with the Supabase
+  keys once those exist.
 
 ## Owed to Brydon
 
-- **A business-side action plan** — what to do, how, and why, covering the
-  nineteen interviews, a distribution plan for thirty students, a real domain,
-  the Dempsey application, and the undecided revenue model. Asked for on
-  2026-08-21 and not delivered before the session ended. **Start here.**
+- **The business plan was written and is not yet filed.** It covers the
+  interviews, distribution to thirty students, the domain, Dempsey and the
+  revenue model, and it is sitting outside the repo rather than in `context/`.
+  Brydon parked the business side to focus on code; picking it back up means
+  filing it as `context/business.md` first.
+- **One correction it contains, since it affects a date in `learned.md`:** the
+  Dempsey application does not go in over winter break. It opens late February
+  and closes in early April, with four rounds after that.
 
 ## Struck from the plan
 

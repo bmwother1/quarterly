@@ -9,6 +9,43 @@ record of what was tried and abandoned is worth more than a tidy file.
 
 ---
 
+## 2026-08-22 · The account step goes last, and setup is a phase you leave
+
+**Decided:** two things, from the same session.
+
+**First, an account is asked for at the end of onboarding, never at the front.**
+The mock at step five of `/onboarding` comes after there is a planned week on
+screen, and the ask is "keep this if you lose your phone" rather than "sign up
+to continue". Email link, no password field.
+
+**Why, given this reverses what was asked for:** the input was a signup flow
+followed by a calendar flow. The evidence points the other way. Time-to-value
+should land inside 60–90 seconds and abandonment roughly triples past thirty
+minutes; `/start` currently gets a student to a real week in three seconds. An
+identity wall in front of that trades the single best-measured advantage this
+product has for an email address that nothing can use until Supabase lands.
+Asked at the end, the same question has a reason a student can evaluate.
+
+**What would make it worth revisiting:** if sync turns out to be the thing
+students actually want, or if week-4 retention among account-holders is
+dramatically higher than among device-only users, the ask has earned a more
+prominent place. Not before there is data.
+
+**Second, being live is permanent.** Once `wentLiveAt` is stamped, setup prompts
+never render again, even for a student who later deletes every commitment and
+falls back below the bar that `isLive` tests for.
+
+**Why not just derive it:** because the honest answer to "do you have classes?"
+is sometimes "no". A model that recomputes readiness on every render nags that
+student forever, which was the original defect. Setup is a phase you leave, not
+a score you can drop below. `liveNoticeSeen` is tracked separately from
+`wentLiveAt` for the same reason: deriving "have we told them" from "are they
+live" re-shows the confirmation on every reload.
+
+**What it costs:** a student who genuinely wants to redo setup needs a route
+back in. `unskipStep` exists and clears `wentLiveAt`; nothing in the UI calls it
+yet. That is a real gap, and it is the deliberate kind.
+
 ## 2026-08-21 · Import from any calendar; never write back
 
 **Decided:** one paste box at `/import` accepts Canvas, Google, Apple and
