@@ -99,13 +99,20 @@ const commitments: Commitment[] = [
 const av = availability();
 const plan = planWeek([], av, { tz: TZ, commitments });
 
-const asked = commitments.reduce((s, c) => s + c.sessionsPerWeek * c.minutesPerSession, 0);
+// Per week, then scaled to the horizon. `scheduledMinutes` and `usableMinutes`
+// are both totals across every day planned, so comparing them against a single
+// week's target made the plan look like it was doing twice what was asked. All
+// three numbers now cover the same stretch of time.
+const askedPerWeek = commitments.reduce((s, c) => s + c.sessionsPerWeek * c.minutesPerSession, 0);
+const weeks = plan.stats.daysPlanned / 7;
+const asked = askedPerWeek * weeks;
 
 console.log('');
 console.log(C.b('  Your week'));
 console.log(C.dim(
   `  ${plan.stats.blockCount} blocks · ${(plan.stats.scheduledMinutes / 60).toFixed(1)}h scheduled ` +
-  `of ${(plan.stats.usableMinutes / 60).toFixed(1)}h usable · you asked for ${(asked / 60).toFixed(1)}h`,
+  `of ${(plan.stats.usableMinutes / 60).toFixed(1)}h usable over ${plan.stats.daysPlanned} days ` +
+  `· you asked for ${(asked / 60).toFixed(1)}h (${(askedPerWeek / 60).toFixed(1)}h a week)`,
 ));
 console.log(C.dim('  work 7:15–16:15 with commute · sleep 00:00–06:30 · bimodal energy'));
 
