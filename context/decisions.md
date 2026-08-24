@@ -9,6 +9,42 @@ record of what was tried and abandoned is worth more than a tidy file.
 
 ---
 
+## 2026-08-23 · Magic links, no server session, and a sync that refuses to guess
+
+**Decided:** three things, all from putting Supabase in.
+
+**Magic link, no passwords anywhere.** A password is one more thing to invent at
+9pm, and the most common reason someone never returns to an app is that they
+cannot get back into it. The cost is a hard dependency on email delivery, which
+makes custom SMTP a launch blocker with a lead time rather than a launch-day
+task: Supabase's built-in sender is documented as testing-only and rate limited
+to a handful an hour, and thirty students onboarding during welcome week would
+hit that wall and see what looks like a broken app.
+
+**Known limitation, accepted:** PKCE stores a verifier in the browser that asked
+for the link, so a student who requests it on their phone and opens the email on
+a laptop cannot sign in. Implicit flow would fix it and puts access tokens in
+browser history instead. For an app holding a real person's whole schedule that
+is the worse trade, so the flow stays and the copy tells people to open it on
+the same device.
+
+**No `proxy.ts` and no `@supabase/ssr`.** Next 16 renamed Middleware to Proxy
+and every Supabase-with-Next guide still says `middleware.ts`, but it does not
+matter here: every page is a client component reading localStorage and no
+server-rendered content depends on who you are. Cookie-based session refresh
+would be machinery serving no request.
+
+**Sync picks a winner, or refuses to.** The plan syncs as a single JSON blob
+mirroring the local store, so syncing is "write the same object somewhere else"
+rather than a schema translation kept in step forever. There is no merge. When
+both sides changed since they were last level, any automatic choice discards a
+real week, so `decideDirection` returns `conflict` and nothing happens. A sync
+that does not run is far better than one that eats a week.
+
+**What would make it worth revisiting:** a student actually hitting the conflict
+state, which needs two devices and is not the realistic case yet. The `revision`
+column is already in the schema for when it is.
+
 ## 2026-08-22 · The account step goes last, and setup is a phase you leave
 
 **Decided:** two things, from the same session.

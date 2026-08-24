@@ -1,13 +1,13 @@
 # Quarterly — project brief
 
-*Generated 2026-08-23 from the project's `context/` files by `npm run handoff`.
+*Generated 2026-08-24 from the project's `context/` files by `npm run handoff`.
 Don't edit this by hand; edit the source files and regenerate.*
 
 This is the standing context for Quarterly. It covers the person building it,
 what's being built, where it stands, and what has already been decided — so a
 conversation can start from here instead of from scratch.
 
-**38 days to launch** (September 30 2026).
+**37 days to launch** (September 30 2026).
 
 ---
 
@@ -193,14 +193,15 @@ compound within a course.
 
 # Where things stand
 
-**Updated: 2026-08-22** · 39 days to launch (September 30)
+**Updated: 2026-08-24** · 37 days to launch (September 30)
 
 This file describes the present. It gets rewritten, not appended to.
 
 Repo: `bmwother1/quarterly` (public). Live and current at
 `quarterly-alpha.vercel.app`. Pushes to `main` auto-deploy in about 20 seconds,
-confirmed working this session by watching a deploy land 27 seconds after a
-push. 185 tests. Node lives at `~/.local/node` and is on Brydon's PATH but not in a
+confirmed working by watching a deploy land 27 seconds after a push. 198 tests.
+Supabase project `dxvekspnhqrcwqbqxleh` (West US Oregon); keys are in
+`.env.local` and in all three Vercel environments. Node lives at `~/.local/node` and is on Brydon's PATH but not in a
 fresh agent shell — prefix `export PATH="$HOME/.local/node/bin:$PATH"`.
 
 ---
@@ -211,10 +212,19 @@ The product is finished enough to hand to a student. Import any calendar, get a
 planned week, check things off, replan when it falls apart. It installs to a
 phone, works offline, and resolves conflicts on its own.
 
-Two things remain untrue, and both outrank everything on the shipped list:
+The data layer landed on 2026-08-23. Accounts, sync and telemetry all work, so
+the thing that measures retention now exists rather than being a plan.
+
+What remains untrue outranks everything on the shipped list:
 
 1. **Nobody has used it but Brydon.** One interview, logged as zero signal.
-2. **Nothing measures retention**, which is the number that decides the project.
+   Fifteen were due by month end and none have happened.
+2. **The sync loop has never been watched end to end.** Every piece is tested
+   and rows did appear in Supabase, but nobody has signed in, made a change, and
+   confirmed the server copy moved. The magic link goes to an inbox no agent can
+   reach, so this needs Brydon and five minutes.
+3. **Retention is measurable, not measured.** Nothing reads the
+   `weekly_retention` view until there are students in it.
 
 ## Shipped
 
@@ -235,7 +245,15 @@ Two things remain untrue, and both outrank everything on the shipped list:
 - **Notification engine** — decision logic and copy written and tested, with a
   banned-phrase list enforcing tone. Delivery is the only missing half
 - **Privacy page** written against the code, with a working delete control
-- **Backup** — export and import JSON, since there is no server copy
+- **Backup** — export and import JSON, and now a server copy as well
+- **Accounts** — magic link, no passwords. Optional throughout: signed out is a
+  supported state everywhere and the no-account product is unchanged
+- **Sync** — the plan mirrors to `plan_state` on change, debounced. When both
+  copies changed since they were last level it reports a conflict and does
+  nothing, because there is no merge and any automatic choice eats a week
+- **Telemetry** — `opened`, `planned`, `block_done`, `block_skipped`,
+  `block_moved`, `feed_synced`. Counts and durations only, never titles or
+  course names. Append-only by grant: the client cannot update or delete
 - **Onboarding with an ending** — `/onboarding` is a five-step guided flow, and
   the app now knows when a student is finished. One prompt at a time, every one
   answerable in both directions, and once `wentLiveAt` is stamped setup prompts
@@ -247,20 +265,28 @@ Two things remain untrue, and both outrank everything on the shipped list:
   configure the same state. `/start` is the default and `/onboarding` is the
   guided alternative; `/setup` is now only reachable from the nav and from
   individual setup prompts. Two of the three should survive to launch and it is
-  not yet decided which.
-- **No way back into setup once live.** `unskipStep` exists and clears
-  `wentLiveAt`, but nothing in the UI calls it. A student who finishes and then
-  wants to redo it has no route.
+  undecided which. **This one needs Brydon**, it is a product call.
+- **The returning-student experience.** Five days away and `/week` opens with a
+  red banner saying 15 blocks passed without an answer. Correct, and it reads
+  like being told off at exactly the moment week-4 retention is decided.
+- **Notification delivery.** Engine, copy and banned-phrase list are written and
+  tested, and `push_subscription` is in the schema. Nothing sends anything: no
+  VAPID keys, no service-worker push handler, no scheduled job.
 
 ## Next, in order
 
-1. **Nineteen more interviews.** Nothing else on this list matters as much.
-2. **Use it for a full week.** The closest available proxy for retention.
-3. **Supabase** — sync, retention measurement, and notification delivery all
-   depend on it. Migration written and waiting at
-   `supabase/migrations/0001_init.sql`; client libraries installed.
-4. **Syllabus parsing** — the one job an LLM genuinely belongs in.
-5. Tailwind oddity: `max-w-*` utilities produced no CSS, so the calendar width
+1. **Interviews.** Nothing else here matters as much and the count is still one.
+   Twelve by Sept 6 is what the business plan argues for.
+2. **Confirm the sync loop by hand.** Sign in, change something, watch
+   `plan_state.updated_at` move. Five minutes, and it is the one claim in the
+   data layer nobody has verified.
+3. **Custom SMTP.** A launch blocker with a lead time. Supabase's built-in
+   sender is documented as testing-only and rate limited to a handful an hour.
+4. **Learned energy pattern** — replace the declared dropdown with observed
+   completion rate by hour. `observed.ts` already collects it.
+5. **Push notification delivery** — the higher-value half of a written feature.
+6. **Syllabus parsing** — the one job an LLM genuinely belongs in.
+7. Tailwind oddity: `max-w-*` utilities produced no CSS, so the calendar width
    is set inline. It will bite again on a class that matters more.
 
 ## Owed to Brydon
@@ -296,15 +322,12 @@ Sequencing note: **push notifications need a server-side subscription store and
 a scheduled job, so Supabase comes first** even though notifications are the
 higher-value feature.
 
-### Now → Aug 23 · prove it survives a real week
-- Use it daily, with the real schedule.
-- Five interviews. Past behaviour only, product not shown.
-
-### Aug 24 → Aug 30 · the data layer
-- Supabase: accounts, sync, and the first thing that measures retention.
-- Learned energy pattern: replace the declared dropdown with observed completion
-  rate by hour. The data is already being collected and read.
-- Ten more interviews. Fifteen total by month end.
+### Aug 24 → Aug 30 · the week the interviews have to happen
+- The data layer shipped a week early, on Aug 23. That bought this week back.
+- **Spend it on students, not code.** Twelve interviews by Sept 6, eight with
+  people who have no social reason to be nice about it.
+- Use it daily, with the real schedule. Still the closest proxy for retention.
+- Learned energy pattern, if there is time left after the interviews.
 
 ### Aug 31 → Sept 13 · the retention features
 - Push notifications. One a day, always carrying the block's reason.
@@ -326,6 +349,35 @@ there is something real. Nothing measures it until Supabase ships.
 ---
 
 # Recent sessions
+
+## 2026-08-23 · Claude Code · The data layer, and a bug a student would have found
+
+Supabase went in: schema, magic-link auth, plan sync, and the telemetry that
+week-4 retention is measured from. Nothing in the product requires an account
+and nothing does now; every path treats signed-out as "stay local", so the
+no-account product is exactly what it was.
+
+Two bugs in it were the interesting part. The Supabase client is created lazily,
+so when a magic link landed on `/week` and nothing on that page touched
+Supabase, no client existed, the code in the URL was never exchanged, and the
+sign-in silently did nothing while looking identical to success. And
+`lastSyncedAt` was doing double duty as "does this device have unsynced edits",
+which made a device that had never synced read as infinitely old, so a week
+built offline lost to any server copy without a word.
+
+Then Brydon looked at his own calendar and found the real one: a 5-a-week run
+and a 4-a-week project were both landing seven times, on every single day.
+Sessions carried a deadline and no floor, so the early-bias in slot value
+dragged later weeks forward. Fixing placement exposed a second bug underneath
+it, where the reason text said "6 of 5 this week" because it counted across the
+whole plan rather than within a week.
+
+Neither was found by a test. Both were found by reading real output, which is
+now four sessions running.
+
+Ended with 198 tests and a live product with accounts. The sync loop has still
+never been watched end to end by anyone, because the magic link goes to an inbox
+no agent can reach.
 
 ## 2026-08-22 · Claude Code · Onboarding got an ending
 
@@ -372,24 +424,6 @@ commit message that was true about intent and false about the code.
 Ended with a business-side action plan requested and not delivered. It is
 recorded at the top of the owed section in `status.md`.
 
-## 2026-08-19 · Claude Code · Landing page, privacy, and a deployment mess
-
-Replaced the entry point. It opened with "paste your Canvas feed" in August,
-when every student's feed is empty by construction, and never mentioned the mode
-that actually works. Canvas moved to /canvas, landing leads with building a week
-by hand. Added navigation, which was missing entirely, and a privacy page
-written against the code rather than aspirationally.
-
-Writing the privacy page caught two false claims: a delete control that didn't
-exist, and a source link on a private repo. Both fixed rather than softened.
-
-Deployment turned out to be broken in a way the success messages hid. The shared
-URL belongs to a project with no Git connection, so five pushes never deployed. A
-CLI deploy created a second project, which is behind Vercel SSO and invisible to
-anyone but Brydon. Neither failure announced itself.
-
-First interview happened. Logged as zero signal, with the reasons.
-
 ---
 
 # Recent decisions
@@ -397,6 +431,42 @@ First interview happened. Logged as zero signal, with the reasons.
 *Older decisions and the full findings log stay in the repo, in
 `context/decisions.md` and `context/learned.md`. Ask for them if a question
 turns on history this brief doesn't cover.*
+
+## 2026-08-23 · Magic links, no server session, and a sync that refuses to guess
+
+**Decided:** three things, all from putting Supabase in.
+
+**Magic link, no passwords anywhere.** A password is one more thing to invent at
+9pm, and the most common reason someone never returns to an app is that they
+cannot get back into it. The cost is a hard dependency on email delivery, which
+makes custom SMTP a launch blocker with a lead time rather than a launch-day
+task: Supabase's built-in sender is documented as testing-only and rate limited
+to a handful an hour, and thirty students onboarding during welcome week would
+hit that wall and see what looks like a broken app.
+
+**Known limitation, accepted:** PKCE stores a verifier in the browser that asked
+for the link, so a student who requests it on their phone and opens the email on
+a laptop cannot sign in. Implicit flow would fix it and puts access tokens in
+browser history instead. For an app holding a real person's whole schedule that
+is the worse trade, so the flow stays and the copy tells people to open it on
+the same device.
+
+**No `proxy.ts` and no `@supabase/ssr`.** Next 16 renamed Middleware to Proxy
+and every Supabase-with-Next guide still says `middleware.ts`, but it does not
+matter here: every page is a client component reading localStorage and no
+server-rendered content depends on who you are. Cookie-based session refresh
+would be machinery serving no request.
+
+**Sync picks a winner, or refuses to.** The plan syncs as a single JSON blob
+mirroring the local store, so syncing is "write the same object somewhere else"
+rather than a schema translation kept in step forever. There is no merge. When
+both sides changed since they were last level, any automatic choice discards a
+real week, so `decideDirection` returns `conflict` and nothing happens. A sync
+that does not run is far better than one that eats a week.
+
+**What would make it worth revisiting:** a student actually hitting the conflict
+state, which needs two devices and is not the realistic case yet. The `revision`
+column is already in the schema for when it is.
 
 ## 2026-08-22 · The account step goes last, and setup is a phase you leave
 
@@ -522,33 +592,15 @@ new constraint, and reacting to an instruction they gave is cause and effect,
 not silent absorption. Same reasoning as the menu closing on click rather than
 on a path change.
 
-## 2026-08-20 · Bottom tab bar, reversing the hamburger
-
-**Decided:** three tabs fixed to the bottom on phones, inline links on laptops.
-The hamburger built the day before is gone.
-
-**Why, and this reverses a decision made on request:** the evidence is
-one-sided. Bottom tab bars lift engagement up to 58% over hidden menus, feature
-discovery rises 30%+ when apps switch, and users are 2–3× less likely to find
-anything behind a hamburger at all. Google measured a 76% usage increase from
-bottom-aligned navigation.
-
-The ergonomic half decides it for this product specifically. A hamburger sits
-top-right, the hardest place to reach one-handed, and a student checking their
-next block on the walk to class has one thumb.
-
-**Three tabs, not four.** Canvas is a once-ever setup action, so it lives inside
-Plan rather than spending a permanent tab.
-
-**Superseded:** the hamburger menu from 2026-08-19.
-
 ---
 
 # Currently waiting on Brydon
 
-- **Supabase project** — send the project URL and the *anon* key. Never the
-  service_role key. Five minutes, unblocks three features.
 - **The interviews.** Ask what they did last Sunday. Don't show the product.
+- **Confirm sync end to end.** See "Next" above.
+- **Custom SMTP**, before students exist rather than after.
+- **A decision on the three doors** into configuration.
+- **The domain.** `quarterlystudy.com`, about $11, still unregistered.
 - **Deployment Protection** is still on, set to
   `all_except_custom_domains`. That means it never affected students and never
   will: `quarterly-alpha.vercel.app` is public today and a custom domain will be

@@ -1,13 +1,14 @@
 # Status
 
-**Updated: 2026-08-22** · 39 days to launch (September 30)
+**Updated: 2026-08-24** · 37 days to launch (September 30)
 
 This file describes the present. It gets rewritten, not appended to.
 
 Repo: `bmwother1/quarterly` (public). Live and current at
 `quarterly-alpha.vercel.app`. Pushes to `main` auto-deploy in about 20 seconds,
-confirmed working this session by watching a deploy land 27 seconds after a
-push. 185 tests. Node lives at `~/.local/node` and is on Brydon's PATH but not in a
+confirmed working by watching a deploy land 27 seconds after a push. 198 tests.
+Supabase project `dxvekspnhqrcwqbqxleh` (West US Oregon); keys are in
+`.env.local` and in all three Vercel environments. Node lives at `~/.local/node` and is on Brydon's PATH but not in a
 fresh agent shell — prefix `export PATH="$HOME/.local/node/bin:$PATH"`.
 
 ---
@@ -18,10 +19,19 @@ The product is finished enough to hand to a student. Import any calendar, get a
 planned week, check things off, replan when it falls apart. It installs to a
 phone, works offline, and resolves conflicts on its own.
 
-Two things remain untrue, and both outrank everything on the shipped list:
+The data layer landed on 2026-08-23. Accounts, sync and telemetry all work, so
+the thing that measures retention now exists rather than being a plan.
+
+What remains untrue outranks everything on the shipped list:
 
 1. **Nobody has used it but Brydon.** One interview, logged as zero signal.
-2. **Nothing measures retention**, which is the number that decides the project.
+   Fifteen were due by month end and none have happened.
+2. **The sync loop has never been watched end to end.** Every piece is tested
+   and rows did appear in Supabase, but nobody has signed in, made a change, and
+   confirmed the server copy moved. The magic link goes to an inbox no agent can
+   reach, so this needs Brydon and five minutes.
+3. **Retention is measurable, not measured.** Nothing reads the
+   `weekly_retention` view until there are students in it.
 
 ## Shipped
 
@@ -42,7 +52,15 @@ Two things remain untrue, and both outrank everything on the shipped list:
 - **Notification engine** — decision logic and copy written and tested, with a
   banned-phrase list enforcing tone. Delivery is the only missing half
 - **Privacy page** written against the code, with a working delete control
-- **Backup** — export and import JSON, since there is no server copy
+- **Backup** — export and import JSON, and now a server copy as well
+- **Accounts** — magic link, no passwords. Optional throughout: signed out is a
+  supported state everywhere and the no-account product is unchanged
+- **Sync** — the plan mirrors to `plan_state` on change, debounced. When both
+  copies changed since they were last level it reports a conflict and does
+  nothing, because there is no merge and any automatic choice eats a week
+- **Telemetry** — `opened`, `planned`, `block_done`, `block_skipped`,
+  `block_moved`, `feed_synced`. Counts and durations only, never titles or
+  course names. Append-only by grant: the client cannot update or delete
 - **Onboarding with an ending** — `/onboarding` is a five-step guided flow, and
   the app now knows when a student is finished. One prompt at a time, every one
   answerable in both directions, and once `wentLiveAt` is stamped setup prompts
@@ -54,27 +72,37 @@ Two things remain untrue, and both outrank everything on the shipped list:
   configure the same state. `/start` is the default and `/onboarding` is the
   guided alternative; `/setup` is now only reachable from the nav and from
   individual setup prompts. Two of the three should survive to launch and it is
-  not yet decided which.
-- **No way back into setup once live.** `unskipStep` exists and clears
-  `wentLiveAt`, but nothing in the UI calls it. A student who finishes and then
-  wants to redo it has no route.
+  undecided which. **This one needs Brydon**, it is a product call.
+- **The returning-student experience.** Five days away and `/week` opens with a
+  red banner saying 15 blocks passed without an answer. Correct, and it reads
+  like being told off at exactly the moment week-4 retention is decided.
+- **Notification delivery.** Engine, copy and banned-phrase list are written and
+  tested, and `push_subscription` is in the schema. Nothing sends anything: no
+  VAPID keys, no service-worker push handler, no scheduled job.
 
 ## Next, in order
 
-1. **Nineteen more interviews.** Nothing else on this list matters as much.
-2. **Use it for a full week.** The closest available proxy for retention.
-3. **Supabase** — sync, retention measurement, and notification delivery all
-   depend on it. Migration written and waiting at
-   `supabase/migrations/0001_init.sql`; client libraries installed.
-4. **Syllabus parsing** — the one job an LLM genuinely belongs in.
-5. Tailwind oddity: `max-w-*` utilities produced no CSS, so the calendar width
+1. **Interviews.** Nothing else here matters as much and the count is still one.
+   Twelve by Sept 6 is what the business plan argues for.
+2. **Confirm the sync loop by hand.** Sign in, change something, watch
+   `plan_state.updated_at` move. Five minutes, and it is the one claim in the
+   data layer nobody has verified.
+3. **Custom SMTP.** A launch blocker with a lead time. Supabase's built-in
+   sender is documented as testing-only and rate limited to a handful an hour.
+4. **Learned energy pattern** — replace the declared dropdown with observed
+   completion rate by hour. `observed.ts` already collects it.
+5. **Push notification delivery** — the higher-value half of a written feature.
+6. **Syllabus parsing** — the one job an LLM genuinely belongs in.
+7. Tailwind oddity: `max-w-*` utilities produced no CSS, so the calendar width
    is set inline. It will bite again on a class that matters more.
 
 ## Blocked on Brydon
 
-- **Supabase project** — send the project URL and the *anon* key. Never the
-  service_role key. Five minutes, unblocks three features.
 - **The interviews.** Ask what they did last Sunday. Don't show the product.
+- **Confirm sync end to end.** See "Next" above.
+- **Custom SMTP**, before students exist rather than after.
+- **A decision on the three doors** into configuration.
+- **The domain.** `quarterlystudy.com`, about $11, still unregistered.
 - **Deployment Protection** is still on, set to
   `all_except_custom_domains`. That means it never affected students and never
   will: `quarterly-alpha.vercel.app` is public today and a custom domain will be
@@ -116,15 +144,12 @@ Sequencing note: **push notifications need a server-side subscription store and
 a scheduled job, so Supabase comes first** even though notifications are the
 higher-value feature.
 
-### Now → Aug 23 · prove it survives a real week
-- Use it daily, with the real schedule.
-- Five interviews. Past behaviour only, product not shown.
-
-### Aug 24 → Aug 30 · the data layer
-- Supabase: accounts, sync, and the first thing that measures retention.
-- Learned energy pattern: replace the declared dropdown with observed completion
-  rate by hour. The data is already being collected and read.
-- Ten more interviews. Fifteen total by month end.
+### Aug 24 → Aug 30 · the week the interviews have to happen
+- The data layer shipped a week early, on Aug 23. That bought this week back.
+- **Spend it on students, not code.** Twelve interviews by Sept 6, eight with
+  people who have no social reason to be nice about it.
+- Use it daily, with the real schedule. Still the closest proxy for retention.
+- Learned energy pattern, if there is time left after the interviews.
 
 ### Aug 31 → Sept 13 · the retention features
 - Push notifications. One a day, always carrying the block's reason.

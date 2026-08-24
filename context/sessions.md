@@ -9,6 +9,35 @@ delete them.
 
 ---
 
+## 2026-08-23 · Claude Code · The data layer, and a bug a student would have found
+
+Supabase went in: schema, magic-link auth, plan sync, and the telemetry that
+week-4 retention is measured from. Nothing in the product requires an account
+and nothing does now; every path treats signed-out as "stay local", so the
+no-account product is exactly what it was.
+
+Two bugs in it were the interesting part. The Supabase client is created lazily,
+so when a magic link landed on `/week` and nothing on that page touched
+Supabase, no client existed, the code in the URL was never exchanged, and the
+sign-in silently did nothing while looking identical to success. And
+`lastSyncedAt` was doing double duty as "does this device have unsynced edits",
+which made a device that had never synced read as infinitely old, so a week
+built offline lost to any server copy without a word.
+
+Then Brydon looked at his own calendar and found the real one: a 5-a-week run
+and a 4-a-week project were both landing seven times, on every single day.
+Sessions carried a deadline and no floor, so the early-bias in slot value
+dragged later weeks forward. Fixing placement exposed a second bug underneath
+it, where the reason text said "6 of 5 this week" because it counted across the
+whole plan rather than within a week.
+
+Neither was found by a test. Both were found by reading real output, which is
+now four sessions running.
+
+Ended with 198 tests and a live product with accounts. The sync loop has still
+never been watched end to end by anyone, because the magic link goes to an inbox
+no agent can reach.
+
 ## 2026-08-22 · Claude Code · Onboarding got an ending
 
 Wired up the completion model that had sat in the repo for three days as a

@@ -51,6 +51,51 @@ gets a polite yes from everyone and teaches nothing. "Walk me through last Sunda
 
 ## From building
 
+### A weekly quota with no floor fills every day of the week (2026-08-23)
+
+Brydon set Run to 5 a week and Quarterly to 4, and both appeared on every single
+day. They were landing seven times each.
+
+Sessions carried `placeBy`, a deadline, and nothing saying how early they could
+land. A session belonging to week three was free to be placed tomorrow, and the
+early-bias in slot value did exactly that, pulling future weeks forward until
+the current one was full. `separateDays` then spread them one per day, which is
+why it read as "every day" rather than as a pile on one afternoon.
+
+**Fixing it exposed a second bug sitting underneath.** Placement went correct
+and the text still said "5 of 4 this week" and "6 of 5 this week", because the
+reason used the plan-wide session index and measured days-left from today rather
+than from the block's own week. A block three weeks out claimed "only 1 days
+left".
+
+**Why the second one matters more than it looks:** "every block explains itself"
+is one of four things this product claims over its competitors. A block
+explaining itself as the sixth of five is worse than one that says nothing,
+because it tells a student the reasons are decoration.
+
+**The pattern, now four sessions running:** neither was found by a test. Both
+were found by reading real output, and the second only because the first fix
+made the output worth reading again.
+
+### A lazily created client meant sign-in silently did nothing (2026-08-23)
+
+The magic link worked, the email arrived fast, and the redirect landed on
+`/week`. No session was created and nothing said so.
+
+`supabase()` builds the client on first call, and `detectSessionInUrl` only runs
+when the client is built. Nothing on `/week` touched Supabase, so no client
+existed, and the code in the URL was never exchanged. The page looked identical
+to a successful sign-in because it looks identical signed out.
+
+**Lesson, and it is the same one as the deploys in August:** an operation whose
+whole point is a side effect has to be verified by the side effect. "The page
+loaded" is not evidence that signing in worked, any more than "git push
+succeeded" was evidence that anything deployed.
+
+The fix was mounting the auth hook in the root layout so any page creates the
+client on arrival. The bug was that lazy creation and a side-effecting
+constructor are a bad pair.
+
 ### autoFocus scrolled the first onboarding screen past its own heading (2026-08-22)
 
 `autoFocus` on the step-one input scrolled the page 302px on load. Everything
