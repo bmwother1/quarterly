@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { EntryRouter } from '@/components/entry-router';
 
 export const metadata = {
   title: 'Quarterly',
@@ -17,6 +18,7 @@ export const metadata = {
  */
 export default function Landing() {
   return (
+    <EntryRouter>
     <main className="mx-auto max-w-2xl px-5 py-14 sm:py-20">
       <h1 className="rise text-[2rem] font-semibold leading-[1.1] sm:text-[2.75rem]">
         A plan that survives you{' '}
@@ -106,6 +108,7 @@ export default function Landing() {
         to see exactly what is and isn&rsquo;t stored.
       </p>
     </main>
+    </EntryRouter>
   );
 }
 

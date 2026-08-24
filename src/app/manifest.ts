@@ -12,7 +12,10 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'Quarterly',
     short_name: 'Quarterly',
     description: 'Your week, planned around the life you actually have.',
-    start_url: '/week',
+    // '/' decides: the week if there is one, the landing page if not. Pointing
+    // this straight at /week got it wrong for anyone who installed before
+    // setting anything up, and made the icon skip the explanation entirely.
+    start_url: '/',
     scope: '/',
     display: 'standalone',
     orientation: 'portrait',

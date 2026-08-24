@@ -73,7 +73,10 @@ self.addEventListener('fetch', (event) => {
           caches.open(SHELL).then((c) => c.put(request, copy));
           return res;
         })
-        .catch(() => caches.match(request).then((hit) => hit ?? caches.match('/week'))),
+        // Falls back to the root, which decides for itself. Falling back to
+        // /week served the calendar to strangers whose first visit happened to
+        // fail, which is the worst possible first impression of the app.
+        .catch(() => caches.match(request).then((hit) => hit ?? caches.match('/'))),
     );
   }
 });
