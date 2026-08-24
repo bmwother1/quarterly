@@ -6,6 +6,7 @@ import { quarterlyStore, type QuarterlyState } from '@/lib/store';
 import { planWeek } from '@/lib/schedule/plan';
 import { applyCompletion, applyLearnedEstimates, dropRemaining, resetWeeklyTallies, type Completion } from '@/lib/schedule/complete';
 import { collisionsWith, describeCollisions, releaseForEvents } from '@/lib/schedule/conflicts';
+import { releaseMissed } from '@/lib/schedule/absence';
 import { isLive, type StepId } from '@/lib/onboarding';
 import { logEvent } from '@/supabase/events';
 
@@ -134,6 +135,27 @@ export function useQuarterly(tz: string) {
       };
     });
   }, [mutate, tz]);
+
+  /**
+   * Come back after a stretch away: let go of everything unanswered, then plan
+   * from today.
+   *
+   * Undoable, because it touches a lot at once and the student is being asked
+   * to trust it at the moment they are least invested.
+   *
+   * This does not breach "replanning is explicit". The student pressed the
+   * button. The rule is about the app not absorbing failures quietly, and
+   * nothing here is quiet: the blocks stay in history marked skipped with no
+   * time against them, so the completion numbers still know the week did not
+   * happen.
+   */
+  const startFresh = useCallback((from: Date = new Date()) => {
+    mutateUndoable('Started fresh', (prev) => ({
+      ...prev,
+      blocks: releaseMissed(prev.blocks, from),
+    }));
+    replan(from);
+  }, [mutateUndoable, replan]);
 
   const complete = useCallback((blockId: string, outcome: Completion, minutes: number | null) => {
     mutate((prev) => ({ ...prev, ...applyCompletion(prev, blockId, outcome, minutes, new Date()) }));
@@ -355,6 +377,6 @@ export function useQuarterly(tz: string) {
     undo, undoLabel, dismissUndo, removeCommitment,
     addEvent, updateEvent, removeEvent, addTask, removeTask,
     updateAvailability, updateCommitments, reset,
-    skipStep, reopenSetup, confirmSleep, markLiveIfReady, ackLive,
+    skipStep, reopenSetup, confirmSleep, markLiveIfReady, ackLive, startFresh,
   };
 }
