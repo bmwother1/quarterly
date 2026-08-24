@@ -2,7 +2,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { emptyState, type QuarterlyState } from '../src/lib/store.ts';
-import { decideDirection, hasContent, type RemoteMeta } from '../src/lib/sync-rule.ts';
+import { afterPull, afterPush, decideDirection, hasContent, type RemoteMeta } from '../src/lib/sync-rule.ts';
 import type { Commitment } from '../src/lib/types.ts';
 
 function commitment(): Commitment {
@@ -100,5 +100,45 @@ describe('which copy of a week wins', () => {
     const s = emptyState();
     s.blocks = [{ id: 'b1' } as never];
     assert.equal(hasContent(s), false);
+  });
+});
+
+describe('what a sync leaves behind', () => {
+  test('a push does not mark the device dirty', () => {
+    // Break this and auto-push loops forever: the push stamps a modification,
+    // the change detector sees it, and it pushes again. Against a phone on
+    // mobile data that is a battery, not a bug report.
+    const before = withWork('2026-08-23T09:00:00Z', '2026-08-23T09:30:00Z');
+    const after = afterPush(before, '2026-08-23T10:00:00Z');
+
+    assert.equal(after.lastSyncedAt, '2026-08-23T10:00:00Z');
+    assert.equal(after.lastModifiedAt, before.lastModifiedAt, 'lastModifiedAt must not move');
+    assert.equal(decideDirection(after, remote('2026-08-23T10:00:00Z')), 'nothing');
+  });
+
+  test('a pull does not make the receiving device look edited', () => {
+    // The other half. Stamp lastModifiedAt with the moment of receipt and the
+    // device immediately looks dirty, then pushes back over what it just
+    // pulled, undoing the other device's work.
+    const incoming = withWork('2026-08-23T08:00:00Z', '2026-08-23T09:45:00Z');
+    const after = afterPull(incoming, '2026-08-23T10:00:00Z');
+
+    assert.equal(after.lastSyncedAt, '2026-08-23T10:00:00Z');
+    assert.equal(after.lastModifiedAt, '2026-08-23T09:45:00Z', 'keeps the server copy\'s own history');
+    assert.equal(decideDirection(after, remote('2026-08-23T09:45:00Z')), 'nothing');
+  });
+
+  test('a pulled copy with no modification stamp falls back to now, not to dirty', () => {
+    const incoming = withWork('2026-08-23T08:00:00Z', null);
+    const after = afterPull(incoming, '2026-08-23T10:00:00Z');
+    assert.equal(after.lastModifiedAt, '2026-08-23T10:00:00Z');
+    assert.equal(decideDirection(after, remote('2026-08-23T10:00:00Z')), 'nothing');
+  });
+
+  test('a push carries the commitments, not just the timestamps', () => {
+    const before = withWork('2026-08-23T09:00:00Z', '2026-08-23T09:30:00Z');
+    const after = afterPush(before, '2026-08-23T10:00:00Z');
+    assert.equal(after.commitments.length, 1);
+    assert.equal(after.commitments[0].id, 'c1');
   });
 });

@@ -2,7 +2,7 @@
 
 import { supabase } from './client';
 import { quarterlyStore, type QuarterlyState } from '@/lib/store';
-import { decideDirection, type SyncDirection } from '@/lib/sync-rule';
+import { afterPull, afterPush, decideDirection, type SyncDirection } from '@/lib/sync-rule';
 
 /**
  * Keeping a student's week in two places.
@@ -59,7 +59,7 @@ export async function push(userId: string): Promise<boolean> {
   // `touch: false` because recording a sync is not a student editing their
   // week. Left true, every push would mark the device dirty again and it would
   // push forever.
-  quarterlyStore.set({ ...quarterlyStore.getSnapshot(), lastSyncedAt: now }, { touch: false });
+  quarterlyStore.set(afterPush(quarterlyStore.getSnapshot(), now), { touch: false });
   return true;
 }
 
@@ -68,13 +68,7 @@ export async function pull(userId: string): Promise<boolean> {
   if (!remote) return false;
 
   const at = new Date().toISOString();
-  quarterlyStore.set(
-    // lastModifiedAt comes from the server copy's own history, not from the act
-    // of receiving it, or this device would immediately look dirty and push
-    // straight back over what it just pulled.
-    { ...remote.state, lastSyncedAt: at, lastModifiedAt: remote.state.lastModifiedAt ?? at },
-    { touch: false },
-  );
+  quarterlyStore.set(afterPull(remote.state, at), { touch: false });
   return true;
 }
 

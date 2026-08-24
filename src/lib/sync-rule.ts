@@ -59,3 +59,33 @@ export function decideDirection(local: QuarterlyState, remote: RemoteMeta | null
   if (localDirty) return 'push';
   return 'nothing';
 }
+
+/**
+ * State after a successful push.
+ *
+ * Split out and kept pure because the invariant is easy to break and fails
+ * silently: `lastModifiedAt` must not move. A push that marks the device dirty
+ * makes the next change detector fire immediately, and auto-push loops forever
+ * against the network until something gives.
+ */
+export function afterPush(local: QuarterlyState, at: string): QuarterlyState {
+  return { ...local, lastSyncedAt: at };
+}
+
+/**
+ * State after a successful pull.
+ *
+ * Same invariant from the other side. The device has just received the server's
+ * copy, so it is level with it, and stamping `lastModifiedAt` with the moment of
+ * receipt would make it look like this device had unsynced edits. It would then
+ * push straight back over the thing it just pulled. The server copy's own
+ * modification time is what carries across; `at` is only a fallback for a copy
+ * written before that field existed.
+ */
+export function afterPull(remote: QuarterlyState, at: string): QuarterlyState {
+  return {
+    ...remote,
+    lastSyncedAt: at,
+    lastModifiedAt: remote.lastModifiedAt ?? at,
+  };
+}
