@@ -55,22 +55,38 @@ const SLIDES: Slide[] = [
 ];
 
 /**
- * Mounted fresh each time the slide is shown, so the timer restarts on its own
- * and the state does not need resetting. Leaving a slide unmounts this.
+ * The three-beat loop: here is your week, two days went by, here it is repaired.
+ *
+ * It starts from the intact week rather than the broken one because the repair
+ * only means something if you saw what it was repairing. Starting at "missed"
+ * showed the punchline with no setup.
+ *
+ * It loops because this is the one slide people will sit on, and a viewer who
+ * looked away for two seconds should not have to work out how to replay it.
+ * Timings are uneven on purpose: long enough on the broken state to feel like a
+ * problem, longest on the result.
+ *
+ * Mounted fresh when the slide is shown, so leaving and returning restarts it.
  */
+const BEATS = [
+  { blocks: PLANNED, caption: 'Your week, as planned', hold: 1900 },
+  { blocks: MISSED, caption: 'Tuesday and Wednesday went by', hold: 2100 },
+  { blocks: REBUILT, caption: 'Rebuilt around what is left', hold: 3400 },
+] as const;
+
 function RebuildDemo() {
-  const [phase, setPhase] = useState<'missed' | 'rebuilt'>('missed');
+  const [beat, setBeat] = useState(0);
 
   useEffect(() => {
-    const t = setTimeout(() => setPhase('rebuilt'), 1400);
+    const t = setTimeout(() => setBeat((b) => (b + 1) % BEATS.length), BEATS[beat].hold);
     return () => clearTimeout(t);
-  }, []);
+  }, [beat]);
 
   return (
     <div>
-      <WeekSketch blocks={phase === 'missed' ? MISSED : REBUILT} />
-      <p className="mt-2 text-center text-xs text-[var(--faint)]">
-        {phase === 'missed' ? 'Tuesday and Wednesday went by' : 'Rebuilt around what is left'}
+      <WeekSketch blocks={BEATS[beat].blocks} />
+      <p className="mt-2 text-center text-xs text-[var(--faint)] transition-opacity duration-300">
+        {BEATS[beat].caption}
       </p>
     </div>
   );

@@ -141,6 +141,30 @@ button, a { -webkit-tap-highlight-color: transparent; }
 /* Content arrives rather than appearing. Short enough not to feel slow. */
 .rise { animation: rise 0.32s var(--ease) both; }
 
+/*
+ * A block moving between days on the miniature week.
+ *
+ * Slower than a normal UI transition on purpose. This is not feedback for
+ * something the viewer did, it is the one moment that has to be *watched*: work
+ * leaving Tuesday and arriving on Thursday is the argument the whole welcome
+ * flow exists to make. Under about 500ms it reads as a flicker and the eye
+ * cannot follow which block went where.
+ *
+ * The overshoot easing is deliberate too. A linear move reads as a diagram
+ * updating; a slight settle reads as something being placed.
+ *
+ * The global prefers-reduced-motion rule above already collapses this, so a
+ * student who has asked their phone to stop moving things gets the end state
+ * immediately.
+ */
+.sketch-block {
+  transition:
+    left 720ms cubic-bezier(0.34, 1.32, 0.5, 1),
+    top 720ms cubic-bezier(0.34, 1.32, 0.5, 1),
+    height 480ms var(--ease),
+    opacity 320ms var(--ease);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
