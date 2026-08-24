@@ -32,7 +32,7 @@ export default function Landing() {
 
       <div className="rise mt-8 flex flex-col gap-3 sm:flex-row">
         <Link
-          href="/start"
+          href="/welcome"
           className="rounded-xl bg-[var(--accent)] px-5 py-3.5 text-center font-medium text-[var(--accent-ink)] shadow-[var(--shadow-md)] transition-transform active:scale-[0.98]"
         >
           Plan my week
