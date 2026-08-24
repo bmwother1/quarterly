@@ -142,3 +142,50 @@ describe('what a sync leaves behind', () => {
     assert.equal(after.commitments[0].id, 'c1');
   });
 });
+
+describe('a work schedule counts as work', () => {
+  /** A device where the student set up a timetable and nothing else. */
+  function timetableOnly(lastSyncedAt: string | null, lastModifiedAt: string | null): QuarterlyState {
+    const s = emptyState();
+    s.availability = {
+      ...s.availability,
+      busy: [
+        ...s.availability.busy,
+        { id: 'w1', day: 0, startMin: 540, endMin: 1020, label: 'Pro shop', kind: 'work' },
+        { id: 'c1', day: 1, startMin: 570, endMin: 650, label: 'CHEM 142', kind: 'class' },
+      ],
+    };
+    s.lastSyncedAt = lastSyncedAt;
+    s.lastModifiedAt = lastModifiedAt;
+    return s;
+  }
+
+  test('a device holding only a work schedule is not empty', () => {
+    // The bug, exactly. Classes, shifts and sleep live in availability.busy,
+    // which the old content test never looked at, so a device holding a
+    // student's whole timetable read as empty and was overwritten on sign-in.
+    assert.equal(hasContent(timetableOnly(null, null)), true);
+  });
+
+  test('default sleep alone is still empty', () => {
+    // Every fresh install ships with sleep blocks. Counting them would make
+    // every device look non-empty and no first sign-in would ever pull.
+    assert.equal(hasContent(emptyState()), false);
+  });
+
+  test('setting up a timetable then signing in does not lose it', () => {
+    // The reported failure: run onboarding, sign in, watch the work schedule
+    // vanish because an older server copy was pulled over the top.
+    // Server untouched since this device last synced; the timetable in front of
+    // us is the only new thing. It goes up, it does not get replaced.
+    const local = timetableOnly('2026-08-23T09:00:00Z', '2026-08-24T18:00:00Z');
+    const decision = decideDirection(local, remote('2026-08-23T09:00:00Z'));
+    assert.notEqual(decision, 'pull', 'must never overwrite a device with unsaved work');
+    assert.equal(decision, 'push');
+  });
+
+  test('unsaved local work beats a server copy that also moved', () => {
+    const local = timetableOnly('2026-08-23T09:00:00Z', '2026-08-24T18:00:00Z');
+    assert.equal(decideDirection(local, remote('2026-08-24T19:00:00Z')), 'conflict');
+  });
+});

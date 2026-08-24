@@ -3,6 +3,7 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import { quarterlyStore } from '@/lib/store';
+import { hasContent } from '@/lib/sync-rule';
 
 /**
  * Decides what the root URL means, which depends entirely on who is asking.
@@ -34,10 +35,10 @@ export function EntryRouter({ children }: { children: React.ReactNode }) {
   );
   const hydrated = state !== quarterlyStore.getServerSnapshot();
 
-  // Blocks alone don't count. They are regenerated, and an empty plan is not
-  // evidence that anyone set anything up. Inputs are what make it their week.
-  const hasWeek =
-    state.commitments.length > 0 || state.assignments.length > 0 || state.events.length > 0;
+  // Same test the sync uses, deliberately shared. It had drifted: this one
+  // ignored `availability`, so a student who set up classes and shifts and
+  // nothing else was sent to the marketing page instead of their own week.
+  const hasWeek = hasContent(state);
 
   const forcedHome =
     typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('home');

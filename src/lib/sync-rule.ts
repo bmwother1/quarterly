@@ -28,35 +28,62 @@ export interface RemoteMeta {
   hasContent: boolean;
 }
 
-/** A state worth protecting. Blocks alone don't count: they're regenerated. */
+/**
+ * A state worth protecting.
+ *
+ * **`availability` belongs here and its absence was a real bug.** Classes, work
+ * shifts and sleep all live in `availability.busy`, so a device holding a
+ * student's entire real timetable, and nothing else, counted as empty and got
+ * silently overwritten by an older server copy on sign-in. That is precisely
+ * the failure this module was written to prevent, missed because "content" was
+ * read as "things to schedule" rather than "work the student did".
+ *
+ * Blocks still don't count: they are regenerated from everything else, so a
+ * state holding only blocks has nothing a replan could not rebuild.
+ *
+ * The default sleep entries don't count either. Every fresh install has those,
+ * so counting them would make every device look non-empty and no first sign-in
+ * would ever pull.
+ */
 export function hasContent(s: QuarterlyState): boolean {
-  return s.commitments.length > 0 || s.assignments.length > 0 || s.events.length > 0;
+  return s.commitments.length > 0
+    || s.assignments.length > 0
+    || s.events.length > 0
+    || s.availability.busy.some((b) => b.kind !== 'sleep');
 }
 
 export function decideDirection(local: QuarterlyState, remote: RemoteMeta | null): SyncDirection {
-  // Nothing on the server yet. This device creates the row, if it has anything
-  // worth creating it with.
-  if (!remote) return hasContent(local) ? 'push' : 'nothing';
-
-  // A fresh install signing in to an existing account. The server is the only
-  // copy that exists, and overwriting it with an empty week is the exact
-  // failure this rule is written to prevent.
-  if (!hasContent(local)) return remote.hasContent ? 'pull' : 'nothing';
-
   const seen = local.lastSyncedAt ? Date.parse(local.lastSyncedAt) : 0;
 
-  // Two independent questions, and conflating them was the original bug.
-  const remoteMoved = Date.parse(remote.updatedAt) > seen;
+  /**
+   * Does this device hold work the server has not got?
+   *
+   * This is the only question that should ever authorise an overwrite, and the
+   * first version got it wrong by asking whether the device looked *empty*
+   * instead. A student who set up a work schedule and nothing else looked empty
+   * and lost the lot.
+   *
+   * With no modification stamp, fall back to whether there is anything here at
+   * all: that state was written before the field existed and its edits are
+   * still real.
+   */
   const localDirty = local.lastModifiedAt
     ? Date.parse(local.lastModifiedAt) > seen
-    // No modification stamp at all means a state written before this field
-    // existed. Treat a week with content as dirty rather than assume it is
-    // disposable.
-    : true;
+    : hasContent(local);
 
-  if (remoteMoved && localDirty) return 'conflict';
-  if (remoteMoved) return 'pull';
+  // Nothing on the server yet. This device creates the row, if it has anything
+  // worth creating it with.
+  if (!remote) return hasContent(local) || localDirty ? 'push' : 'nothing';
+
+  const remoteMoved = Date.parse(remote.updatedAt) > seen;
+
+  // Two empty copies have nothing to exchange, however old either looks.
+  if (!localDirty && !hasContent(local) && !remote.hasContent) return 'nothing';
+
+  // The rule, in one line: a device with unsaved work is never overwritten.
+  if (localDirty && remoteMoved) return 'conflict';
   if (localDirty) return 'push';
+  if (remoteMoved) return 'pull';
   return 'nothing';
 }
 
