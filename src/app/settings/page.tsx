@@ -7,6 +7,7 @@ import { ThemePicker } from '@/components/theme-provider';
 import { Insights } from '@/components/insights';
 import { BackupControls } from '@/components/backup-controls';
 import { AccountPanel } from '@/components/account-panel';
+import { deleteServerAccount } from '@/supabase/account';
 import { DEFAULT_TZ } from '@/lib/time';
 
 const TZ = DEFAULT_TZ;
@@ -84,13 +85,27 @@ export default function Settings() {
         </Section>
       )}
 
-      <Section title="Delete everything" hint="There is no copy anywhere else.">
+      <Section
+        title="Delete everything"
+        hint="Your week on this device, and your account and its copy on the server if you have one."
+      >
         <button
           onClick={() => {
-            if (window.confirm('Delete your whole setup and plan? This cannot be undone.')) {
+            if (!window.confirm(
+              'Delete your account, your week and everything logged about how you used it? This cannot be undone.',
+            )) return;
+
+            // Server first, deliberately. If the local wipe went first and this
+            // failed, the week would vanish and the server copy would remain,
+            // and the student would have no reason to suspect it.
+            void deleteServerAccount().then((result) => {
+              if (!result.ok) {
+                flash(result.message);
+                return;
+              }
               reset();
-              flash('Everything deleted');
-            }
+              flash(result.hadAccount ? 'Account and data deleted' : 'Everything deleted');
+            });
           }}
           className="rounded-lg border border-[var(--warn)]/50 px-3.5 py-2 text-sm text-[var(--warn)]"
         >
