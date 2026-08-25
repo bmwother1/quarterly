@@ -14,6 +14,7 @@ what the other already worked out.
 | `learned.md` | Evidence — from research, from building, from students | Append |
 | `status.md` | What's shipped, what's next, what's blocked | Every session |
 | `sessions.md` | One short entry per session, newest first | Every session |
+| `roadmap.md` | What gets built next, and what the retention number decides | Rarely |
 | `HANDOFF.md` | Generated. The single file to paste into a Cowork chat | `npm run handoff` |
 
 ## Reading it efficiently
