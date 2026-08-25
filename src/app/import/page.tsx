@@ -4,6 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useQuarterly } from '@/hooks/use-quarterly';
 import { logEvent } from '@/supabase/events';
+import { eventsFromICS } from '@/lib/calendar/import';
+import { looksLikeCalendar } from '@/lib/canvas/ics';
 import { WorkloadChart, CourseList } from '@/components/workload-chart';
 import { SOURCE_HELP } from '@/lib/calendar/sources';
 import { DEFAULT_TZ, fmtDay, fmtTime } from '@/lib/time';
@@ -29,6 +31,56 @@ export default function ImportPage() {
   const [error, setError] = useState<{ error: string; hint?: string } | null>(null);
   const [result, setResult] = useState<Result | null>(null);
   const [imported, setImported] = useState<string | null>(null);
+
+  /**
+   * Import a .ics file the student exported themselves.
+   *
+   * **Why this exists.** The link path is genuinely hard for Apple Calendar: it
+   * means publishing your calendar as a public feed, which is buried in the
+   * share settings, only works for iCloud calendars, and asks a student to make
+   * their schedule world-readable to get it into an app. File then Export is two
+   * clicks and exposes nothing.
+   *
+   * **Parsed in the browser, not sent anywhere.** The parser is dependency-free
+   * domain code, so a file never leaves the device. That also sidesteps the
+   * host allowlist entirely, since there is no host: the whole reason that
+   * allowlist exists is that a feed URL is a bearer credential for someone's
+   * whole schedule, and a file is not.
+   *
+   * **A file always becomes fixed events to schedule around, never assignments.**
+   * The server decides between the two from the feed's hostname, and a file has
+   * no hostname. Guessing from the contents would be wrong sometimes, and
+   * silently turning someone's work shifts into coursework is worse than asking
+   * Canvas users to paste their link.
+   */
+  async function importFile(file: File) {
+    setBusy(true);
+    setError(null);
+    setResult(null);
+    setImported(null);
+    try {
+      const text = await file.text();
+      if (!looksLikeCalendar(text)) {
+        setError({
+          error: "That file doesn't look like a calendar.",
+          hint: 'It needs to be a .ics file, exported from Calendar with File then Export.',
+        });
+        return;
+      }
+
+      const { events, skippedRecurring } = eventsFromICS(text, {
+        tz: TZ,
+        from: new Date(),
+        days: 60,
+      });
+
+      setResult({ kind: 'events', source: file.name.replace(/\.ics$/i, ''), events, skippedRecurring });
+    } catch {
+      setError({ error: 'Could not read that file.', hint: 'Try exporting it again.' });
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function fetchFeed(e: React.FormEvent) {
     e.preventDefault();
@@ -96,7 +148,7 @@ export default function ImportPage() {
     <main className="mx-auto max-w-2xl px-5 py-10 sm:py-14">
       <h1 className="text-2xl font-semibold">Import a calendar</h1>
       <p className="mt-1.5 text-[var(--muted)]">
-        Canvas, Google, Apple or Outlook. Paste the link and Quarterly works out what it is.
+        Canvas, Google, Apple or Outlook. Paste a link, or import a file you exported.
       </p>
 
       <form onSubmit={fetchFeed} className="mt-6 space-y-3">
@@ -119,6 +171,29 @@ export default function ImportPage() {
           {busy ? 'Reading…' : 'Import'}
         </button>
       </form>
+
+      <div className="mt-5 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+        <p className="text-sm font-medium">Using Apple Calendar?</p>
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          A link means publishing your calendar publicly, which is buried in the share settings
+          and only works for iCloud calendars. Exporting a file is easier and nothing leaves
+          your device: <strong>File, then Export</strong>, then pick the file here.
+        </p>
+        <label className="mt-3 inline-block cursor-pointer rounded-lg border border-[var(--border-strong)] px-3.5 py-2 text-sm">
+          Choose an .ics file
+          <input
+            type="file"
+            accept=".ics,text/calendar"
+            className="sr-only"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              // Cleared so picking the same file twice still fires a change.
+              e.target.value = '';
+              if (f) void importFile(f);
+            }}
+          />
+        </label>
+      </div>
 
       {error && (
         <div role="alert" className="mt-4 rounded-xl border border-[var(--warn)]/40 bg-[var(--accent-soft)] p-3 text-sm">
