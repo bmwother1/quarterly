@@ -67,6 +67,11 @@ export async function pull(userId: string): Promise<boolean> {
   const remote = await fetchRemote(userId);
   if (!remote) return false;
 
+  // Everything this device holds, kept before the server copy lands on top.
+  // The decision above is meant to be right; this is what makes it survivable
+  // when it isn't.
+  quarterlyStore.stash();
+
   const at = new Date().toISOString();
   quarterlyStore.set(afterPull(remote.state, at), { touch: false });
   return true;

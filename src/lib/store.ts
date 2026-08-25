@@ -73,6 +73,19 @@ export interface QuarterlyState {
 }
 
 const KEY = 'quarterly.state.v1';
+
+/**
+ * The last state that was about to be replaced by the server.
+ *
+ * Sync has now had two data-loss bugs in two days, both in the same decision,
+ * and both silent and permanent. That is the worst shape a bug can have here: a
+ * student loses a week of setup and there is nothing to point at.
+ *
+ * This does not make the decision smarter. It makes a wrong one survivable,
+ * which is worth more, because the next mistake in that function will be one
+ * nobody predicted either.
+ */
+const RESCUE = 'quarterly.rescue.v1';
 const VERSION = 1;
 
 export function emptyState(): QuarterlyState {
@@ -175,9 +188,62 @@ export const quarterlyStore = {
     for (const l of listeners) l();
   },
 
+  /**
+   * Keep a copy of what is about to be overwritten.
+   *
+   * Deliberately a single slot rather than a history. The realistic rescue is
+   * "the sync just ate my week and I noticed immediately", not archaeology, and
+   * one slot cannot quietly fill a student's storage quota.
+   */
+  stash(): void {
+    if (typeof window === 'undefined') return;
+    try {
+      const current = this.getSnapshot();
+      window.localStorage.setItem(RESCUE, JSON.stringify({
+        at: new Date().toISOString(),
+        state: current,
+      }));
+    } catch {
+      // A failed stash must never stop the sync it was protecting.
+    }
+  },
+
+  /** What is in the rescue slot, if anything. */
+  stashed(): { at: string; state: QuarterlyState } | null {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = window.localStorage.getItem(RESCUE);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as { at: string; state: Partial<QuarterlyState> };
+      return { at: parsed.at, state: { ...emptyState(), ...parsed.state, version: VERSION } };
+    } catch {
+      return null;
+    }
+  },
+
+  /**
+   * Put the stashed copy back.
+   *
+   * Touches the state, unlike a sync write, because restoring is a student
+   * making a decision about their own week. It should push afterwards.
+   */
+  restoreStash(): boolean {
+    const held = this.stashed();
+    if (!held) return false;
+    this.set(held.state);
+    return true;
+  },
+
+  discardStash(): void {
+    if (typeof window !== 'undefined') window.localStorage.removeItem(RESCUE);
+  },
+
   clear(): void {
     cache = emptyState();
-    if (typeof window !== 'undefined') window.localStorage.removeItem(KEY);
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(KEY);
+      window.localStorage.removeItem(RESCUE);
+    }
     for (const l of listeners) l();
   },
 };

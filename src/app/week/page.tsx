@@ -9,6 +9,7 @@ import { Sheet, AddButton } from '@/components/sheet';
 import { UndoBar } from '@/components/undo-bar';
 import { AddItem } from '@/components/add-item';
 import { SetupPrompt } from '@/components/setup-prompt';
+import { RescueNotice } from '@/components/rescue-notice';
 import { DEFAULT_TZ, addDays, fmtDay, fmtTime, localParts } from '@/lib/time';
 import { missedBlocks } from '@/lib/schedule/complete';
 import { absence } from '@/lib/schedule/absence';
@@ -151,6 +152,8 @@ export default function WeekPage() {
             from last Tuesday is a toll gate charged at the exact moment they
             are deciding whether to keep using this.
           */}
+          <RescueNotice tz={TZ} />
+
           {gap.kind === 'away' && (
             <div className="mb-6 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)]">
               <h2 className="font-medium">Welcome back.</h2>
