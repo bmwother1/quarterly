@@ -7,6 +7,7 @@ import { ThemePicker } from '@/components/theme-provider';
 import { Insights } from '@/components/insights';
 import { BackupControls } from '@/components/backup-controls';
 import { AccountPanel } from '@/components/account-panel';
+import { NotificationToggle } from '@/components/notification-toggle';
 import { deleteServerAccount } from '@/supabase/account';
 import { DEFAULT_TZ } from '@/lib/time';
 
@@ -45,6 +46,10 @@ export default function Settings() {
 
       <Section title="Account">
         <AccountPanel lastSyncedAt={state.lastSyncedAt} tz={TZ} />
+      </Section>
+
+      <Section title="Notifications">
+        <NotificationToggle />
       </Section>
 
       <Section title="Colours">

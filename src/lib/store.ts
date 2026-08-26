@@ -66,6 +66,14 @@ export interface QuarterlyState {
   lastModifiedAt?: string | null;
   lastSyncedAt: string | null;
   /**
+   * When a push notification was last sent to this student.
+   *
+   * On their state rather than on the subscription, because "one a day" is a
+   * fact about the person. Keyed to the subscription instead, someone with a
+   * phone and a laptop would get two.
+   */
+  lastNotifiedAt?: string | null;
+  /**
    * Deliberately absent: the Canvas feed URL.
    *
    * It's a bearer credential for a student's entire schedule. Keeping it in
@@ -108,6 +116,7 @@ export function emptyState(): QuarterlyState {
     liveNoticeSeen: false,
     lastModifiedAt: null,
     lastSyncedAt: null,
+    lastNotifiedAt: null,
   };
 }
 
