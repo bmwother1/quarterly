@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useQuarterly } from '@/hooks/use-quarterly';
 import { BlockCard } from '@/components/block-card';
 import { WeekGrid } from '@/components/week-grid';
+import { MonthGrid } from '@/components/month-grid';
 import { Sheet, AddButton } from '@/components/sheet';
 import { UndoBar } from '@/components/undo-bar';
 import { AddItem } from '@/components/add-item';
@@ -15,7 +16,7 @@ import { missedBlocks } from '@/lib/schedule/complete';
 import { absence } from '@/lib/schedule/absence';
 import { nextNotice } from '@/lib/notify';
 import type { StudyBlock } from '@/lib/types';
-import { categoryForCommitment, colorVar } from '@/lib/categories';
+import { categoryForCommitment, colorVar, type Category } from '@/lib/categories';
 
 const TZ = DEFAULT_TZ;
 
@@ -28,7 +29,7 @@ export default function WeekPage() {
   // Fixed at mount so every render agrees on "now" — reading the clock during
   // render is impure and drifts between the server and client passes.
   const [now] = useState(() => new Date());
-  const [view, setView] = useState<'grid' | 'list'>('grid');
+  const [view, setView] = useState<'grid' | 'list' | 'month'>('grid');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
@@ -52,6 +53,20 @@ export default function WeekPage() {
       map.set(c.title, colorVar(categoryForCommitment(c.category), c.shade));
     }
     return (group: string) => map.get(group) ?? 'var(--accent)';
+  }, [state.courses, state.commitments]);
+
+  /**
+   * The same lookup as `colourFor`, answering category instead of colour.
+   *
+   * A block only knows its course code or commitment title, so turning that
+   * back into a category needs the same map. Anything unrecognised is
+   * coursework, which is what an orphaned block almost always is.
+   */
+  const categoryFor = useMemo(() => {
+    const map = new Map<string, Category>();
+    for (const c of state.courses) map.set(c.code, c.category);
+    for (const c of state.commitments) map.set(c.title, categoryForCommitment(c.category));
+    return (group: string): Category => map.get(group) ?? 'deadline';
   }, [state.courses, state.commitments]);
 
   // Fourteen days, matching the planner's horizon. Showing seven while planning
@@ -258,7 +273,7 @@ export default function WeekPage() {
           )}
 
           <div className="mb-6 flex gap-1 text-sm">
-            {(['grid', 'list'] as const).map((v) => (
+            {(['grid', 'list', 'month'] as const).map((v) => (
               <button
                 key={v}
                 onClick={() => setView(v)}
@@ -268,7 +283,7 @@ export default function WeekPage() {
                     : 'text-[var(--muted)] hover:text-[var(--ink)]'
                 }`}
               >
-                {v === 'grid' ? 'Calendar' : 'List'}
+                {v === 'grid' ? 'Calendar' : v === 'list' ? 'List' : 'Month'}
               </button>
             ))}
           </div>
@@ -348,6 +363,19 @@ export default function WeekPage() {
                   Your study blocks will appear here, fitted around the shaded hours.
                 </p>
               )}
+            </div>
+          )}
+
+          {view === 'month' && (
+            <div className="mb-8">
+              <MonthGrid
+                blocks={state.blocks}
+                events={state.events}
+                availability={state.availability}
+                tz={TZ}
+                colorFor={colourFor}
+                categoryFor={categoryFor}
+              />
             </div>
           )}
 

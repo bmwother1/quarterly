@@ -12,6 +12,7 @@
 
 import type { Availability, BusyBlock, FixedEvent, StudyBlock } from '../types.ts';
 import { localParts, weekdayOf, zonedInstant } from '../time.ts';
+import { categoryForBusyKind, type Category } from '../categories.ts';
 
 export interface DaySegment {
   key: string;
@@ -31,8 +32,45 @@ export interface DayBreakdown {
   fixedMinutes: number;
   freeMinutes: number;
   doneMinutes: number;
+  /**
+   * Minutes per category, for a view that has room for one colour rather than
+   * a whole breakdown.
+   *
+   * Added here rather than computed separately because this function already
+   * walks every block, event and busy span for the day. A month view deriving
+   * its own workload would be a second answer to a question already answered,
+   * and the two would drift the first time either changed.
+   *
+   * Sleep is counted but must be excluded when picking a dominant category, or
+   * every day of the year is a sleep day.
+   */
+  byCategory: Record<Category, number>;
   blocks: StudyBlock[];
   events: FixedEvent[];
+}
+
+function emptyByCategory(): Record<Category, number> {
+  return { deadline: 0, class: 0, work: 0, focus: 0, personal: 0, sleep: 0 };
+}
+
+/**
+ * The category a day reads as, for a single bar.
+ *
+ * Sleep is excluded because it wins every day and says nothing. Ties go to the
+ * earlier entry in `CATEGORY_ORDER`, so a day split evenly between coursework
+ * and a shift reads as coursework: the thing a student has to decide about
+ * beats the thing already decided for them.
+ */
+const CATEGORY_ORDER: Category[] = ['deadline', 'focus', 'class', 'work', 'personal'];
+
+export function dominantCategory(byCategory: Record<Category, number>): Category | null {
+  let best: Category | null = null;
+  let bestMinutes = 0;
+  for (const c of CATEGORY_ORDER) {
+    const m = byCategory[c] ?? 0;
+    if (m > bestMinutes) { best = c; bestMinutes = m; }
+  }
+  return bestMinutes > 0 ? best : null;
 }
 
 function minutesOf(a: { start: string; end: string }): number {
@@ -57,6 +95,8 @@ export function breakdownForDay(
   availability: Availability,
   tz: string,
   colorFor: (group: string) => string,
+  /** Which category a course code or commitment title belongs to. */
+  categoryFor: (group: string) => Category = () => 'deadline',
 ): DayBreakdown {
   const weekday = weekdayOf(dateKey);
   const dayBlocks = blocks
@@ -85,6 +125,18 @@ export function breakdownForDay(
     dayEvents.reduce((s, e) => s + minutesOf(e), 0);
 
   const plannedMinutes = [...byGroup.values()].reduce((s, m) => s + m, 0);
+
+  // Same walk, rolled up by category instead of by course.
+  const byCategory = emptyByCategory();
+  for (const [group, minutes] of byGroup) {
+    byCategory[categoryFor(group)] += minutes;
+  }
+  for (const b of busy) {
+    byCategory[categoryForBusyKind(b.kind)] += b.endMin - b.startMin;
+  }
+  for (const e of dayEvents) {
+    byCategory[e.category] += minutesOf(e);
+  }
   const freeMinutes = Math.max(0, wakingMinutes - fixedMinutes - plannedMinutes);
 
   const segments: DaySegment[] = [
@@ -112,6 +164,7 @@ export function breakdownForDay(
     plannedMinutes,
     fixedMinutes,
     freeMinutes,
+    byCategory,
     doneMinutes: dayBlocks
       .filter((b) => b.status === 'done' || b.status === 'partial')
       .reduce((s, b) => s + (b.actualMinutes ?? b.minutes), 0),
