@@ -10,7 +10,7 @@ import { CATEGORY_DEMAND } from '@/lib/schedule/score';
 import { DEFAULT_TZ } from '@/lib/time';
 import type { CommitmentCategory } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
-import { sendMagicLink } from '@/supabase/auth';
+import { CodeSignIn } from '@/components/code-sign-in';
 
 const TZ = DEFAULT_TZ;
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -70,20 +70,8 @@ export default function Onboarding() {
   const [sleepEnd, setSleepEnd] = useState('07:00');
 
   // Step 5
-  const [email, setEmail] = useState('');
-  const [sent, setSent] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
   const { signedIn, email: signedInAs, available: accountsAvailable } = useAuth();
 
-  async function requestLink() {
-    setSending(true);
-    setAuthError(null);
-    const result = await sendMagicLink(email);
-    setSending(false);
-    if (result.ok) setSent(true);
-    else setAuthError(result.message);
-  }
 
   /**
    * Focus the first field without scrolling to it.
@@ -344,17 +332,16 @@ export default function Onboarding() {
   /**
    * Step 5. The account ask, and the only step that talks to a server.
    *
-   * Three states, and the middle one is the one that matters: a student who
-   * followed a magic link from a previous attempt arrives here already signed
-   * in, and being asked to sign in again would read as the app having lost
-   * them. Checked before the form is offered at all.
+   * Checked before the form is offered: a student who already signed in on this
+   * device would otherwise be asked to do it again, which reads as the app
+   * having lost them.
    */
   if (signedIn) {
     return (
       <OnboardingShell
         stepNumber={5} stepCount={STEPS}
         title="You're signed in."
-        blurb={`Your week will sync to ${signedInAs}, so it survives a lost phone or a second browser.`}
+        blurb={`Your week syncs to ${signedInAs}, so it survives a lost phone or a second browser.`}
         footer={<Continue onClick={finish}>Take me to my week</Continue>}
       >
         <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-sm text-[var(--muted)]">
@@ -371,53 +358,15 @@ export default function Onboarding() {
       blurb="Your week lives on this device. An account is the only way it survives a lost phone or a second browser."
       onSkip={finish}
       skipLabel="No thanks, keep it on this device"
-      footer={
-        sent
-          ? <Continue onClick={finish}>Take me to my week</Continue>
-          : (
-            <Continue
-              onClick={requestLink}
-              disabled={!email.includes('@') || sending || !accountsAvailable}
-            >
-              {sending ? 'Sending…' : 'Email me a link'}
-            </Continue>
-          )
-      }
     >
-      {!accountsAvailable && (
-        <div className="mb-4 rounded-lg border border-[var(--warn)]/40 bg-[var(--accent-soft)] px-3.5 py-2.5 text-xs text-[var(--warn)]">
+      {!accountsAvailable ? (
+        <div className="rounded-lg border border-[var(--warn)]/40 bg-[var(--accent-soft)] px-3.5 py-2.5 text-sm text-[var(--warn)]">
           Accounts aren&rsquo;t configured in this build. Skip for now and your week stays on this device.
         </div>
-      )}
-
-      {sent ? (
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
-          <p className="font-medium">Check your email.</p>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            A sign-in link is on its way to {email}. Opening it brings you straight back here,
-            already signed in. No password to invent and none to forget.
-          </p>
-          <p className="mt-2 text-sm text-[var(--faint)]">
-            You don&rsquo;t have to wait for it. Carry on and open the link whenever.
-          </p>
-        </div>
       ) : (
-        <>
-          <input
-            type="email" value={email}
-            onChange={(e) => { setEmail(e.target.value); setAuthError(null); }}
-            onKeyDown={(e) => { if (e.key === 'Enter' && email.includes('@') && !sending) requestLink(); }}
-            aria-label="Email address" placeholder="you@uw.edu" autoComplete="email"
-            className="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3.5 outline-none placeholder:text-[var(--faint)] focus:border-[var(--accent)]"
-          />
-          {authError ? (
-            <p className="mt-2.5 text-sm text-[var(--warn)]">{authError}</p>
-          ) : (
-            <p className="mt-2.5 text-sm text-[var(--faint)]">
-              A link, not a password. One less thing to invent at 9pm.
-            </p>
-          )}
-        </>
+        // The week is already planned by the time this renders, so signing in
+        // has nothing to gate. `finish` only navigates.
+        <CodeSignIn onSignedIn={finish} />
       )}
     </OnboardingShell>
   );

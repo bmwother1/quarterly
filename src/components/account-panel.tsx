@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import { sendMagicLink, signOut } from '@/supabase/auth';
+import { signOut } from '@/supabase/auth';
+import { CodeSignIn } from './code-sign-in';
 import { fmtDay } from '@/lib/time';
 
 /**
@@ -19,10 +19,6 @@ import { fmtDay } from '@/lib/time';
  */
 export function AccountPanel({ lastSyncedAt, tz }: { lastSyncedAt: string | null; tz: string }) {
   const { signedIn, email, loading, available } = useAuth();
-  const [input, setInput] = useState('');
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   if (!available) {
     return (
@@ -59,51 +55,14 @@ export function AccountPanel({ lastSyncedAt, tz }: { lastSyncedAt: string | null
     );
   }
 
-  if (sent) {
-    return (
-      <div className="space-y-1.5">
-        <p className="text-sm font-medium">Check your email.</p>
-        <p className="text-sm text-[var(--muted)]">
-          A sign-in link is on its way to {input}.
-        </p>
-        <p className="text-sm text-[var(--faint)]">
-          Open it on this device. The link can only be completed in the browser that asked for it.
-        </p>
-      </div>
-    );
-  }
-
-  async function request() {
-    setSending(true);
-    setError(null);
-    const result = await sendMagicLink(input);
-    setSending(false);
-    if (result.ok) setSent(true);
-    else setError(result.message);
-  }
-
   return (
-    <div className="space-y-2.5">
-      <p className="text-sm text-[var(--muted)]">
-        Your week lives only in this browser. An account is what makes it survive a lost phone.
-      </p>
-      <div className="flex flex-wrap gap-2">
-        <input
-          type="email" value={input}
-          onChange={(e) => { setInput(e.target.value); setError(null); }}
-          onKeyDown={(e) => { if (e.key === 'Enter' && input.includes('@') && !sending) void request(); }}
-          aria-label="Email address" placeholder="you@uw.edu" autoComplete="email"
-          className="min-w-0 flex-1 rounded-lg border border-[var(--border-strong)] bg-[var(--surface)] px-3.5 py-2 text-sm outline-none placeholder:text-[var(--faint)] focus:border-[var(--accent)]"
-        />
-        <button
-          onClick={() => { void request(); }}
-          disabled={!input.includes('@') || sending}
-          className="rounded-lg bg-[var(--accent)] px-3.5 py-2 text-sm font-medium text-[var(--accent-ink)] disabled:bg-transparent disabled:text-[var(--faint)] disabled:ring-1 disabled:ring-[var(--border)]"
-        >
-          {sending ? 'Sending…' : 'Email me a link'}
-        </button>
-      </div>
-      {error && <p className="text-sm text-[var(--warn)]">{error}</p>}
-    </div>
+    <CodeSignIn
+      onSignedIn={() => { /* useAuth re-renders this panel into the signed-in branch. */ }}
+      intro={
+        <p className="text-sm text-[var(--muted)]">
+          Your week lives only in this browser. An account is what makes it survive a lost phone.
+        </p>
+      }
+    />
   );
 }
