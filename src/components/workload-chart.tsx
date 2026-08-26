@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import type { Assignment } from '@/lib/types';
+import { colorVar } from '@/lib/categories';
+import type { Assignment, Course } from '@/lib/types';
 import { DEFAULT_TZ } from '@/lib/time';
 
 export interface WorkloadWeek {
@@ -62,7 +63,7 @@ export function WorkloadChart({ weeks }: { weeks: WorkloadWeek[] }) {
 }
 
 /** Course chips, coloured consistently with everything else in the app. */
-export function CourseList({ courses }: { courses: Array<{ code: string; fullName: string; color: string }> }) {
+export function CourseList({ courses }: { courses: Course[] }) {
   return (
     <div className="flex flex-wrap gap-2">
       {courses.map((c) => (
@@ -70,7 +71,7 @@ export function CourseList({ courses }: { courses: Array<{ code: string; fullNam
           key={c.code}
           className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-sm"
         >
-          <span className="h-2 w-2 rounded-full" style={{ background: c.color }} aria-hidden />
+          <span className="h-2 w-2 rounded-full" style={{ background: colorVar(c.category, c.shade) }} aria-hidden />
           {c.code}
         </span>
       ))}

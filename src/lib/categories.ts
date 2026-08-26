@@ -83,18 +83,44 @@ export function colorVar(category: Category, shade = 0): string {
 }
 
 /**
- * Which shade an entity gets, from its position among its own kind.
+ * The shade a new entity should take, given what its siblings already hold.
  *
- * Position in a stable sorted list, not order of creation, so removing a course
- * does not repaint the others. That rule is inherited from the previous palette
- * decision and it is the difference between colour meaning something and colour
- * being a side effect of when you happened to add things.
+ * Assigned once and stored, never recomputed. Deriving it from position in a
+ * list looks tidier and breaks the rule that colour follows the entity: delete
+ * one course and every course after it silently changes colour, which is
+ * exactly the behaviour the previous palette decision ruled out.
+ *
+ * Fills the lowest free slot, so removing a course frees its shade for the next
+ * one rather than leaving a hole. Past the family's limit it returns 0, because
+ * two courses that look alike are resolved by their labels.
  */
-export function shadeFor(id: string, siblingIds: string[]): number {
-  const sorted = [...new Set(siblingIds)].sort();
-  const i = sorted.indexOf(id);
-  return i < 0 ? 0 : i;
+export function nextShade(category: Category, taken: number[]): number {
+  const limit = CATEGORY_META[category].shades;
+  for (let i = 0; i < limit; i++) {
+    if (!taken.includes(i)) return i;
+  }
+  return 0;
 }
+
+/** Shades already spoken for in a category, from anything that carries one. */
+export function takenShades<T extends { category?: Category; shade?: number }>(
+  items: T[],
+  category: Category,
+): number[] {
+  return items.filter((i) => i.category === category && typeof i.shade === 'number')
+    .map((i) => i.shade as number);
+}
+
+/**
+ * Categories a student can give a one-off event.
+ *
+ * A `FixedEvent` is time already spoken for. `deadline` and `focus` are the
+ * opposite: they are what the scheduler places into whatever is left, so
+ * offering them here would mean two things sharing a name and behaving
+ * differently. `sleep` is availability rather than an event. The cut comes from
+ * the model, not from tidying the sheet.
+ */
+export const EVENT_CATEGORIES: Category[] = ['personal', 'class', 'work'];
 
 // ── mapping things onto categories ──────────────────────────────────
 
@@ -130,7 +156,21 @@ export function categoryForAssignment(): Category {
  * personal calendar produces fixed time, and the only further signal worth
  * trusting is an obvious course code or an obvious shift word in the title.
  */
-const CLASS_HINT = /\b(lecture|lab|section|seminar|tutorial|studio|recitation)\b|\b[A-Z]{2,5}\s?\d{3}\b/;
+/**
+ * Two patterns, not one, because they need opposite case handling.
+ *
+ * The words are case-insensitive: a calendar entry is as likely to say "Lab" as
+ * "lab". The course code is deliberately case-sensitive, because `[A-Z]{2,5}`
+ * matching case-insensitively would turn "the 100 metres" and "flat 220" into
+ * courses.
+ *
+ * Combining them into one regex is what a first pass did, and the `i` flag then
+ * had to apply to both. Without it the word list was dead for every capitalised
+ * title, which is most of them: "Organic Chemistry Lab" matched nothing and
+ * "EE 371 Lecture" only passed by accident, via its course code.
+ */
+const CLASS_WORD = /\b(lecture|lab|section|seminar|tutorial|studio|recitation|discussion)\b/i;
+const COURSE_CODE = /\b[A-Z]{2,5}\s?\d{3}\b/;
 const WORK_HINT = /\b(shift|work|meeting|standup|stand-up|on call|on-call)\b/i;
 
 export function categoryForImportedEvent(
@@ -138,7 +178,7 @@ export function categoryForImportedEvent(
   title: string,
 ): Category {
   if (produces === 'assignments') return 'deadline';
-  if (CLASS_HINT.test(title)) return 'class';
+  if (CLASS_WORD.test(title) || COURSE_CODE.test(title)) return 'class';
   if (WORK_HINT.test(title)) return 'work';
   return DEFAULT_CATEGORY;
 }

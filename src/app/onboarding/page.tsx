@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useQuarterly } from '@/hooks/use-quarterly';
 import { OnboardingShell, Continue } from '@/components/onboarding-shell';
+import { categoryForCommitment, nextShade, takenShades } from '@/lib/categories';
 import { CATEGORY_DEMAND } from '@/lib/schedule/score';
 import { DEFAULT_TZ } from '@/lib/time';
 import type { CommitmentCategory } from '@/lib/types';
@@ -13,7 +14,6 @@ import { sendMagicLink } from '@/supabase/auth';
 
 const TZ = DEFAULT_TZ;
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const COLORS = ['#e11d48', '#0ea5e9', '#10b981', '#8b5cf6', '#f59e0b'];
 
 /**
  * The guided setup flow, for a student who wants to be walked through it.
@@ -134,7 +134,16 @@ export default function Onboarding() {
       bufferAfterMinutes: category === 'fitness' ? 10 : 0,
       windowStartMin: category === 'fitness' ? 6 * 60 : null,
       windowEndMin: category === 'fitness' ? 21 * 60 : null,
-      active: true, color: COLORS[state.commitments.length % COLORS.length],
+      active: true,
+      // Assigned once from what is already taken in this category, so removing
+      // a commitment frees its shade instead of recolouring the others.
+      shade: nextShade(
+        categoryForCommitment(category),
+        takenShades(
+          state.commitments.map((c) => ({ category: categoryForCommitment(c.category), shade: c.shade })),
+          categoryForCommitment(category),
+        ),
+      ),
     }]);
     setTitle('');
     setStep(2);

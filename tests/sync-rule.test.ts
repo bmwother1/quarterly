@@ -10,7 +10,7 @@ function commitment(): Commitment {
     id: 'c1', title: 'Study', category: 'learning', sessionsPerWeek: 3, minutesPerSession: 60,
     importance: 0.7, demand: 0.8, lastDoneAt: null, doneThisWeek: 0, maxPerDay: 1,
     minSessionMinutes: 30, bufferAfterMinutes: 0, windowStartMin: null, windowEndMin: null,
-    active: true, color: '#2a78d6',
+    active: true, shade: 0,
   };
 }
 

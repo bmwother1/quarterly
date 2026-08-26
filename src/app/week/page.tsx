@@ -15,6 +15,7 @@ import { missedBlocks } from '@/lib/schedule/complete';
 import { absence } from '@/lib/schedule/absence';
 import { nextNotice } from '@/lib/notify';
 import type { StudyBlock } from '@/lib/types';
+import { categoryForCommitment, colorVar } from '@/lib/categories';
 
 const TZ = DEFAULT_TZ;
 
@@ -42,9 +43,14 @@ export default function WeekPage() {
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   const colourFor = useMemo(() => {
+    // Resolves to a CSS variable, not a hex, so the same block follows the
+    // theme instead of carrying a colour chosen under whichever mode was
+    // active when it was created.
     const map = new Map<string, string>();
-    for (const c of state.courses) map.set(c.code, c.color);
-    for (const c of state.commitments) map.set(c.title, c.color);
+    for (const c of state.courses) map.set(c.code, colorVar(c.category, c.shade));
+    for (const c of state.commitments) {
+      map.set(c.title, colorVar(categoryForCommitment(c.category), c.shade));
+    }
     return (group: string) => map.get(group) ?? 'var(--accent)';
   }, [state.courses, state.commitments]);
 
@@ -295,7 +301,7 @@ export default function WeekPage() {
                   <div className="flex items-start gap-3">
                     <span
                       className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full"
-                      style={{ background: selectedEvent.color }}
+                      style={{ background: colorVar(selectedEvent.category, selectedEvent.shade) }}
                       aria-hidden
                     />
                     <div className="min-w-0 flex-1">

@@ -1,4 +1,5 @@
 'use client';
+import { categoryForCommitment, colorVar, nextShade, takenShades } from '@/lib/categories';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -12,7 +13,6 @@ import Link from 'next/link';
 const TZ = DEFAULT_TZ;
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-const COMMITMENT_COLORS = ['#10b981', '#8b5cf6', '#e11d48', '#0ea5e9', '#f59e0b', '#ec4899'];
 
 function toMin(hhmm: string): number {
   const [h, m] = hhmm.split(':').map(Number);
@@ -362,7 +362,13 @@ function CommitmentsSection({
       windowStartMin: category === 'fitness' ? 6 * 60 : null,
       windowEndMin: category === 'fitness' ? 21 * 60 : null,
       active: true,
-      color: COMMITMENT_COLORS[prev.length % COMMITMENT_COLORS.length],
+      shade: nextShade(
+        categoryForCommitment(category),
+        takenShades(
+          prev.map((c) => ({ category: categoryForCommitment(c.category), shade: c.shade })),
+          categoryForCommitment(category),
+        ),
+      ),
     }]);
 
     setTitle('');
@@ -377,7 +383,7 @@ function CommitmentsSection({
         <ul className="mb-4 space-y-2">
           {commitments.map((c) => (
             <li key={c.id} className="flex items-center gap-3 rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm">
-              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: c.color }} aria-hidden />
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colorVar(categoryForCommitment(c.category), c.shade) }} aria-hidden />
               <span className="min-w-0 flex-1 truncate">{c.title}</span>
               <span className="shrink-0 text-[var(--muted)]">
                 {c.sessionsPerWeek}× {c.minutesPerSession}m

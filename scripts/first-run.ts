@@ -32,7 +32,7 @@ function fromFirstRun(title: string, per: number, mins: number, category: Commit
     bufferAfterMinutes: category === 'fitness' ? 10 : 0,
     windowStartMin: category === 'fitness' ? 6 * 60 : null,
     windowEndMin: category === 'fitness' ? 21 * 60 : null,
-    active: true, color: '#e11d48',
+    active: true, shade: 0,
   };
 }
 

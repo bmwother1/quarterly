@@ -1,10 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import {
+  CATEGORY_META, DEFAULT_CATEGORY, EVENT_CATEGORIES, colorVar, nextShade, takenShades,
+  type Category,
+} from '@/lib/categories';
 import type { FixedEvent, WorkKind } from '@/lib/types';
 import { fmtDay, fmtTime, DEFAULT_TZ } from '@/lib/time';
 
-const EVENT_COLORS = ['#0891b2', '#e11d48', '#8b5cf6', '#f59e0b', '#10b981'];
 
 const KINDS: WorkKind[] = ['problem set', 'writing', 'reading', 'project', 'exam', 'lab', 'other'];
 
@@ -71,6 +74,7 @@ export function AddItem({
     editing
       ? String(Math.round((new Date(editing.end).getTime() - new Date(editing.start).getTime()) / 60_000))
       : '60');
+  const [category, setCategory] = useState<Category>(() => editing?.category ?? DEFAULT_CATEGORY);
   const [course, setCourse] = useState('');
   const [kind, setKind] = useState<WorkKind>('problem set');
 
@@ -98,7 +102,10 @@ export function AddItem({
         start: startISO,
         end: new Date(new Date(startISO).getTime() + minutes * 60_000).toISOString(),
         note: null,
-        color: EVENT_COLORS[events.length % EVENT_COLORS.length],
+        category,
+        // Shade among events already in this category, so two appointments in
+        // the same category are still tellable apart at a glance.
+        shade: nextShade(category, takenShades(events, category)),
       });
       setTitle('');
       setCourse('');
@@ -205,6 +212,34 @@ export function AddItem({
           </label>
         </div>
 
+        {mode === 'event' && (
+          <div>
+            <span className="text-sm text-[var(--muted)]">What kind of time is this?</span>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {EVENT_CATEGORIES.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setCategory(c)}
+                  aria-pressed={category === c}
+                  className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm ${
+                    category === c
+                      ? 'border-[var(--accent)] bg-[var(--accent-soft)] font-medium'
+                      : 'border-[var(--border)] text-[var(--muted)]'
+                  }`}
+                >
+                  <span
+                    className="h-2.5 w-2.5 rounded-full"
+                    style={{ background: colorVar(c, 0) }}
+                    aria-hidden
+                  />
+                  {CATEGORY_META[c].label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <button
           onClick={submit}
           disabled={!title.trim()}
@@ -224,7 +259,7 @@ export function AddItem({
           <ul className="mt-2 divide-y divide-[var(--border)]">
             {upcoming.map((e) => (
               <li key={e.id} className="flex items-center gap-3 py-2 text-sm">
-                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: e.color }} aria-hidden />
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colorVar(e.category, e.shade) }} aria-hidden />
                 <span className="min-w-0 flex-1 truncate">{e.title}</span>
                 <span className="shrink-0 text-[var(--muted)]">
                   {fmtDay(e.start, tz)} · {fmtTime(e.start, tz)}

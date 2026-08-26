@@ -10,7 +10,7 @@ function commitment(id = 'c1'): Commitment {
     id, title: 'Study', category: 'learning', sessionsPerWeek: 3, minutesPerSession: 60,
     importance: 0.7, demand: 0.8, lastDoneAt: null, doneThisWeek: 0, maxPerDay: 1,
     minSessionMinutes: 30, bufferAfterMinutes: 0, windowStartMin: null, windowEndMin: null,
-    active: true, color: '#2a78d6',
+    active: true, shade: 0,
   };
 }
 
@@ -70,7 +70,7 @@ describe('when setup is finished', () => {
   test('any of the three routes to "something to plan" works', () => {
     for (const seed of [
       (s: QuarterlyState) => { s.commitments = [commitment()]; },
-      (s: QuarterlyState) => { s.courses = [{ code: 'CHEM 142', fullName: 'CHEM 142 A', color: '#2a78d6' }]; },
+      (s: QuarterlyState) => { s.courses = [{ code: 'CHEM 142', fullName: 'CHEM 142 A', category: 'deadline' as const, shade: 0 }]; },
       (s: QuarterlyState) => {
         s.assignments = [{
           id: 'a', title: 'HW', course: 'MATH', courseFull: 'MATH', kind: 'problem set',

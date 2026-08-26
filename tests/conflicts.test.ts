@@ -14,11 +14,11 @@ const study: Commitment = {
   id: 'study', title: 'Study', category: 'learning', sessionsPerWeek: 5, minutesPerSession: 60,
   importance: 0.7, demand: 0.8, lastDoneAt: null, doneThisWeek: 0, maxPerDay: 1,
   minSessionMinutes: 30, bufferAfterMinutes: 0, windowStartMin: null, windowEndMin: null,
-  active: true, color: '#e11d48',
+  active: true, shade: 0,
 };
 
 function eventOver(b: StudyBlock, title = 'Dentist'): FixedEvent {
-  return { id: 'ev', title, note: null, color: '#0891b2', start: b.start, end: b.end };
+  return { id: 'ev', title, note: null, category: 'personal', shade: 0, start: b.start, end: b.end };
 }
 
 describe('a one-off landing on planned work', () => {
@@ -85,7 +85,7 @@ describe('a one-off landing on planned work', () => {
 
   test('an event on a free evening moves nothing', () => {
     const quiet: FixedEvent = {
-      id: 'ev2', title: 'Concert', note: null, color: '#8b5cf6',
+      id: 'ev2', title: 'Concert', note: null, category: 'personal', shade: 0,
       start: zonedInstant('2026-10-07', 20 * 60, TZ).toISOString(),
       end: zonedInstant('2026-10-07', 22 * 60, TZ).toISOString(),
     };

@@ -11,10 +11,10 @@
  * scheduler must stop putting things at 10am on Tuesdays.
  */
 
+import { categoryForImportedEvent, nextShade } from '../categories.ts';
 import type { FixedEvent } from '../types.ts';
 import { parseICS } from '../canvas/ics.ts';
 import { parseRRule, expand } from './recurrence.ts';
-import { SERIES } from '../series.ts';
 
 export interface ImportedEvents {
   events: FixedEvent[];
@@ -32,7 +32,7 @@ export interface ImportedEvents {
  */
 export function eventsFromICS(
   raw: string,
-  opts: { tz: string; from: Date; days: number; colorOffset?: number },
+  opts: { tz: string; from: Date; days: number; produces?: 'assignments' | 'events' },
 ): ImportedEvents {
   const parsed = parseICS(raw, opts.tz);
   const windowStart = opts.from;
@@ -40,7 +40,14 @@ export function eventsFromICS(
 
   const events: FixedEvent[] = [];
   let skippedRecurring = 0;
-  let colorIndex = opts.colorOffset ?? 0;
+  /**
+   * Shade per distinct series, not per occurrence.
+   *
+   * A weekly lecture expands into twenty events and they are one thing, so they
+   * share a shade. Incrementing per occurrence would have burned the whole
+   * ladder on a single course and made every calendar look identical.
+   */
+  const shadeBySeries = new Map<string, number>();
 
   for (const ev of parsed) {
     if (!ev.start || ev.start.allDay) continue;
@@ -51,7 +58,18 @@ export function eventsFromICS(
     // the least-wrong assumption and matches what most clients show.
     const end = ev.end?.date ?? new Date(start.getTime() + 60 * 60_000);
 
-    const color = SERIES[colorIndex % SERIES.length].light;
+    // Guessed from the title, because a feed gives nothing better. Wrong
+    // guesses are cheap here: the student can change it, and the default is
+    // the broad one rather than a confident mistake.
+    const category = categoryForImportedEvent(opts.produces ?? 'events', title);
+    const seriesKey = `${category}:${ev.uid ?? title}`;
+    if (!shadeBySeries.has(seriesKey)) {
+      const taken = [...shadeBySeries.entries()]
+        .filter(([k]) => k.startsWith(`${category}:`))
+        .map(([, v]) => v);
+      shadeBySeries.set(seriesKey, nextShade(category, taken));
+    }
+    const shade = shadeBySeries.get(seriesKey)!;
 
     if (ev.rrule) {
       const rule = parseRRule(ev.rrule);
@@ -64,10 +82,10 @@ export function eventsFromICS(
           start: occ.start.toISOString(),
           end: occ.end.toISOString(),
           note: ev.location ?? null,
-          color,
+          category,
+          shade,
         });
       }
-      colorIndex += 1;
       continue;
     }
 
@@ -79,9 +97,9 @@ export function eventsFromICS(
       start: start.toISOString(),
       end: end.toISOString(),
       note: ev.location ?? null,
-      color,
+      category,
+      shade,
     });
-    colorIndex += 1;
   }
 
   // One calendar can legitimately hold hundreds of occurrences. Sorting makes

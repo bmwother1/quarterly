@@ -25,7 +25,7 @@ function commitment(over: Partial<Commitment> & { id: string }): Commitment {
     title: 'Run', category: 'fitness', sessionsPerWeek: 5, minutesPerSession: 35,
     importance: 0.8, demand: 0.25, lastDoneAt: null, doneThisWeek: 0, maxPerDay: 1,
     minSessionMinutes: 30, bufferAfterMinutes: 10, windowStartMin: null, windowEndMin: null,
-    active: true, color: '#10b981', ...over,
+    active: true, shade: 0, ...over,
   };
 }
 
@@ -265,7 +265,7 @@ describe('one-off fixed events', () => {
     const monday = zonedInstant('2026-10-05', 8 * 60, TZ);
 
     const dentist = {
-      id: 'ev1', title: 'Dentist', note: null, color: '#0891b2',
+      id: 'ev1', title: 'Dentist', note: null, category: 'personal' as const, shade: 0,
       start: zonedInstant('2026-10-05', 10 * 60, TZ).toISOString(),
       end: zonedInstant('2026-10-05', 11 * 60, TZ).toISOString(),
     };
@@ -291,7 +291,7 @@ describe('one-off fixed events', () => {
     const monday = zonedInstant('2026-10-05', 8 * 60, TZ);
 
     const wedding = {
-      id: 'ev2', title: 'Wedding', note: null, color: '#e11d48',
+      id: 'ev2', title: 'Wedding', note: null, category: 'personal' as const, shade: 0,
       start: zonedInstant('2026-10-06', 8 * 60, TZ).toISOString(),
       end: zonedInstant('2026-10-06', 22 * 60, TZ).toISOString(),
     };

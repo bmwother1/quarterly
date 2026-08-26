@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useQuarterly } from '@/hooks/use-quarterly';
+import { categoryForCommitment, nextShade, takenShades } from '@/lib/categories';
 import { CATEGORY_DEMAND } from '@/lib/schedule/score';
 import { DEFAULT_TZ } from '@/lib/time';
 import type { CommitmentCategory } from '@/lib/types';
@@ -32,7 +33,6 @@ const EXAMPLES: Array<{ title: string; category: CommitmentCategory; per: number
   { title: 'Practice', category: 'personal', per: 3, mins: 45 },
 ];
 
-const COLORS = ['#e11d48', '#0ea5e9', '#10b981', '#8b5cf6', '#f59e0b'];
 
 export default function Start() {
   const { state, hydrated, updateCommitments, replan } = useQuarterly(TZ);
@@ -71,7 +71,15 @@ export default function Start() {
       windowStartMin: category === 'fitness' ? 6 * 60 : null,
       windowEndMin: category === 'fitness' ? 21 * 60 : null,
       active: true,
-      color: COLORS[state.commitments.length % COLORS.length],
+      // Assigned once from what is already taken in this category, so removing
+      // a commitment frees its shade instead of recolouring the others.
+      shade: nextShade(
+        categoryForCommitment(category),
+        takenShades(
+          state.commitments.map((c) => ({ category: categoryForCommitment(c.category), shade: c.shade })),
+          categoryForCommitment(category),
+        ),
+      ),
     }]);
 
     replan(new Date());

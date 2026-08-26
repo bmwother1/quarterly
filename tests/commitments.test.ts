@@ -26,7 +26,7 @@ function commitment(over: Partial<Commitment> & { id: string; title: string }): 
     windowStartMin: null,
     windowEndMin: null,
     active: true,
-    color: '#888888',
+    shade: 0,
     ...over,
   };
 }

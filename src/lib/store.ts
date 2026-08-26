@@ -12,6 +12,9 @@
 
 import type { Assignment, Availability, Commitment, Course, FixedEvent, StudyBlock } from './types.ts';
 import type { UnscheduledItem } from './schedule/plan.ts';
+import {
+  categoryForAssignment, categoryForCommitment, categoryForImportedEvent, nextShade,
+} from './categories.ts';
 import { defaultAvailability } from './schedule/slots.ts';
 
 export interface QuarterlyState {
@@ -86,7 +89,7 @@ const KEY = 'quarterly.state.v1';
  * nobody predicted either.
  */
 const RESCUE = 'quarterly.rescue.v1';
-const VERSION = 1;
+const VERSION = 2;
 
 export function emptyState(): QuarterlyState {
   return {
@@ -135,11 +138,69 @@ function read(): QuarterlyState {
     const parsed = JSON.parse(raw) as Partial<QuarterlyState>;
     // Merge over a fresh empty state so a blob written by an older build can
     // never leave a field undefined and crash a render.
-    return { ...emptyState(), ...parsed, version: VERSION };
+    return upgrade({ ...emptyState(), ...parsed });
   } catch {
     return emptyState();
   }
 }
+
+/**
+ * Bring a stored blob up to the current shape.
+ *
+ * Version 2 replaced per-entity hex colours with a category and a shade. There
+ * is no SQL here on purpose: the server copy is this same object stored as
+ * jsonb, so migrating the client migrates both, and the server corrects itself
+ * on the next push.
+ *
+ * Every course, commitment and event written before this has a `color` string
+ * and no category. Their colours are not recoverable as categories, and they
+ * should not be: the old hex was arbitrary, so trying to honour it would
+ * preserve the exact meaninglessness this replaced. They get mapped from what
+ * the record actually says it is, and old `color` fields are dropped.
+ */
+function upgrade(state: QuarterlyState): QuarterlyState {
+  if (state.version === VERSION) return state;
+
+  // Drops the v1 `color` field. Kept as a helper rather than inlined because
+  // three record types need it and one of them forgetting is the whole bug.
+  const strip = <T extends object>(o: T): T => {
+    const rest = { ...(o as T & { color?: string }) };
+    delete rest.color;
+    return rest as T;
+  };
+
+  const courseCategory = categoryForAssignment();
+  const courses = state.courses.map((c, i) => ({
+    ...strip(c),
+    category: c.category ?? courseCategory,
+    shade: typeof c.shade === 'number' ? c.shade : nextShade(courseCategory, range(i)),
+  }));
+
+  // Commitments derive their display category, so only the shade is new.
+  const commitmentShades = new Map<string, number[]>();
+  const commitments = state.commitments.map((c) => {
+    if (typeof c.shade === 'number') return strip(c);
+    const cat = categoryForCommitment(c.category);
+    const taken = commitmentShades.get(cat) ?? [];
+    const shade = nextShade(cat, taken);
+    commitmentShades.set(cat, [...taken, shade]);
+    return { ...strip(c), shade };
+  });
+
+  const eventShades = new Map<string, number[]>();
+  const events = state.events.map((e) => {
+    if (e.category && typeof e.shade === 'number') return strip(e);
+    const cat = e.category ?? categoryForImportedEvent('events', e.title);
+    const taken = eventShades.get(cat) ?? [];
+    const shade = nextShade(cat, taken);
+    eventShades.set(cat, [...taken, shade]);
+    return { ...strip(e), category: cat, shade };
+  });
+
+  return { ...state, courses, commitments, events, version: VERSION };
+}
+
+const range = (n: number) => Array.from({ length: n }, (_, i) => i);
 
 export const quarterlyStore = {
   subscribe(listener: () => void): () => void {

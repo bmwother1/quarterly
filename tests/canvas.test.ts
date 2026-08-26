@@ -136,7 +136,7 @@ describe('assignments from a real feed', () => {
   test('extracts four courses with distinct colours', () => {
     const courses = coursesFrom(assignments);
     assert.equal(courses.length, 4);
-    assert.equal(new Set(courses.map((c) => c.color)).size, 4);
+    assert.equal(new Set(courses.map((c) => c.shade)).size, 4);
     assert.deepEqual(courses.map((c) => c.code).sort(), ['CHEM 142', 'CSE 121', 'ENGL 131', 'MATH 124']);
   });
 

@@ -8,6 +8,8 @@
  */
 
 /** What kind of work an assignment is. Drives duration, method, and energy fit. */
+import type { Category } from './categories.ts';
+
 export type WorkKind =
   | 'exam'
   | 'quiz'
@@ -136,7 +138,19 @@ export interface StudyBlock {
 export interface Course {
   code: string;
   fullName: string;
-  color: string;
+  /**
+   * What kind of hour this produces. Always `deadline`: Canvas emits due dates
+   * and nothing else. Stored rather than assumed so a future source that emits
+   * lectures does not have to fight the model.
+   */
+  category: Category;
+  /**
+   * Which step within the category's hue family, assigned once at creation.
+   *
+   * Never recomputed from list position. That would repaint every course after
+   * one is deleted, which is the behaviour the palette decision ruled out.
+   */
+  shade: number;
 }
 
 /**
@@ -193,7 +207,15 @@ export interface Commitment {
   windowStartMin: number | null;
   windowEndMin: number | null;
   active: boolean;
-  color: string;
+  /**
+   * Which step within its hue family.
+   *
+   * There is no display `category` here on purpose: a commitment already
+   * carries `category: CommitmentCategory`, and the display one is derived from
+   * it by `categoryForCommitment`. Storing both would be two fields that can
+   * disagree, and the one that disagreed would be the one on screen.
+   */
+  shade: number;
 }
 
 export type CommitmentCategory = 'fitness' | 'project' | 'learning' | 'personal';
@@ -214,7 +236,9 @@ export interface FixedEvent {
   start: string;
   end: string;
   note: string | null;
-  color: string;
+  /** Guessed on import from the title, chosen by hand when added in the app. */
+  category: Category;
+  shade: number;
 }
 
 /** Everything we persist for one student. */

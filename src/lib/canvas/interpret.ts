@@ -10,6 +10,7 @@
  * estimate beats asking a student to enter durations for forty assignments.
  */
 
+import { categoryForAssignment, nextShade } from '../categories.ts';
 import type { Assignment, Course, WorkKind } from '../types.ts';
 import { parseICS } from './ics.ts';
 import { DEFAULT_TZ, mondayOf } from '../time.ts';
@@ -131,21 +132,39 @@ export function assignmentsFromICS(
   return out;
 }
 
-const COURSE_COLORS = [
-  '#e11d48', '#0ea5e9', '#8b5cf6', '#f59e0b',
-  '#10b981', '#ec4899', '#6366f1', '#14b8a6',
-];
-
-export function coursesFrom(assignments: Assignment[]): Course[] {
+/**
+ * Courses from a feed, keeping the shades any of them already had.
+ *
+ * `existing` matters more than it looks. Re-importing a feed rebuilds this list,
+ * and assigning shades by position would mean adding one course silently
+ * recolours every course after it. A student who has learned that blue is CHEM
+ * should not have that taken away by a sync.
+ */
+export function coursesFrom(assignments: Assignment[], existing: Course[] = []): Course[] {
   const seen = new Map<string, string>();
   for (const a of assignments) {
     if (!seen.has(a.course)) seen.set(a.course, a.courseFull);
   }
-  return [...seen].map(([code, fullName], i) => ({
-    code,
-    fullName,
-    color: COURSE_COLORS[i % COURSE_COLORS.length],
-  }));
+
+  const held = new Map(existing.map((c) => [c.code, c.shade]));
+  const category = categoryForAssignment();
+  const taken: number[] = [];
+
+  // Known courses keep their shade and claim it first, so a new course fills a
+  // genuinely free slot rather than colliding with one that is merely later.
+  for (const code of seen.keys()) {
+    const s = held.get(code);
+    if (typeof s === 'number') taken.push(s);
+  }
+
+  return [...seen].map(([code, fullName]) => {
+    let shade = held.get(code);
+    if (typeof shade !== 'number') {
+      shade = nextShade(category, taken);
+      taken.push(shade);
+    }
+    return { code, fullName, category, shade };
+  });
 }
 
 /**

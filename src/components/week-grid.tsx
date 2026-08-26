@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRef, useState } from 'react';
 import type { Availability, BusyBlock, FixedEvent, StudyBlock } from '@/lib/types';
 import { localParts, fmtTime, zonedInstant } from '@/lib/time';
+import { colorVar } from '@/lib/categories';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -251,8 +252,10 @@ export function WeekGrid({
                         style={{
                           top: `${top}%`,
                           height: `${Math.max(2.5, height)}%`,
-                          background: `color-mix(in srgb, ${e.color} 28%, var(--surface))`,
-                          borderLeft: `3px solid ${e.color}`,
+                          background: `color-mix(in srgb, ${colorVar(e.category, e.shade)} 28%, var(--surface))`,
+                          // The tint is a wash: at 28% the categories sit ~2 ΔE
+                          // apart. This border is the colour signal here.
+                          borderLeft: `3px solid ${colorVar(e.category, e.shade)}`,
                         }}
                         title={`${e.title} · ${fmtTime(e.start, tz)}`}
                       >
