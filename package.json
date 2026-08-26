@@ -14,7 +14,8 @@
     "check": "npm run typecheck && npm run lint && npm test",
     "handoff": "node scripts/handoff.ts",
     "my-week": "node scripts/my-week.ts",
-    "first-run": "node scripts/first-run.ts"
+    "first-run": "node scripts/first-run.ts",
+    "palette": "node scripts/check-palette.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
