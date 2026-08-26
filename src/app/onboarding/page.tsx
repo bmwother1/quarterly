@@ -45,7 +45,7 @@ function toMin(v: string): number {
 export default function Onboarding() {
   const {
     state, hydrated, updateCommitments, updateAvailability,
-    confirmSleep, skipStep, markLiveIfReady, replan,
+    confirmSleep, setSleepHours, skipStep, markLiveIfReady, replan,
   } = useQuarterly(TZ);
   const router = useRouter();
 
@@ -158,13 +158,10 @@ export default function Onboarding() {
   }
 
   function saveSleep() {
-    const s = toMin(sleepStart);
-    const e = toMin(sleepEnd);
-    updateAvailability((prev) => ({
-      ...prev,
-      busy: prev.busy.map((b) => (b.kind === 'sleep' ? { ...b, startMin: s, endMin: e } : b)),
-    }));
-    confirmSleep();
+    // One call, so the hours and the flag cannot come apart. The old version
+    // also only rewrote sleep blocks that already existed, so a student whose
+    // availability had none silently kept the defaults.
+    setSleepHours(toMin(sleepEnd), toMin(sleepStart));
     setStep(4);
   }
 

@@ -24,7 +24,7 @@ function toHHMM(min: number): string {
 
 export default function SetupPage() {
   const {
-    state, hydrated, updateAvailability, updateCommitments, replan,
+    state, hydrated, updateAvailability, updateCommitments, replan, setSleepHours,
     removeCommitment, undo, undoLabel, dismissUndo,
   } = useQuarterly(TZ);
   const router = useRouter();
@@ -46,20 +46,9 @@ export default function SetupPage() {
   const commitBlock = av.busy.find((b) => b.kind === 'work' || b.kind === 'class');
 
   // Every one of these reads `prev`, never the render-time `av`.
-  function setSleep(wakeMin: number, bedMin: number) {
-    updateAvailability((prev) => {
-      const busy = prev.busy.filter((b) => b.kind !== 'sleep');
-      for (let day = 0; day < 7; day++) {
-        busy.push({ id: `sleep-${day}`, day, startMin: bedMin, endMin: wakeMin, label: 'Sleep', kind: 'sleep' });
-      }
-      return {
-        ...prev,
-        busy,
-        dayStartMin: wakeMin,
-        dayEndMin: bedMin > wakeMin ? bedMin : 24 * 60 - 15,
-      };
-    });
-  }
+  // Sleep goes through the hook so the hours and `sleepConfirmed` cannot come
+  // apart: writing one without the other left the /week prompt asking forever.
+  const setSleep = setSleepHours;
 
   function setWorkShift(days: number[], startMin: number, endMin: number, label: string) {
     updateAvailability((prev) => {

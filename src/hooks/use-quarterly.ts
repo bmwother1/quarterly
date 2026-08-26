@@ -7,7 +7,7 @@ import { planWeek } from '@/lib/schedule/plan';
 import { applyCompletion, applyLearnedEstimates, dropRemaining, resetWeeklyTallies, type Completion } from '@/lib/schedule/complete';
 import { collisionsWith, describeCollisions, releaseForEvents } from '@/lib/schedule/conflicts';
 import { releaseMissed } from '@/lib/schedule/absence';
-import { isLive, type StepId } from '@/lib/onboarding';
+import { applySleepHours, isLive, type StepId } from '@/lib/onboarding';
 import { logEvent } from '@/supabase/events';
 
 /**
@@ -347,6 +347,16 @@ export function useQuarterly(tz: string) {
     }));
   }, [mutate]);
 
+  /**
+   * Sleep hours and the fact that they were set, together.
+   *
+   * Separate from `updateAvailability` so no caller can write the hours and
+   * leave the question open, which is exactly what `/setup` did.
+   */
+  const setSleepHours = useCallback((wakeMin: number, bedMin: number) => {
+    mutate((prev) => applySleepHours(prev, wakeMin, bedMin));
+  }, [mutate]);
+
   const confirmSleep = useCallback(() => {
     mutate((prev) => ({ ...prev, sleepConfirmed: true }));
   }, [mutate]);
@@ -377,6 +387,6 @@ export function useQuarterly(tz: string) {
     undo, undoLabel, dismissUndo, removeCommitment,
     addEvent, updateEvent, removeEvent, addTask, removeTask,
     updateAvailability, updateCommitments, reset,
-    skipStep, reopenSetup, confirmSleep, markLiveIfReady, ackLive, startFresh,
+    skipStep, reopenSetup, confirmSleep, setSleepHours, markLiveIfReady, ackLive, startFresh,
   };
 }

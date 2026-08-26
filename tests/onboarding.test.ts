@@ -2,7 +2,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { emptyState, type QuarterlyState } from '../src/lib/store.ts';
-import { steps, isLive, progress, nextPrompt, unresolved } from '../src/lib/onboarding.ts';
+import { steps, isLive, progress, nextPrompt, unresolved, applySleepHours } from '../src/lib/onboarding.ts';
 import type { Commitment } from '../src/lib/types.ts';
 
 function commitment(id = 'c1'): Commitment {
@@ -174,5 +174,47 @@ describe('leaving setup for good', () => {
       assert.ok(destinations.has(s.id), `${s.id} needs a destination`);
       assert.ok(s.skipLabel.length > 0, `${s.id} needs a way to decline`);
     }
+  });
+});
+
+describe('setting sleep hours answers the sleep question', () => {
+  test('setting the hours resolves the prompt, not just the data', () => {
+    // The bug Brydon hit. /setup wrote the hours and never set
+    // `sleepConfirmed`, so /week kept asking someone who had already answered.
+    // The hours were saving the whole time and there was no way to tell, so the
+    // only control that dismissed the prompt was the one that means "defaults".
+    const before = emptyState();
+    assert.equal(before.sleepConfirmed, false);
+
+    const after = applySleepHours(before, 7 * 60, 23 * 60);
+    assert.equal(after.sleepConfirmed, true, 'hours set must also mark it answered');
+  });
+
+  test('the hours actually land, on every day of the week', () => {
+    const s = applySleepHours(emptyState(), 6 * 60 + 30, 23 * 60 + 30);
+    const sleep = s.availability.busy.filter((b) => b.kind === 'sleep');
+    assert.equal(sleep.length, 7, 'a week has seven nights');
+    assert.ok(sleep.every((b) => b.startMin === 23 * 60 + 30 && b.endMin === 6 * 60 + 30));
+  });
+
+  test('works from a state that had no sleep blocks at all', () => {
+    // The old onboarding path mapped over existing sleep blocks, so a state
+    // with none silently kept the defaults and looked like it had saved.
+    const bare = emptyState();
+    bare.availability = { ...bare.availability, busy: [] };
+
+    const s = applySleepHours(bare, 8 * 60, 24 * 60);
+    assert.equal(s.availability.busy.filter((b) => b.kind === 'sleep').length, 7);
+    assert.equal(s.sleepConfirmed, true);
+  });
+
+  test('a late bedtime past midnight does not invert the waking day', () => {
+    const s = applySleepHours(emptyState(), 7 * 60, 1 * 60);
+    assert.ok(s.availability.dayEndMin > s.availability.dayStartMin, 'the day must run forwards');
+  });
+
+  test('after setting hours the sleep step stops being asked', () => {
+    const s = applySleepHours(emptyState(), 7 * 60, 23 * 60);
+    assert.ok(!unresolved(s).some((step) => step.id === 'sleep'));
   });
 });
