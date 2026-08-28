@@ -132,11 +132,14 @@ export default function WeekPage() {
 
   return (
     <main
-      className="mx-auto w-full px-5 py-10 sm:py-14"
-      // Set directly rather than through a utility class: the calendar needs
-      // roughly twice the width of the prose views, and a conditional class name
-      // here was not surviving the CSS build.
-      style={{ maxWidth: view === 'grid' ? 1080 : 672 }}
+      // The calendar needs roughly twice the width of the prose views. Both
+      // widths are written out in full because Tailwind reads source text: a
+      // class name stitched together at runtime is a string it never sees, so
+      // the utility is never generated. That is what broke here before, not the
+      // `max-w-*` utilities themselves, which work everywhere else in the app.
+      className={`mx-auto w-full px-5 py-10 sm:py-14 ${
+        view === 'grid' ? 'max-w-[1080px]' : 'max-w-2xl'
+      }`}
     >
       <header className="mb-8 flex flex-wrap items-baseline justify-between gap-3">
         <div>

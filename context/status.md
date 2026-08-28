@@ -6,7 +6,7 @@ This file describes the present. It gets rewritten, not appended to.
 
 Repo: `bmwother1/quarterly` (public). Live and current at
 `quarterly-alpha.vercel.app`. Pushes to `main` auto-deploy in about 20 seconds,
-confirmed working by watching a deploy land 27 seconds after a push. 267 tests.
+confirmed working by watching a deploy land 27 seconds after a push. 276 tests.
 Supabase project `dxvekspnhqrcwqbqxleh` (West US Oregon); keys are in
 `.env.local` and in all three Vercel environments. Node lives at `~/.local/node` and is on Brydon's PATH but not in a
 fresh agent shell — prefix `export PATH="$HOME/.local/node/bin:$PATH"`.
@@ -28,18 +28,19 @@ He intends to pay a group of friends weekly for feedback and run them through
 autumn. That makes Sept 30 a private beta and moves the first honest retention
 read to winter quarter. Interviews are parked at his instruction.
 
-Three things are blocked on dashboard actions he has not done, and each one
-makes a shipped feature inert:
+All three dashboard actions were done on 2026-08-27. `0002` ran, so account
+deletion works and the privacy page is accurate again.
+`SUPABASE_SERVICE_ROLE_KEY` was added in Vercel as a Secret and `0003` ran,
+returning job id 1, so the notification cron is scheduled every ten minutes.
+**Delivery is scheduled, not yet observed:** nobody has read
+`cron.job_run_details` to confirm a run succeeded, and no notification has
+arrived on a real phone.
 
-1. **Account deletion fails.** `delete_own_account` does not exist because
-   `0002` was never run, so "Delete my data" wipes localStorage and leaves the
-   server copy. The privacy page promises otherwise, which makes this the one
-   live inaccuracy in the product.
-2. **Sign-in cannot complete.** No custom SMTP, so the template still sends a
+One thing is still blocked on a dashboard action:
+
+1. **Sign-in cannot complete.** No custom SMTP, so the template still sends a
    link with no code in it, and Supabase will not let the template be edited
    until SMTP exists.
-3. **Notifications will never send.** No `SUPABASE_SERVICE_ROLE_KEY` in Vercel
-   and no `pg_cron` job, so the toggle subscribes correctly into silence.
 
 **Retention is measurable, not measured**, and now also unmeasurable by design
 until the paid-tester question is resolved: paying people to open the app buys
@@ -93,10 +94,19 @@ and has not been done.
   because the link route means publishing an Apple calendar publicly
 - **Push notifications** — permission, subscription, service-worker handlers, a
   Settings toggle that detects the iOS home-screen requirement, and a sender
-  that runs the same engine the app uses. Nothing sends until the two dashboard
-  actions above are done
+  that runs the same engine the app uses. The key and the cron are both in
+  place as of 2026-08-27; a successful run has not been observed yet
 - **Account deletion** — a `security definer` function so a student can remove
-  their auth row and cascade everything. Written, not yet run
+  their auth row and cascade everything. `0002` run 2026-08-27 and verified:
+  `prosecdef` true, so the function runs with owner rights as intended
+- **Learned energy pattern** — the scheduler plans against observed completion
+  rate by hour rather than the setup dropdown, but only with 24+ settled blocks,
+  evidence that separates, and disagreement with what the student said. A stated
+  preference locks it. Insights leads with the switch and offers a refusal
+- **The returning-student experience** — shipped 2026-08-24. `absence()` tells a
+  lapse from an away: two days or fewer still asks for answers, longer says
+  "Welcome back", offers "Plan from today", and releases the unanswered blocks
+  as skipped rather than making the student itemise last Tuesday
 
 ## In progress, not finished
 
@@ -105,9 +115,6 @@ and has not been done.
   guided alternative; `/setup` is now only reachable from the nav and from
   individual setup prompts. Two of the three should survive to launch and it is
   undecided which. **This one needs Brydon**, it is a product call.
-- **The returning-student experience.** Five days away and `/week` opens with a
-  red banner saying 15 blocks passed without an answer. Correct, and it reads
-  like being told off at exactly the moment week-4 retention is decided.
 - **Drag-to-move, unverified.** Cross-day drags and drops onto occupied slots
   were both broken and are both fixed, and blocks now push each other aside.
   Synthetic pointer events do not enter the drag state at all, so **this needs a
@@ -122,29 +129,19 @@ and has not been done.
 
 ## Next, in order
 
-1. **Run `0002`, add the service_role key, run `0003`.** Three dashboard
-   actions that turn three shipped features from inert to working.
+1. **Confirm a cron run succeeded**, then get one notification onto a real
+   phone. `cron.job_run_details` is the first check; a `failed` row most likely
+   means the Vault secret and `CRON_SECRET` in Vercel disagree.
 2. **Custom SMTP**, which also unblocks testing the sign-in code. Resend sends
    to the account owner's own address with no domain, which is enough to verify
    the flow today.
 3. **Confirm the drag by hand**, and the sync loop while there.
-4. **Learned energy pattern** — replace the declared dropdown with observed
-   completion rate by hour. `observed.ts` already collects it and `Insights`
-   already reads it; the dropdown still overrides both.
-5. **Syllabus parsing, or cut the claim.** The competitive table says Quarterly
+4. **Syllabus parsing, or cut the claim.** The competitive table says Quarterly
    knows what to study and it does not. Decide by Sept 1 rather than carrying an
    untrue claim into recruiting.
-6. Tailwind oddity: `max-w-*` utilities produced no CSS, so the calendar width
-   is set inline. It will bite again on a class that matters more.
 
 ## Blocked on Brydon
 
-- **Migration `0002`**, or deletion stays broken while the privacy page says it
-  works. This is the most urgent thing in the file.
-- **`SUPABASE_SERVICE_ROLE_KEY` into Vercel**, by hand in the dashboard. It
-  bypasses RLS entirely, so it is the one key that should never travel through a
-  chat.
-- **Migration `0003`**, with the cron secret and domain filled in.
 - **Custom SMTP**, before students exist rather than after.
 - **Confirm the drag on a real pointer**, and the sync loop.
 - **The name, then the domain.** Both still open, and the domain choice depends
@@ -201,7 +198,7 @@ higher-value feature.
 - **Spend it on students, not code.** Twelve interviews by Sept 6, eight with
   people who have no social reason to be nice about it.
 - Use it daily, with the real schedule. Still the closest proxy for retention.
-- Learned energy pattern, if there is time left after the interviews.
+- Learned energy pattern. Shipped Aug 27.
 
 ### Aug 31 → Sept 13 · the retention features
 - Push notifications. One a day, always carrying the block's reason.

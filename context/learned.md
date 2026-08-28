@@ -51,6 +51,34 @@ gets a polite yes from everyone and teaches nothing. "Walk me through last Sunda
 
 ## From building
 
+### The Tailwind class that "produced no CSS" was never written down (2026-08-27)
+
+`/week` needed two container widths, 1080px for the calendar and 672px for the
+prose views. The conditional class did not work, so it was set with an inline
+`style` and recorded in `status.md` as "`max-w-*` utilities produced no CSS,
+it will bite again on a class that matters more".
+
+That diagnosis was wrong, and the wrong version is the expensive part: it
+describes a broken framework, which nobody can act on, instead of a rule, which
+everybody can.
+
+Tailwind reads **source text**. It has no idea what the code does, so a class
+name assembled at runtime is a string it never sees and never generates. Written
+out in full, both work. Checked by building and grepping the output CSS:
+`max-w-2xl{max-width:var(--container-2xl)}` and
+`max-w-\[1080px\]{max-width:1080px}` are both there, and the live page measures
+1080 and 672 in the two views.
+
+Two things worth keeping:
+
+- **Every class name goes in the source whole.** Pick between complete strings,
+  never build one by concatenation.
+- **A grep of the built CSS settles this in one command**, and would have
+  settled it the first time. `.next/static/chunks/*.css`, and remember Tailwind
+  escapes the brackets, so `max-w-\[1080px\]` is what you are searching for.
+  The first grep here missed it for exactly that reason and briefly looked like
+  a confirmation of the original wrong theory.
+
 ### The drag lived on the element guaranteed to disappear (2026-08-27)
 
 Brydon reported two things: dragging a block to another day made it vanish, and
