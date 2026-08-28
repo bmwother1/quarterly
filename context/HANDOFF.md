@@ -332,14 +332,16 @@ and has not been done.
 
 ## Owed to Brydon
 
-- **The business plan was written and is not yet filed.** It covers the
-  interviews, distribution to thirty students, the domain, Dempsey and the
-  revenue model, and it is sitting outside the repo rather than in `context/`.
-  Brydon parked the business side to focus on code; picking it back up means
-  filing it as `context/business.md` first.
-- **One correction it contains, since it affects a date in `learned.md`:** the
-  Dempsey application does not go in over winter break. It opens late February
-  and closes in early April, with four rounds after that.
+- **The business plan is gone.** It was written on 2026-08-22 covering the
+  interviews, distribution, the domain, Dempsey and the revenue model, delivered
+  as a file, and never filed into `context/`. The scratchpad holding it has since
+  been cleared, so the only copy is in that conversation. Worth rewriting rather
+  than recovering: interviews are now parked, the tester plan has changed to paid
+  friends through autumn, and the name is being replaced, so most of its
+  distribution section is out of date anyway.
+- **One correction it contained**, since it affects a date elsewhere: the Dempsey
+  application does not go in over winter break. It opens late February and closes
+  in early April, with four rounds after that.
 
 ## Struck from the plan
 
