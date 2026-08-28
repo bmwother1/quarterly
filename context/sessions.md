@@ -9,6 +9,35 @@ delete them.
 
 ---
 
+## 2026-08-26 · Claude Code · Colour, a code, a month, and a drag that never worked
+
+Three specified pieces of work, in order, plus two bugs Brydon found by using it.
+
+Colour became a category system. Five separate hex arrays in five files were
+replaced by six categories owning hue families, with shades inside for
+individual courses. Nothing stores a hex any more, so dark mode stopped being a
+second palette to maintain. The palette is generated and validated by
+`npm run palette` rather than chosen: the first attempt failed 24 ways under
+colour vision deficiency and nobody would have seen it by eye.
+
+Sign-in became a six-digit code. Brydon spotted that this removes the need for a
+pending-signup table entirely rather than mitigating it, because a student who
+never leaves the tab still has their answers in hand when they type the code.
+That deleted a whole unauthenticated write path from the design.
+
+The month view landed, reusing `breakdownForDay` rather than deriving a second
+workload number, with a test asserting the two views cannot disagree.
+
+Then Brydon reported sleep hours that would not save, and dragging a block to
+another day making it vanish. Both were real, both had causes other than the
+obvious one, and both are in `learned.md`.
+
+A long stretch went on naming and produced no decision. Slate died to
+Technolutions, Tessel to a live TESSELL trademark, and four of five candidates
+were killed by collisions found only after they had been recommended. The
+process was backwards and is recorded as such.
+
+
 ## 2026-08-23 · Claude Code · The data layer, and a bug a student would have found
 
 Supabase went in: schema, magic-link auth, plan sync, and the telemetry that

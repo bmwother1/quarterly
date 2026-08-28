@@ -9,6 +9,92 @@ record of what was tried and abandoned is worth more than a tidy file.
 
 ---
 
+## 2026-08-26 · Two colour axes, and a code instead of a link
+
+**Decided:** colour carries two independent things. Category owns the hue family
+and answers "what kind of hour is this". Shade steps within the family and
+answers "which course". The month view reads category only; week and day views
+read both.
+
+**Why not category alone, which is what was asked for:** with one colour per
+category, five courses render identically in the week grid, and the same request
+also said course distinction should survive there. Both cannot come from one
+field.
+
+**Why not per-course alone, which is what existed:** the same red was a lecture
+one week and a gym session the next, so colour meant nothing and was decoration.
+
+**What it cost to get right.** The first palette gave every family the same
+lightness ladder and differed them only by hue. It failed 24 ways, because hue
+is precisely what colour vision deficiency destroys. Families now own lightness
+bands and no two are neighbours on both axes at once. `npm run palette` runs
+OKLCH generation, Viénot simulation for all three deficiencies and CIEDE2000, in
+both modes, with an exit code.
+
+**The limit, recorded rather than hidden:** the week grid paints blocks as a 26%
+tint, and at that strength two shades of one family sit about 1.5 ΔE apart.
+Within-family distinction there rests on the label and the 3px full-strength
+border, not on the fill. Category separation, which is what the month view
+needs, is 10.9.
+
+---
+
+**Decided:** sign-in is a six-digit code typed into the tab, not a magic link.
+
+**Why:** a link can only be completed in the browser that requested it, because
+that browser holds the PKCE verifier. A student who onboards in Safari and opens
+the link from the mail app lands in a different context and gets an error about
+a code verifier. The code never leaves the tab, so the failure cannot happen
+rather than being handled.
+
+**What it removed.** The original plan was to persist onboarding answers
+server-side against a pending signup record. Brydon spotted that the code flow
+deletes the need for it: the student still has their answers when they verify,
+so the write happens as a normal authenticated user. No pending table, no anon
+INSERT, no claim token, no security-definer claiming function, and no
+unauthenticated write path to carry forever.
+
+**The stated cost was a 60-second window where a tab crash loses the answers.**
+It does not exist: `/onboarding` writes through the store at every step, so
+everything is in localStorage before the code screen.
+
+**Rejected: implicit flow.** It would make links work anywhere, and it puts
+access tokens in browser history on an app holding a person's whole schedule.
+
+**What would make it worth revisiting:** if code delivery turns out to be the
+thing students fail at, which depends entirely on email deliverability rather
+than on the flow.
+
+---
+
+## 2026-08-27 · A dragged block pushes, and never merges
+
+**Decided:** dropping a block on top of another displaces the other one
+downward into the next free gap, and says so. The dragged block never moves.
+
+**Why the dragged one wins:** it is the only thing on screen the student has
+just made an explicit decision about. Everything else is the scheduler's
+opinion, and an opinion yields to an instruction. Same reasoning as an
+appointment beating a plan, one level down.
+
+**Why settled blocks are obstructions rather than things to shove:** a finished
+block is a record of what happened. Shifting it to tidy the present is
+rewriting the past, so a displaced block goes around it.
+
+**Why a push past the end of the day is refused:** a visible overlap the student
+can see and fix beats work silently relocated to 2am.
+
+**Rejected: merging two sessions of the same commitment into one longer block.**
+Two 30-minute runs are not one 60-minute run, and for study it is worse: the
+entire premise of spacing is that separate sessions beat one double session.
+`maxPerDay` and `separateDays` exist to prevent exactly this, so an automatic
+merge would silently undo what the scheduler is for.
+
+**What would make it worth revisiting:** an explicit version, where dragging one
+session onto another merges them *and says what it costs*. That is a real
+feature with real copy, not a side effect of dragging, and it should wait until
+a student asks for it.
+
 ## 2026-08-23 · Magic links, no server session, and a sync that refuses to guess
 
 **Decided:** three things, all from putting Supabase in.

@@ -1,12 +1,12 @@
 # Status
 
-**Updated: 2026-08-24** · 37 days to launch (September 30)
+**Updated: 2026-08-27** · 34 days to launch (September 30)
 
 This file describes the present. It gets rewritten, not appended to.
 
 Repo: `bmwother1/quarterly` (public). Live and current at
 `quarterly-alpha.vercel.app`. Pushes to `main` auto-deploy in about 20 seconds,
-confirmed working by watching a deploy land 27 seconds after a push. 198 tests.
+confirmed working by watching a deploy land 27 seconds after a push. 267 tests.
 Supabase project `dxvekspnhqrcwqbqxleh` (West US Oregon); keys are in
 `.env.local` and in all three Vercel environments. Node lives at `~/.local/node` and is on Brydon's PATH but not in a
 fresh agent shell — prefix `export PATH="$HOME/.local/node/bin:$PATH"`.
@@ -19,19 +19,32 @@ The product is finished enough to hand to a student. Import any calendar, get a
 planned week, check things off, replan when it falls apart. It installs to a
 phone, works offline, and resolves conflicts on its own.
 
-The data layer landed on 2026-08-23. Accounts, sync and telemetry all work, so
-the thing that measures retention now exists rather than being a plan.
+The data layer landed on 2026-08-23 and the interface caught up on 2026-08-26:
+categories, a month view, a six-digit sign-in, and push notifications that can
+reach a phone.
 
-What remains untrue outranks everything on the shipped list:
+**Brydon has changed the plan.** No marketing until a full quarter of real use.
+He intends to pay a group of friends weekly for feedback and run them through
+autumn. That makes Sept 30 a private beta and moves the first honest retention
+read to winter quarter. Interviews are parked at his instruction.
 
-1. **Nobody has used it but Brydon.** One interview, logged as zero signal.
-   Fifteen were due by month end and none have happened.
-2. **The sync loop has never been watched end to end.** Every piece is tested
-   and rows did appear in Supabase, but nobody has signed in, made a change, and
-   confirmed the server copy moved. The magic link goes to an inbox no agent can
-   reach, so this needs Brydon and five minutes.
-3. **Retention is measurable, not measured.** Nothing reads the
-   `weekly_retention` view until there are students in it.
+Three things are blocked on dashboard actions he has not done, and each one
+makes a shipped feature inert:
+
+1. **Account deletion fails.** `delete_own_account` does not exist because
+   `0002` was never run, so "Delete my data" wipes localStorage and leaves the
+   server copy. The privacy page promises otherwise, which makes this the one
+   live inaccuracy in the product.
+2. **Sign-in cannot complete.** No custom SMTP, so the template still sends a
+   link with no code in it, and Supabase will not let the template be edited
+   until SMTP exists.
+3. **Notifications will never send.** No `SUPABASE_SERVICE_ROLE_KEY` in Vercel
+   and no `pg_cron` job, so the toggle subscribes correctly into silence.
+
+**Retention is measurable, not measured**, and now also unmeasurable by design
+until the paid-tester question is resolved: paying people to open the app buys
+the number rather than reading it. Tagging the cohort at signup is one column
+and has not been done.
 
 ## Shipped
 
@@ -51,10 +64,13 @@ What remains untrue outranks everything on the shipped list:
   says what it moved, and never touches finished blocks
 - **Notification engine** — decision logic and copy written and tested, with a
   banned-phrase list enforcing tone. Delivery is the only missing half
-- **Privacy page** written against the code, with a working delete control
+- **Privacy page** rewritten 2026-08-24 against the code, covering what a
+  signed-in student's data actually is. Its delete control is real but currently
+  fails, see above
 - **Backup** — export and import JSON, and now a server copy as well
-- **Accounts** — magic link, no passwords. Optional throughout: signed out is a
-  supported state everywhere and the no-account product is unchanged
+- **Accounts** — a six-digit code, no passwords, no links. Optional throughout:
+  signed out is a supported state everywhere and the no-account product is
+  unchanged. Untestable until SMTP exists
 - **Sync** — the plan mirrors to `plan_state` on change, debounced. When both
   copies changed since they were last level it reports a conflict and does
   nothing, because there is no merge and any automatic choice eats a week
@@ -64,7 +80,23 @@ What remains untrue outranks everything on the shipped list:
 - **Onboarding with an ending** — `/onboarding` is a five-step guided flow, and
   the app now knows when a student is finished. One prompt at a time, every one
   answerable in both directions, and once `wentLiveAt` is stamped setup prompts
-  never return. The account step is a labelled mock and is deliberately last
+  never return. The account step is real and deliberately last
+- **Categories** — six of them owning hue families, with shades inside for
+  individual courses. Nothing stores a hex; rendering resolves a CSS variable.
+  `npm run palette` validates the whole thing under three colour vision
+  deficiencies in both modes, with an exit code
+- **Month view** — one bar per day, weighted by minutes rather than event count,
+  coloured by the day's dominant category, tapping through to the day view
+- **A welcome carousel** at `/welcome`, showing a week repairing itself, because
+  people hearing the pitch kept asking whether Outlook already did this
+- **Calendar file import** — `.ics` parsed in the browser and never uploaded,
+  because the link route means publishing an Apple calendar publicly
+- **Push notifications** — permission, subscription, service-worker handlers, a
+  Settings toggle that detects the iOS home-screen requirement, and a sender
+  that runs the same engine the app uses. Nothing sends until the two dashboard
+  actions above are done
+- **Account deletion** — a `security definer` function so a student can remove
+  their auth row and cascade everything. Written, not yet run
 
 ## In progress, not finished
 
@@ -76,33 +108,51 @@ What remains untrue outranks everything on the shipped list:
 - **The returning-student experience.** Five days away and `/week` opens with a
   red banner saying 15 blocks passed without an answer. Correct, and it reads
   like being told off at exactly the moment week-4 retention is decided.
-- **Notification delivery.** Engine, copy and banned-phrase list are written and
-  tested, and `push_subscription` is in the schema. Nothing sends anything: no
-  VAPID keys, no service-worker push handler, no scheduled job.
+- **Drag-to-move, unverified.** Cross-day drags and drops onto occupied slots
+  were both broken and are both fixed, and blocks now push each other aside.
+  Synthetic pointer events do not enter the drag state at all, so **this needs a
+  real thumb before it can be called working.** Third time this feature has
+  broken without a test noticing.
+- **The name.** `Quarterly` encodes the quarter system and the product is now a
+  general scheduler, which Brydon's own `product.md` said in August. A long
+  stretch on 2026-08-26 produced no decision: Slate collides with Technolutions,
+  which 2,000 universities use for admissions and retention, and Tessel collides
+  with a live TESSELL software trademark. Nothing is branded, so the cost of
+  changing is still near zero.
 
 ## Next, in order
 
-1. **Interviews.** Nothing else here matters as much and the count is still one.
-   Twelve by Sept 6 is what the business plan argues for.
-2. **Confirm the sync loop by hand.** Sign in, change something, watch
-   `plan_state.updated_at` move. Five minutes, and it is the one claim in the
-   data layer nobody has verified.
-3. **Custom SMTP.** A launch blocker with a lead time. Supabase's built-in
-   sender is documented as testing-only and rate limited to a handful an hour.
+1. **Run `0002`, add the service_role key, run `0003`.** Three dashboard
+   actions that turn three shipped features from inert to working.
+2. **Custom SMTP**, which also unblocks testing the sign-in code. Resend sends
+   to the account owner's own address with no domain, which is enough to verify
+   the flow today.
+3. **Confirm the drag by hand**, and the sync loop while there.
 4. **Learned energy pattern** — replace the declared dropdown with observed
-   completion rate by hour. `observed.ts` already collects it.
-5. **Push notification delivery** — the higher-value half of a written feature.
-6. **Syllabus parsing** — the one job an LLM genuinely belongs in.
-7. Tailwind oddity: `max-w-*` utilities produced no CSS, so the calendar width
+   completion rate by hour. `observed.ts` already collects it and `Insights`
+   already reads it; the dropdown still overrides both.
+5. **Syllabus parsing, or cut the claim.** The competitive table says Quarterly
+   knows what to study and it does not. Decide by Sept 1 rather than carrying an
+   untrue claim into recruiting.
+6. Tailwind oddity: `max-w-*` utilities produced no CSS, so the calendar width
    is set inline. It will bite again on a class that matters more.
 
 ## Blocked on Brydon
 
-- **The interviews.** Ask what they did last Sunday. Don't show the product.
-- **Confirm sync end to end.** See "Next" above.
+- **Migration `0002`**, or deletion stays broken while the privacy page says it
+  works. This is the most urgent thing in the file.
+- **`SUPABASE_SERVICE_ROLE_KEY` into Vercel**, by hand in the dashboard. It
+  bypasses RLS entirely, so it is the one key that should never travel through a
+  chat.
+- **Migration `0003`**, with the cron secret and domain filled in.
 - **Custom SMTP**, before students exist rather than after.
+- **Confirm the drag on a real pointer**, and the sync loop.
+- **The name, then the domain.** Both still open, and the domain choice depends
+  on the name.
 - **A decision on the three doors** into configuration.
-- **The domain.** `quarterlystudy.com`, about $11, still unregistered.
+- **Whether paid testers are tagged separately.** Paying people to open the app
+  measures the payment, not the product, so they must not pollute the retention
+  cohort.
 - **Deployment Protection** is still on, set to
   `all_except_custom_domains`. That means it never affected students and never
   will: `quarterly-alpha.vercel.app` is public today and a custom domain will be

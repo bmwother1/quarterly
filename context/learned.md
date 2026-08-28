@@ -51,6 +51,100 @@ gets a polite yes from everyone and teaches nothing. "Walk me through last Sunda
 
 ## From building
 
+### The drag lived on the element guaranteed to disappear (2026-08-27)
+
+Brydon reported two things: dragging a block to another day made it vanish, and
+dragging onto an overlapping block made it freeze and snap back. One root cause.
+
+A block was only ever rendered by its own day column. Dragging into another day
+made the source column return null while the target column had never heard of
+it, so the element unmounted mid-gesture. Pointer capture dies with the element
+it was set on, so no pointerup ever arrived and the drop never committed.
+
+The same-day case was the same shape. `setPointerCapture` sat in a try/catch
+that silently continued, and when capture failed, moving over another block sent
+pointermove to *that* block, whose handler bailed on the id mismatch.
+
+**The lesson generalises past this bug.** Both handlers were on the block, which
+is the one element in the whole interaction guaranteed to be unmounted or
+covered exactly when the drag gets interesting. Move and release now belong to
+the grid, which is present for the entire gesture and under the pointer the
+whole time.
+
+**And this is the third time this feature has broken without a test noticing.**
+Synthetic pointer events do not even enter the drag state, so it still ends with
+a human confirming it. The honest position is that this component cannot be
+verified here at all.
+
+### A palette chosen by eye fails in ways nobody sees (2026-08-26)
+
+The first category palette gave all six families the same lightness ladder and
+separated them by hue alone. It failed 24 checks: deuteranopia folded deadline
+into personal, protanopia folded class into focus, tritanopia folded class into
+work. Hue is exactly what colour vision deficiency destroys, so a palette that
+relies on it has no fallback.
+
+Families now own lightness bands, and no two are neighbours on both axes at
+once. Worst canonical pair went from confusable to ΔE 12.7.
+
+**The finding worth keeping is about the tint, not the palette.** The week grid
+paints blocks as `color-mix(colour 26%, surface)`. At that strength categories
+10.9 apart collapse to about 2.6. Validating the pure colour said almost nothing
+about what is on screen, and if the month view had reused the week grid's tint
+treatment it would have been unreadable with nothing flagging it.
+
+**Method note, and a near miss.** A hue sweep reported "0 failures" three times
+while the script was crashing on a syntax error, because the check counted
+`grep FAIL` instead of the exit code. Sanity checks in both directions now run
+first: a known-registered value must read taken and a known-nonsense one must
+read free.
+
+### One flag, two writers, and the question never got answered (2026-08-26)
+
+Brydon entered sleep hours during onboarding, found no way to save them, and
+`/week` kept asking. Both halves were true and neither cause was the obvious one.
+
+`/setup` saved the hours correctly on every keystroke. What it never did was set
+`sleepConfirmed`, which is what the prompt keys off. So the prompt kept asking
+someone who had already answered, nothing confirmed the save, and the only
+control that dismissed it was "the default is fine", which is the one answer
+that discards the real hours. He took the exit that worked and ended up on defaults.
+
+Sleep is the only step whose resolution is a flag rather than derived from the
+data, because a default nobody looked at and a default deliberately chosen are
+identical in `availability`. That makes it the only step where a writer can
+update the data and leave the question open.
+
+**The fix was not to patch the call site.** Both writes now happen in one
+function that both pages call, because patching `/setup` alone would have left
+the next writer free to make the same mistake. That surfaced a second bug: the
+onboarding path mapped over *existing* sleep blocks, so a student whose
+availability had none kept the defaults while the screen looked like it saved.
+
+### A daily cron would have made notifications look broken (2026-08-26)
+
+The engine's best notice is `next-up`, which fires only when a block starts
+within fifteen minutes and is deliberately exempt from the daily cap, because a
+nudge that arrives late is worthless. Vercel's free tier caps cron at once a day.
+
+Ran the real engine rather than reasoning about it: a block four hours away
+returns nothing at all. A daily call would have produced silence for nearly
+every student on nearly every day.
+
+Switched to pg_cron every ten minutes, which is on Supabase's free tier. **The
+general lesson is that a scheduler's cadence is part of its design**, and
+inheriting whatever the host offers for free is how a feature ships inert.
+
+### iOS web push is invisible rather than restricted (2026-08-26)
+
+On iPhone, push works only from a home-screen install. In a Safari tab the Push
+API is not merely restricted, it is absent, and there is no error: a student
+would grant permission and receive nothing forever. Detected and named in the
+toggle, because "add to home screen" is thirty seconds from working and
+"unsupported browser" is a dead end. It also has to be step one when recruiting
+testers.
+
+
 ### A weekly quota with no floor fills every day of the week (2026-08-23)
 
 Brydon set Run to 5 a week and Quarterly to 4, and both appeared on every single

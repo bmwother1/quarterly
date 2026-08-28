@@ -1,13 +1,13 @@
 # Quarterly — project brief
 
-*Generated 2026-08-24 from the project's `context/` files by `npm run handoff`.
+*Generated 2026-08-28 from the project's `context/` files by `npm run handoff`.
 Don't edit this by hand; edit the source files and regenerate.*
 
 This is the standing context for Quarterly. It covers the person building it,
 what's being built, where it stands, and what has already been decided — so a
 conversation can start from here instead of from scratch.
 
-**37 days to launch** (September 30 2026).
+**33 days to launch** (September 30 2026).
 
 ---
 
@@ -193,13 +193,13 @@ compound within a course.
 
 # Where things stand
 
-**Updated: 2026-08-24** · 37 days to launch (September 30)
+**Updated: 2026-08-27** · 34 days to launch (September 30)
 
 This file describes the present. It gets rewritten, not appended to.
 
 Repo: `bmwother1/quarterly` (public). Live and current at
 `quarterly-alpha.vercel.app`. Pushes to `main` auto-deploy in about 20 seconds,
-confirmed working by watching a deploy land 27 seconds after a push. 198 tests.
+confirmed working by watching a deploy land 27 seconds after a push. 267 tests.
 Supabase project `dxvekspnhqrcwqbqxleh` (West US Oregon); keys are in
 `.env.local` and in all three Vercel environments. Node lives at `~/.local/node` and is on Brydon's PATH but not in a
 fresh agent shell — prefix `export PATH="$HOME/.local/node/bin:$PATH"`.
@@ -212,19 +212,32 @@ The product is finished enough to hand to a student. Import any calendar, get a
 planned week, check things off, replan when it falls apart. It installs to a
 phone, works offline, and resolves conflicts on its own.
 
-The data layer landed on 2026-08-23. Accounts, sync and telemetry all work, so
-the thing that measures retention now exists rather than being a plan.
+The data layer landed on 2026-08-23 and the interface caught up on 2026-08-26:
+categories, a month view, a six-digit sign-in, and push notifications that can
+reach a phone.
 
-What remains untrue outranks everything on the shipped list:
+**Brydon has changed the plan.** No marketing until a full quarter of real use.
+He intends to pay a group of friends weekly for feedback and run them through
+autumn. That makes Sept 30 a private beta and moves the first honest retention
+read to winter quarter. Interviews are parked at his instruction.
 
-1. **Nobody has used it but Brydon.** One interview, logged as zero signal.
-   Fifteen were due by month end and none have happened.
-2. **The sync loop has never been watched end to end.** Every piece is tested
-   and rows did appear in Supabase, but nobody has signed in, made a change, and
-   confirmed the server copy moved. The magic link goes to an inbox no agent can
-   reach, so this needs Brydon and five minutes.
-3. **Retention is measurable, not measured.** Nothing reads the
-   `weekly_retention` view until there are students in it.
+Three things are blocked on dashboard actions he has not done, and each one
+makes a shipped feature inert:
+
+1. **Account deletion fails.** `delete_own_account` does not exist because
+   `0002` was never run, so "Delete my data" wipes localStorage and leaves the
+   server copy. The privacy page promises otherwise, which makes this the one
+   live inaccuracy in the product.
+2. **Sign-in cannot complete.** No custom SMTP, so the template still sends a
+   link with no code in it, and Supabase will not let the template be edited
+   until SMTP exists.
+3. **Notifications will never send.** No `SUPABASE_SERVICE_ROLE_KEY` in Vercel
+   and no `pg_cron` job, so the toggle subscribes correctly into silence.
+
+**Retention is measurable, not measured**, and now also unmeasurable by design
+until the paid-tester question is resolved: paying people to open the app buys
+the number rather than reading it. Tagging the cohort at signup is one column
+and has not been done.
 
 ## Shipped
 
@@ -244,10 +257,13 @@ What remains untrue outranks everything on the shipped list:
   says what it moved, and never touches finished blocks
 - **Notification engine** — decision logic and copy written and tested, with a
   banned-phrase list enforcing tone. Delivery is the only missing half
-- **Privacy page** written against the code, with a working delete control
+- **Privacy page** rewritten 2026-08-24 against the code, covering what a
+  signed-in student's data actually is. Its delete control is real but currently
+  fails, see above
 - **Backup** — export and import JSON, and now a server copy as well
-- **Accounts** — magic link, no passwords. Optional throughout: signed out is a
-  supported state everywhere and the no-account product is unchanged
+- **Accounts** — a six-digit code, no passwords, no links. Optional throughout:
+  signed out is a supported state everywhere and the no-account product is
+  unchanged. Untestable until SMTP exists
 - **Sync** — the plan mirrors to `plan_state` on change, debounced. When both
   copies changed since they were last level it reports a conflict and does
   nothing, because there is no merge and any automatic choice eats a week
@@ -257,7 +273,23 @@ What remains untrue outranks everything on the shipped list:
 - **Onboarding with an ending** — `/onboarding` is a five-step guided flow, and
   the app now knows when a student is finished. One prompt at a time, every one
   answerable in both directions, and once `wentLiveAt` is stamped setup prompts
-  never return. The account step is a labelled mock and is deliberately last
+  never return. The account step is real and deliberately last
+- **Categories** — six of them owning hue families, with shades inside for
+  individual courses. Nothing stores a hex; rendering resolves a CSS variable.
+  `npm run palette` validates the whole thing under three colour vision
+  deficiencies in both modes, with an exit code
+- **Month view** — one bar per day, weighted by minutes rather than event count,
+  coloured by the day's dominant category, tapping through to the day view
+- **A welcome carousel** at `/welcome`, showing a week repairing itself, because
+  people hearing the pitch kept asking whether Outlook already did this
+- **Calendar file import** — `.ics` parsed in the browser and never uploaded,
+  because the link route means publishing an Apple calendar publicly
+- **Push notifications** — permission, subscription, service-worker handlers, a
+  Settings toggle that detects the iOS home-screen requirement, and a sender
+  that runs the same engine the app uses. Nothing sends until the two dashboard
+  actions above are done
+- **Account deletion** — a `security definer` function so a student can remove
+  their auth row and cascade everything. Written, not yet run
 
 ## In progress, not finished
 
@@ -269,24 +301,33 @@ What remains untrue outranks everything on the shipped list:
 - **The returning-student experience.** Five days away and `/week` opens with a
   red banner saying 15 blocks passed without an answer. Correct, and it reads
   like being told off at exactly the moment week-4 retention is decided.
-- **Notification delivery.** Engine, copy and banned-phrase list are written and
-  tested, and `push_subscription` is in the schema. Nothing sends anything: no
-  VAPID keys, no service-worker push handler, no scheduled job.
+- **Drag-to-move, unverified.** Cross-day drags and drops onto occupied slots
+  were both broken and are both fixed, and blocks now push each other aside.
+  Synthetic pointer events do not enter the drag state at all, so **this needs a
+  real thumb before it can be called working.** Third time this feature has
+  broken without a test noticing.
+- **The name.** `Quarterly` encodes the quarter system and the product is now a
+  general scheduler, which Brydon's own `product.md` said in August. A long
+  stretch on 2026-08-26 produced no decision: Slate collides with Technolutions,
+  which 2,000 universities use for admissions and retention, and Tessel collides
+  with a live TESSELL software trademark. Nothing is branded, so the cost of
+  changing is still near zero.
 
 ## Next, in order
 
-1. **Interviews.** Nothing else here matters as much and the count is still one.
-   Twelve by Sept 6 is what the business plan argues for.
-2. **Confirm the sync loop by hand.** Sign in, change something, watch
-   `plan_state.updated_at` move. Five minutes, and it is the one claim in the
-   data layer nobody has verified.
-3. **Custom SMTP.** A launch blocker with a lead time. Supabase's built-in
-   sender is documented as testing-only and rate limited to a handful an hour.
+1. **Run `0002`, add the service_role key, run `0003`.** Three dashboard
+   actions that turn three shipped features from inert to working.
+2. **Custom SMTP**, which also unblocks testing the sign-in code. Resend sends
+   to the account owner's own address with no domain, which is enough to verify
+   the flow today.
+3. **Confirm the drag by hand**, and the sync loop while there.
 4. **Learned energy pattern** — replace the declared dropdown with observed
-   completion rate by hour. `observed.ts` already collects it.
-5. **Push notification delivery** — the higher-value half of a written feature.
-6. **Syllabus parsing** — the one job an LLM genuinely belongs in.
-7. Tailwind oddity: `max-w-*` utilities produced no CSS, so the calendar width
+   completion rate by hour. `observed.ts` already collects it and `Insights`
+   already reads it; the dropdown still overrides both.
+5. **Syllabus parsing, or cut the claim.** The competitive table says Quarterly
+   knows what to study and it does not. Decide by Sept 1 rather than carrying an
+   untrue claim into recruiting.
+6. Tailwind oddity: `max-w-*` utilities produced no CSS, so the calendar width
    is set inline. It will bite again on a class that matters more.
 
 ## Owed to Brydon
@@ -350,6 +391,34 @@ there is something real. Nothing measures it until Supabase ships.
 
 # Recent sessions
 
+## 2026-08-26 · Claude Code · Colour, a code, a month, and a drag that never worked
+
+Three specified pieces of work, in order, plus two bugs Brydon found by using it.
+
+Colour became a category system. Five separate hex arrays in five files were
+replaced by six categories owning hue families, with shades inside for
+individual courses. Nothing stores a hex any more, so dark mode stopped being a
+second palette to maintain. The palette is generated and validated by
+`npm run palette` rather than chosen: the first attempt failed 24 ways under
+colour vision deficiency and nobody would have seen it by eye.
+
+Sign-in became a six-digit code. Brydon spotted that this removes the need for a
+pending-signup table entirely rather than mitigating it, because a student who
+never leaves the tab still has their answers in hand when they type the code.
+That deleted a whole unauthenticated write path from the design.
+
+The month view landed, reusing `breakdownForDay` rather than deriving a second
+workload number, with a test asserting the two views cannot disagree.
+
+Then Brydon reported sleep hours that would not save, and dragging a block to
+another day making it vanish. Both were real, both had causes other than the
+obvious one, and both are in `learned.md`.
+
+A long stretch went on naming and produced no decision. Slate died to
+Technolutions, Tessel to a live TESSELL trademark, and four of five candidates
+were killed by collisions found only after they had been recommended. The
+process was backwards and is recorded as such.
+
 ## 2026-08-23 · Claude Code · The data layer, and a bug a student would have found
 
 Supabase went in: schema, magic-link auth, plan sync, and the telemetry that
@@ -403,27 +472,6 @@ One bug found by looking rather than by a test, again: `autoFocus` scrolled the
 page 302px on load, so a student on a phone landed mid-form having never seen
 the heading or the progress bar.
 
-## 2026-08-21 · Claude Code · Import anything, and a day view
-
-Four things landed. Two bugs in the first-run path, found by writing a script
-that prints what a stranger actually gets from `/start` — one of which silently
-stopped a commitment being scheduled forever after a single shortfall. Conflict
-resolution, so an appointment dropped on planned work moves the work and says so.
-A day view, whose palette work turned up that the course colours failed a
-colourblind check. And calendar import for Canvas, Google, Apple and Outlook,
-which needed recurrence expansion to be worth anything.
-
-Two roadmap items were struck on evidence: Google's calendar API needs a
-five-week verification, and writing a plan back into Google Calendar is worse
-than nothing because subscriptions refresh every 12–24 hours.
-
-Also found Canvas had become unreachable on a phone — the tab bar dropped it on
-the reasoning that it belonged inside Plan, and it was never put inside Plan. A
-commit message that was true about intent and false about the code.
-
-Ended with a business-side action plan requested and not delivered. It is
-recorded at the top of the owed section in `status.md`.
-
 ---
 
 # Recent decisions
@@ -431,6 +479,90 @@ recorded at the top of the owed section in `status.md`.
 *Older decisions and the full findings log stay in the repo, in
 `context/decisions.md` and `context/learned.md`. Ask for them if a question
 turns on history this brief doesn't cover.*
+
+## 2026-08-26 · Two colour axes, and a code instead of a link
+
+**Decided:** colour carries two independent things. Category owns the hue family
+and answers "what kind of hour is this". Shade steps within the family and
+answers "which course". The month view reads category only; week and day views
+read both.
+
+**Why not category alone, which is what was asked for:** with one colour per
+category, five courses render identically in the week grid, and the same request
+also said course distinction should survive there. Both cannot come from one
+field.
+
+**Why not per-course alone, which is what existed:** the same red was a lecture
+one week and a gym session the next, so colour meant nothing and was decoration.
+
+**What it cost to get right.** The first palette gave every family the same
+lightness ladder and differed them only by hue. It failed 24 ways, because hue
+is precisely what colour vision deficiency destroys. Families now own lightness
+bands and no two are neighbours on both axes at once. `npm run palette` runs
+OKLCH generation, Viénot simulation for all three deficiencies and CIEDE2000, in
+both modes, with an exit code.
+
+**The limit, recorded rather than hidden:** the week grid paints blocks as a 26%
+tint, and at that strength two shades of one family sit about 1.5 ΔE apart.
+Within-family distinction there rests on the label and the 3px full-strength
+border, not on the fill. Category separation, which is what the month view
+needs, is 10.9.
+
+---
+
+**Decided:** sign-in is a six-digit code typed into the tab, not a magic link.
+
+**Why:** a link can only be completed in the browser that requested it, because
+that browser holds the PKCE verifier. A student who onboards in Safari and opens
+the link from the mail app lands in a different context and gets an error about
+a code verifier. The code never leaves the tab, so the failure cannot happen
+rather than being handled.
+
+**What it removed.** The original plan was to persist onboarding answers
+server-side against a pending signup record. Brydon spotted that the code flow
+deletes the need for it: the student still has their answers when they verify,
+so the write happens as a normal authenticated user. No pending table, no anon
+INSERT, no claim token, no security-definer claiming function, and no
+unauthenticated write path to carry forever.
+
+**The stated cost was a 60-second window where a tab crash loses the answers.**
+It does not exist: `/onboarding` writes through the store at every step, so
+everything is in localStorage before the code screen.
+
+**Rejected: implicit flow.** It would make links work anywhere, and it puts
+access tokens in browser history on an app holding a person's whole schedule.
+
+**What would make it worth revisiting:** if code delivery turns out to be the
+thing students fail at, which depends entirely on email deliverability rather
+than on the flow.
+
+## 2026-08-27 · A dragged block pushes, and never merges
+
+**Decided:** dropping a block on top of another displaces the other one
+downward into the next free gap, and says so. The dragged block never moves.
+
+**Why the dragged one wins:** it is the only thing on screen the student has
+just made an explicit decision about. Everything else is the scheduler's
+opinion, and an opinion yields to an instruction. Same reasoning as an
+appointment beating a plan, one level down.
+
+**Why settled blocks are obstructions rather than things to shove:** a finished
+block is a record of what happened. Shifting it to tidy the present is
+rewriting the past, so a displaced block goes around it.
+
+**Why a push past the end of the day is refused:** a visible overlap the student
+can see and fix beats work silently relocated to 2am.
+
+**Rejected: merging two sessions of the same commitment into one longer block.**
+Two 30-minute runs are not one 60-minute run, and for study it is worse: the
+entire premise of spacing is that separate sessions beat one double session.
+`maxPerDay` and `separateDays` exist to prevent exactly this, so an automatic
+merge would silently undo what the scheduler is for.
+
+**What would make it worth revisiting:** an explicit version, where dragging one
+session onto another merges them *and says what it costs*. That is a real
+feature with real copy, not a side effect of dragging, and it should wait until
+a student asks for it.
 
 ## 2026-08-23 · Magic links, no server session, and a sync that refuses to guess
 
@@ -541,66 +673,24 @@ exactly how the lookalike-domain bug gets reintroduced four more times.
 Suffix matching now lives in one place, and there's a test that tries
 `calendar.google.com.attacker.com` and its equivalent for every provider.
 
-## 2026-08-21 · A stacked bar, not a pie — and a validated palette
-
-**Decided:** the day view answers "where does this day go" with one horizontal
-stacked bar. Tapping a day in the week grid or a bar in the workload chart opens
-it.
-
-**Why not the pie that was asked for:** part-to-whole is a stacked bar's job.
-Comparing segment lengths along one axis is a much easier read than comparing
-wedge angles, long course names have somewhere to sit, and the bar still works
-at 10px tall on a phone. The calendar column is also already a proportional
-picture of the day, so a pie of the same data would duplicate it.
-
-**The bigger finding:** the course colours, picked by eye months ago, failed a
-colourblind check. The original pink and green sat at ΔE 4.9 under
-deuteranopia against a ≥8 target — roughly one man in twelve could not tell two
-of their courses apart. Replaced with a set validated in both modes: worst
-adjacent CVD ΔE 9.1 light, 8.4 dark.
-
-**Two rules that keep it valid.** Hues are assigned in fixed order and never
-cycled into new ones — a ninth course reuses slot one rather than inventing a
-colour indistinguishable from an existing one. And colour follows the entity,
-not its position in a list, so removing a course never repaints the others.
-
-Three light steps fall below 3:1 contrast, so every segment carries a visible
-label. Colour is never the only encoding.
-
-## 2026-08-21 · An appointment beats a plan, including a pinned one
-
-**Decided:** adding or moving a one-off event resolves whatever it lands on,
-immediately. Blocks move; the event doesn't. Pinned blocks move too, and get
-named in a notice. Finished blocks are never touched.
-
-**Why the event wins:** an appointment has a real time in the world and a study
-block does not, so only one of the two *can* move. That isn't a judgement call.
-
-**Why pinned blocks move as well:** a pin means "the scheduler should stop
-arguing with me about this hour," which is a preference. An appointment is a
-fact. The fact wins — but silently overriding the one place the app promised to
-defer would be worse than the collision, so it says what it did: *"Moved
-Quarterly — you'd placed it where Dentist is."*
-
-**Why finished blocks don't move:** a completed block is a record of what
-happened, not a plan. Rewriting it to tidy the calendar is falsifying history.
-
-**Does auto-replanning here breach "replanning is explicit"?** No, and the
-distinction matters. That rule is about not absorbing your *failures* quietly —
-a missed block must never just vanish. Here the student has told the app about a
-new constraint, and reacting to an instruction they gave is cause and effect,
-not silent absorption. Same reasoning as the menu closing on click rather than
-on a path change.
-
 ---
 
 # Currently waiting on Brydon
 
-- **The interviews.** Ask what they did last Sunday. Don't show the product.
-- **Confirm sync end to end.** See "Next" above.
+- **Migration `0002`**, or deletion stays broken while the privacy page says it
+  works. This is the most urgent thing in the file.
+- **`SUPABASE_SERVICE_ROLE_KEY` into Vercel**, by hand in the dashboard. It
+  bypasses RLS entirely, so it is the one key that should never travel through a
+  chat.
+- **Migration `0003`**, with the cron secret and domain filled in.
 - **Custom SMTP**, before students exist rather than after.
+- **Confirm the drag on a real pointer**, and the sync loop.
+- **The name, then the domain.** Both still open, and the domain choice depends
+  on the name.
 - **A decision on the three doors** into configuration.
-- **The domain.** `quarterlystudy.com`, about $11, still unregistered.
+- **Whether paid testers are tagged separately.** Paying people to open the app
+  measures the payment, not the product, so they must not pollute the retention
+  cohort.
 - **Deployment Protection** is still on, set to
   `all_except_custom_domains`. That means it never affected students and never
   will: `quarterly-alpha.vercel.app` is public today and a custom domain will be
