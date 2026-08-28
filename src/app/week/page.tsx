@@ -302,7 +302,8 @@ export default function WeekPage() {
                   setSelectedId((cur) => (cur === id ? null : id));
                   setSelectedEventId(null);
                 }}
-                onMove={moveBlock}
+                // Says what it shifted. Silent reshuffling is how a plan becomes fiction.
+                onMove={(id, startMs) => announce(moveBlock(id, startMs))}
                 onSelectEvent={(id) => {
                   setSelectedEventId((cur) => (cur === id ? null : id));
                   setSelectedId(null);

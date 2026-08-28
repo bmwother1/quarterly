@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import type { Commitment, FixedEvent, StudyBlock } from '../src/lib/types.ts';
 import { planWeek } from '../src/lib/schedule/plan.ts';
 import { defaultAvailability } from '../src/lib/schedule/slots.ts';
-import { collisionsWith, releaseForEvents, describeCollisions, overlaps } from '../src/lib/schedule/conflicts.ts';
+import { collisionsWith, releaseForEvents, describeCollisions, overlaps, pushAside, describeDisplaced } from '../src/lib/schedule/conflicts.ts';
 import { zonedInstant, localParts } from '../src/lib/time.ts';
 
 const TZ = 'America/Los_Angeles';
@@ -102,5 +102,81 @@ describe('a one-off landing on planned work', () => {
       const p = localParts(new Date(b.start), TZ);
       assert.ok(p.minutesOfDay >= 8 * 60 && p.minutesOfDay < 22 * 60, `moved to ${p.hour}:00`);
     }
+  });
+});
+
+describe('blocks push each other aside', () => {
+  const DAY = '2026-09-15';
+  function b(id: string, course: string, hour: number, minutes: number, status = 'planned'): StudyBlock {
+    const start = new Date(`${DAY}T${String(hour).padStart(2, '0')}:00:00-07:00`);
+    return {
+      id, course, title: course, assignmentId: null, commitmentId: 'c',
+      start: start.toISOString(),
+      end: new Date(start.getTime() + minutes * 60_000).toISOString(),
+      minutes, status, why: '', method: null, actualMinutes: null, pinned: false,
+    } as unknown as StudyBlock;
+  }
+  const at = (blocks: StudyBlock[], id: string) =>
+    new Date(blocks.find((x) => x.id === id)!.start).toISOString();
+
+  test('a block dropped on another moves it down, not on top of it', () => {
+    const before = [b('a', 'Run', 9, 60), b('b', 'CHEM', 9, 60)];
+    const { blocks, displaced } = pushAside(before, 'a');
+
+    assert.equal(displaced.length, 1);
+    assert.equal(displaced[0].id, 'b');
+    // CHEM starts where Run ends, rather than sharing the hour.
+    assert.equal(at(blocks, 'b'), before[0].end);
+  });
+
+  test('the block the student moved never moves', () => {
+    // It is the only thing on screen they just made a decision about.
+    const before = [b('a', 'Run', 9, 60), b('b', 'CHEM', 9, 60)];
+    const { blocks } = pushAside(before, 'a');
+    assert.equal(at(blocks, 'a'), before[0].start);
+  });
+
+  test('a settled block is an obstruction, not something to shove', () => {
+    // A finished block is a record of what happened. Moving it to tidy the
+    // present is rewriting the past, so the displaced block goes around it.
+    const done = b('done', 'Essay', 10, 60, 'done');
+    const before = [b('a', 'Run', 9, 60), b('b', 'CHEM', 9, 60), done];
+    const { blocks, displaced } = pushAside(before, 'a');
+
+    assert.equal(at(blocks, 'done'), done.start, 'history stays put');
+    assert.ok(displaced.some((d) => d.id === 'b'));
+    // Pushed past the finished essay rather than onto it.
+    assert.equal(at(blocks, 'b'), done.end);
+  });
+
+  test('two displaced blocks do not land on each other', () => {
+    // The bug a single pass would have: both get pushed to the same free slot.
+    const before = [b('a', 'Run', 9, 60), b('b', 'CHEM', 9, 30), b('c', 'MATH', 9, 30)];
+    const { blocks } = pushAside(before, 'a');
+    const bStart = at(blocks, 'b');
+    const cStart = at(blocks, 'c');
+    assert.notEqual(bStart, cStart);
+  });
+
+  test('nothing moves when nothing overlaps', () => {
+    const before = [b('a', 'Run', 9, 60), b('b', 'CHEM', 14, 60)];
+    const { blocks, displaced } = pushAside(before, 'a');
+    assert.equal(displaced.length, 0);
+    assert.equal(blocks, before, 'the same array, so React skips the re-render');
+  });
+
+  test('a push past the end of the day is refused rather than made at 2am', () => {
+    // Silently moving work into the middle of the night is worse than an
+    // overlap the student can see and fix.
+    const before = [b('a', 'Run', 21, 60), b('b', 'CHEM', 21, 60)];
+    const { displaced } = pushAside(before, 'a', { dayEndMin: 22 * 60 });
+    assert.equal(displaced.length, 0);
+  });
+
+  test('it says what it moved', () => {
+    const before = [b('a', 'Run', 9, 60), b('b', 'CHEM', 9, 60)];
+    const { displaced } = pushAside(before, 'a');
+    assert.match(describeDisplaced(displaced) ?? '', /CHEM/);
+    assert.equal(describeDisplaced([]), null, 'silence when nothing moved');
   });
 });

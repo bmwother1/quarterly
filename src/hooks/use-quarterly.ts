@@ -5,7 +5,9 @@ import type { Assignment, Availability, Commitment, FixedEvent, WorkKind } from 
 import { quarterlyStore, type QuarterlyState } from '@/lib/store';
 import { planWeek } from '@/lib/schedule/plan';
 import { applyCompletion, applyLearnedEstimates, dropRemaining, resetWeeklyTallies, type Completion } from '@/lib/schedule/complete';
-import { collisionsWith, describeCollisions, releaseForEvents } from '@/lib/schedule/conflicts';
+import {
+  collisionsWith, describeCollisions, describeDisplaced, pushAside, releaseForEvents,
+} from '@/lib/schedule/conflicts';
 import { releaseMissed } from '@/lib/schedule/absence';
 import { applySleepHours, isLive, type StepId } from '@/lib/onboarding';
 import { logEvent } from '@/supabase/events';
@@ -198,18 +200,34 @@ export function useQuarterly(tz: string) {
   }, [mutateUndoable]);
 
   /** Move a block by hand and pin it, so the next replan leaves it alone. */
-  const moveBlock = useCallback((blockId: string, startMs: number) => {
-    mutate((prev) => ({
-      ...prev,
-      blocks: prev.blocks.map((b) => {
+  /**
+   * Move a block by hand, and push whatever it lands on out of the way.
+   *
+   * Returns what was displaced so the caller can say so. Blocks that quietly
+   * stack on top of each other are the same lie the "didn't fit" list exists to
+   * avoid, one level down.
+   */
+  const moveBlock = useCallback((blockId: string, startMs: number): string | null => {
+    let notice: string | null = null;
+
+    mutate((prev) => {
+      const moved = prev.blocks.map((b) => {
         if (b.id !== blockId) return b;
         const end = new Date(startMs + b.minutes * 60_000).toISOString();
         return { ...b, start: new Date(startMs).toISOString(), end, pinned: true };
-      }).sort((a, b) => a.start.localeCompare(b.start)),
-    }));
+      });
+
+      const { blocks, displaced } = pushAside(moved, blockId, {
+        dayEndMin: prev.availability.dayEndMin,
+      });
+      notice = describeDisplaced(displaced);
+
+      return { ...prev, blocks: blocks.sort((a, b) => a.start.localeCompare(b.start)) };
+    });
     // A move is the scheduler being told it got an hour wrong. Worth counting:
     // a student correcting it constantly means the scoring function is off.
     logEvent('block_moved');
+    return notice;
   }, [mutate]);
 
   /**

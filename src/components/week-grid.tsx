@@ -156,7 +156,38 @@ export function WeekGrid({
       </div>
 
       <div className="overflow-x-auto">
-        <div ref={gridRef} className="flex gap-px" style={{ minWidth: days.length * 92 }}>
+        <div
+          ref={gridRef}
+          className="flex gap-px"
+          style={{ minWidth: days.length * 92 }}
+          /**
+           * The whole gesture lives here rather than on the block.
+           *
+           * A block is unmounted and remounted every time the pointer crosses
+           * into another day, and it can also sit underneath a block it is being
+           * dragged over. Handlers on the block therefore stop firing exactly
+           * when the drag gets interesting. The grid is present for the whole
+           * gesture and under the pointer the entire time.
+           */
+          onPointerMove={(e) => {
+            const cur = dragRef.current;
+            if (!cur) return;
+            const hit = locate(e.clientX, e.clientY);
+            if (!hit) return;
+            if (hit.dateKey !== cur.dateKey || hit.minute !== cur.minute) moved.current = true;
+            setDragBoth({ id: cur.id, ...hit });
+          }}
+          onPointerUp={() => {
+            const cur = dragRef.current;
+            if (cur && moved.current) {
+              onMove(cur.id, zonedInstant(cur.dateKey, cur.minute, tz).getTime());
+            }
+            setDragBoth(null);
+          }}
+          // A cancel is the browser taking the gesture away, so the block goes
+          // back rather than landing somewhere the student did not choose.
+          onPointerCancel={() => setDragBoth(null)}
+        >
         {/* Hour gutter */}
         <div className="relative w-11 shrink-0" style={{ height: 640 }}>
           {hourMarks.map((m) => (
@@ -172,7 +203,20 @@ export function WeekGrid({
 
         {days.map((dateKey) => {
           const weekday = localParts(new Date(dateKey + 'T12:00:00Z'), 'UTC').weekday;
-          const dayBlocks = blocks.filter((b) => localParts(new Date(b.start), tz).dateKey === dateKey);
+          /**
+           * Blocks this column draws.
+           *
+           * A dragged block moves between columns, so it is taken out of the one
+           * it came from and added to the one under the pointer. Before this it
+           * was only ever drawn by its own column, so dragging to another day
+           * rendered nothing anywhere: the element unmounted mid-gesture, took
+           * its pointer capture with it, and the drop never happened.
+           */
+          const dayBlocks = blocks.filter((b) => {
+            const home = localParts(new Date(b.start), tz).dateKey;
+            if (drag?.id === b.id) return drag.dateKey === dateKey;
+            return home === dateKey;
+          });
           const isToday = dateKey === todayKey;
 
           const positioned: Positioned[] = dayBlocks.map((block) => {
@@ -271,11 +315,9 @@ export function WeekGrid({
                   const selected = block.id === selectedId;
                   const dragging = drag?.id === block.id;
 
-                  // While dragging, the block follows the pointer's day and
-                  // quarter-hour rather than its stored position.
+                  // While dragging, the block follows the pointer's quarter-hour.
+                  // Which column draws it is already decided by `dayBlocks`.
                   const shownTop = dragging ? pct(drag!.minute) : topPct;
-                  const inThisColumn = dragging ? drag!.dateKey === dateKey : true;
-                  if (dragging && !inThisColumn) return null;
 
                   return (
                     <button
@@ -293,29 +335,18 @@ export function WeekGrid({
                         // leaves the block, which it does immediately. It can
                         // throw for a pointer id the browser isn't tracking, and
                         // that must not take the drag down with it.
+                        // Captured on the grid rather than on the block. The
+                        // block unmounts the moment the pointer crosses into
+                        // another day, and capture dies with the element it was
+                        // set on, which is what killed cross-day drags. The grid
+                        // outlives the whole gesture.
                         try {
-                          (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+                          gridRef.current?.setPointerCapture(e.pointerId);
                         } catch {
-                          /* dragging still works, it just stops at the edges */
+                          /* falls back to bubbling, which still reaches the grid */
                         }
                         setDragBoth({ id: block.id, dateKey, minute: minuteOfDay(block.start, tz) });
                       }}
-                      onPointerMove={(e) => {
-                        const cur = dragRef.current;
-                        if (!cur || cur.id !== block.id) return;
-                        const hit = locate(e.clientX, e.clientY);
-                        if (!hit) return;
-                        if (hit.dateKey !== cur.dateKey || hit.minute !== cur.minute) moved.current = true;
-                        setDragBoth({ id: block.id, ...hit });
-                      }}
-                      onPointerUp={() => {
-                        const cur = dragRef.current;
-                        if (cur && cur.id === block.id && moved.current) {
-                          onMove(block.id, zonedInstant(cur.dateKey, cur.minute, tz).getTime());
-                        }
-                        setDragBoth(null);
-                      }}
-                      onPointerCancel={() => setDragBoth(null)}
                       title={`${block.course} · ${fmtTime(block.start, tz)}`}
                       className={`absolute inset-x-0.5 touch-none select-none overflow-hidden rounded px-1 py-0.5 text-left text-[10px] leading-tight ${
                         selected ? 'ring-2 ring-[var(--ink)]' : ''
