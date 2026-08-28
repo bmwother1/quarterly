@@ -62,8 +62,13 @@ export default function Settings() {
           availability={state.availability}
           tz={TZ}
           onAdoptPattern={(p) => {
-            updateAvailability((prev) => ({ ...prev, energy: p }));
-            flash('Updated from your own blocks');
+            // Either button here is the student answering deliberately, so both
+            // lock it. Adopting means they agree; refusing means they have been
+            // shown the evidence and chosen anyway, and the app should stop
+            // arguing with them.
+            const refusing = p === state.availability.energy;
+            updateAvailability((prev) => ({ ...prev, energy: p, energyLocked: true }));
+            flash(refusing ? 'Keeping what you chose' : 'Updated from your own blocks');
           }}
         />
       </Section>

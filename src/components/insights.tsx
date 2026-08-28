@@ -2,7 +2,9 @@
 
 import { useMemo } from 'react';
 import type { Availability, StudyBlock } from '@/lib/types';
-import { inferEnergyPattern, durationBias, deadHours, hourStats } from '@/lib/schedule/observed';
+import {
+  inferEnergyPattern, durationBias, deadHours, hourStats, effectiveEnergy,
+} from '@/lib/schedule/observed';
 
 const LABEL: Record<string, string> = {
   morning: 'a morning person',
@@ -35,6 +37,12 @@ export function Insights({
   onAdoptPattern: (p: Availability['energy']) => void;
 }) {
   const inferred = useMemo(() => inferEnergyPattern(blocks, tz), [blocks, tz]);
+  // What the scheduler is actually planning against, which is not always what
+  // the student picked.
+  const effective = useMemo(
+    () => effectiveEnergy(availability, blocks, tz),
+    [availability, blocks, tz],
+  );
   const bias = useMemo(() => durationBias(blocks), [blocks]);
   const dead = useMemo(() => deadHours(blocks, tz), [blocks, tz]);
   const settled = useMemo(
@@ -53,7 +61,34 @@ export function Insights({
 
   const items: React.ReactNode[] = [];
 
-  if (inferred && inferred.pattern !== availability.energy) {
+  /**
+   * When observation has taken over, say so first.
+   *
+   * The scheduler quietly moving every demanding block to a different part of
+   * the day is exactly the kind of silent change that makes a plan feel
+   * arbitrary. Same rule as every block explaining itself: if the app changed
+   * its mind, the student hears it from the app rather than noticing.
+   */
+  if (effective.source === 'observed') {
+    items.push(
+      <div key="energy-live" className="rounded-xl border border-[var(--accent)]/30 bg-[var(--accent-soft)] p-4">
+        <p className="font-medium">
+          Your week is being planned around {LABEL[effective.pattern]}.
+        </p>
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          You picked &ldquo;{LABEL[availability.energy]}&rdquo;, but across{' '}
+          {effective.observations} blocks you finished or skipped, {LABEL[effective.pattern]} is
+          where your work actually lands. Demanding work is being put there.
+        </p>
+        <button
+          onClick={() => onAdoptPattern(availability.energy)}
+          className="mt-3 rounded-lg border border-[var(--border-strong)] px-3.5 py-2 text-sm"
+        >
+          No, keep &ldquo;{LABEL[availability.energy]}&rdquo;
+        </button>
+      </div>,
+    );
+  } else if (inferred && inferred.pattern !== availability.energy) {
     items.push(
       <div key="energy" className="rounded-xl border border-[var(--accent)]/30 bg-[var(--accent-soft)] p-4">
         <p className="font-medium">

@@ -147,3 +147,78 @@ export function durationBias(
     .filter((x) => x.ratio > 1.25 || x.ratio < 0.75)
     .sort((a, b) => b.ratio - a.ratio);
 }
+
+/**
+ * How many observations before what a student does is allowed to overrule what
+ * they said about themselves.
+ *
+ * Much higher than `MIN_OBSERVATIONS`, and the gap between the two is the whole
+ * point. Eight is enough to *mention* a pattern in Insights, where the student
+ * reads it and decides. It is nowhere near enough to silently reschedule their
+ * week against a preference they stated on purpose: eight blocks is one bad
+ * week, and one bad week is exactly when someone's real pattern looks worst.
+ */
+export const OVERRIDE_MIN_OBSERVATIONS = 24;
+
+/** And the evidence has to actually separate, not merely lean. */
+export const OVERRIDE_MIN_CONFIDENCE = 0.55;
+
+export interface EffectiveEnergy {
+  pattern: EnergyPattern;
+  /** Which one the scheduler is using, and therefore what to say about it. */
+  source: 'declared' | 'observed';
+  observations: number;
+  confidence: number;
+}
+
+/**
+ * The energy pattern the scheduler should actually use.
+ *
+ * The app has been recording completion rate by hour since day one and then
+ * scheduling against a dropdown, so it measured the truth and ignored it. This
+ * closes that, but not unconditionally.
+ *
+ * **Three things must all hold before observation wins.** There has to be real
+ * evidence, it has to separate clearly, and it has to disagree with what the
+ * student said. Agreement is not an override, it is a coincidence, and calling
+ * it one would put a needless "we changed this" notice in front of someone.
+ *
+ * **`energyLocked` always wins.** A student who has been told what their blocks
+ * say and still chose otherwise has answered the question, and an app that
+ * keeps overruling them is arguing rather than helping. Same reasoning as a
+ * pinned block: a preference is a preference.
+ *
+ * Nothing here is a model. Counts and ratios, so it is instant, identical every
+ * time, and incapable of inventing a pattern that is not in the data.
+ */
+export function effectiveEnergy(
+  availability: { energy: EnergyPattern; energyLocked?: boolean },
+  blocks: StudyBlock[],
+  tz: string,
+): EffectiveEnergy {
+  const declared: EffectiveEnergy = {
+    pattern: availability.energy,
+    source: 'declared',
+    observations: 0,
+    confidence: 0,
+  };
+
+  if (availability.energyLocked) return declared;
+
+  const inferred = inferEnergyPattern(blocks, tz);
+  if (!inferred) return declared;
+
+  declared.observations = inferred.observations;
+  declared.confidence = inferred.confidence;
+
+  if (inferred.observations < OVERRIDE_MIN_OBSERVATIONS) return declared;
+  if (inferred.confidence < OVERRIDE_MIN_CONFIDENCE) return declared;
+  if (inferred.pattern === availability.energy) return declared;
+
+  return {
+    pattern: inferred.pattern,
+    source: 'observed',
+    observations: inferred.observations,
+    confidence: inferred.confidence,
+  };
+}

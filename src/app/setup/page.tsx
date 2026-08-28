@@ -149,7 +149,9 @@ export default function SetupPage() {
           {(['morning', 'evening', 'steady', 'bimodal'] as EnergyPattern[]).map((p) => (
             <button
               key={p}
-              onClick={() => updateAvailability((prev) => ({ ...prev, energy: p }))}
+              // Picking one here is a considered answer, so it locks: from
+              // now on, observation reports but does not overrule.
+              onClick={() => updateAvailability((prev) => ({ ...prev, energy: p, energyLocked: true }))}
               className={`rounded-full border px-3 py-1.5 text-sm ${
                 av.energy === p
                   ? 'border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]'

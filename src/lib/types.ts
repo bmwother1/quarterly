@@ -83,6 +83,14 @@ export interface Availability {
   dayEndMin: number;
   /** 'morning' | 'evening' | 'steady' — shifts which hours suit demanding work. */
   energy: EnergyPattern;
+  /**
+   * The student has decided this themselves, so observation must not overrule it.
+   *
+   * Absent means "no strong opinion", which is the honest default: the value
+   * above starts as a setup guess rather than a considered answer. Set only when
+   * they change it knowing what their own blocks say.
+   */
+  energyLocked?: boolean;
   /** Hard ceiling on scheduled study minutes in any one day. */
   maxDailyMinutes: number;
   /**

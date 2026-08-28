@@ -35,6 +35,7 @@
 import type { Assignment, Availability, Commitment, FixedEvent, StudyBlock, WorkKind } from '../types.ts';
 import { DEFAULT_TZ, localParts, weekdayOf, zonedInstant } from '../time.ts';
 import { freeMinutesByDay, freeSlots } from './slots.ts';
+import { effectiveEnergy } from './observed.ts';
 import {
   CATEGORY_METHOD,
   MIN_SESSION_MINUTES,
@@ -537,6 +538,20 @@ export function planWeek(
     };
   });
 
+  /**
+   * Which energy pattern to schedule against.
+   *
+   * The app has recorded completion rate by hour since day one and then planned
+   * against a dropdown, so it was measuring the truth and ignoring it. Settled
+   * blocks are the evidence, and they are already here as `existingBlocks`.
+   *
+   * Falls back to the declared value unless there is a lot of evidence, it
+   * separates clearly, and it disagrees. Getting this wrong is expensive in a
+   * specific way: it silently moves every demanding block to a different part of
+   * the day, and the student has no idea why their week changed shape.
+   */
+  const energy = effectiveEnergy(availability, opts.existingBlocks, opts.tz);
+
   // Hours already spent, and hours already promised to something at a fixed
   // time, are both unavailable for the same reason.
   const occupied = [
@@ -660,7 +675,7 @@ export function planWeek(
 
         if (contiguousCourseMinutes(spans, c.ms, endMs, minutes) > opts.maxConsecutiveCourseMinutes) continue;
 
-        const fit = fitForDemand(p.demand, c.hour, availability.energy);
+        const fit = fitForDemand(p.demand, c.hour, energy.pattern);
         const daysOut = Math.max(0, (c.ms - nowMs) / 86_400_000);
 
         // Three pulls, balanced: the right hour, sooner rather than later, and
@@ -693,7 +708,7 @@ export function planWeek(
           lastTouched: p.assignment.lastTouched,
           dueAt: p.dueAt,
           slotStart: new Date(startMs),
-          energy: availability.energy,
+          energy: energy.pattern,
           localHour: hour,
           now,
         })
