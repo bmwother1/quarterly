@@ -32,15 +32,21 @@ All three dashboard actions were done on 2026-08-27. `0002` ran, so account
 deletion works and the privacy page is accurate again.
 `SUPABASE_SERVICE_ROLE_KEY` was added in Vercel as a Secret and `0003` ran,
 returning job id 1, so the notification cron is scheduled every ten minutes.
-**Delivery is scheduled, not yet observed:** nobody has read
-`cron.job_run_details` to confirm a run succeeded, and no notification has
-arrived on a real phone.
+Custom SMTP went in the same night, through Resend, and **sign-in was run end to
+end for the first time: Brydon received a code and signed in.** Nothing is
+blocked on a dashboard action any more.
 
-One thing is still blocked on a dashboard action:
+The notification chain was then fixed end to end and **returns 200**: the cron
+fires, the app authenticates, and the sender reads its tables. It took three
+fixes, each hidden behind the one before it. The Vault secret did not match
+`CRON_SECRET` (401), and then `service_role` had no grant on the tables it
+reads, because `0001` granted only to `authenticated` (500). `0004` adds those
+grants.
 
-1. **Sign-in cannot complete.** No custom SMTP, so the template still sends a
-   link with no code in it, and Supabase will not let the template be edited
-   until SMTP exists.
+**Nothing has been delivered yet.** The endpoint reports `subscriptions: 0`,
+because the Settings toggle was subscribing into a broken pipeline for as long
+as it has existed and nobody has turned it on since. One phone needs to enable
+it before delivery is real.
 
 **Retention is measurable, not measured**, and now also unmeasurable by design
 until the paid-tester question is resolved: paying people to open the app buys
@@ -71,7 +77,7 @@ and has not been done.
 - **Backup** — export and import JSON, and now a server copy as well
 - **Accounts** — a six-digit code, no passwords, no links. Optional throughout:
   signed out is a supported state everywhere and the no-account product is
-  unchanged. Untestable until SMTP exists
+  unchanged. Confirmed working end to end on 2026-08-27
 - **Sync** — the plan mirrors to `plan_state` on change, debounced. When both
   copies changed since they were last level it reports a conflict and does
   nothing, because there is no merge and any automatic choice eats a week
@@ -99,6 +105,10 @@ and has not been done.
 - **Account deletion** — a `security definer` function so a student can remove
   their auth row and cascade everything. `0002` run 2026-08-27 and verified:
   `prosecdef` true, so the function runs with owner rights as intended
+- **Drag-to-move** — cross-day drags and drops onto occupied slots both work and
+  blocks push each other aside. Confirmed by thumb on 2026-08-27, which is the
+  only way it can be confirmed: synthetic pointer events never enter the drag
+  state
 - **Learned energy pattern** — the scheduler plans against observed completion
   rate by hour rather than the setup dropdown, but only with 24+ settled blocks,
   evidence that separates, and disagreement with what the student said. A stated
@@ -115,11 +125,6 @@ and has not been done.
   guided alternative; `/setup` is now only reachable from the nav and from
   individual setup prompts. Two of the three should survive to launch and it is
   undecided which. **This one needs Brydon**, it is a product call.
-- **Drag-to-move, unverified.** Cross-day drags and drops onto occupied slots
-  were both broken and are both fixed, and blocks now push each other aside.
-  Synthetic pointer events do not enter the drag state at all, so **this needs a
-  real thumb before it can be called working.** Third time this feature has
-  broken without a test noticing.
 - **The name.** `Quarterly` encodes the quarter system and the product is now a
   general scheduler, which Brydon's own `product.md` said in August. A long
   stretch on 2026-08-26 produced no decision: Slate collides with Technolutions,
@@ -129,21 +134,23 @@ and has not been done.
 
 ## Next, in order
 
-1. **Confirm a cron run succeeded**, then get one notification onto a real
-   phone. `cron.job_run_details` is the first check; a `failed` row most likely
-   means the Vault secret and `CRON_SECRET` in Vercel disagree.
-2. **Custom SMTP**, which also unblocks testing the sign-in code. Resend sends
-   to the account owner's own address with no domain, which is enough to verify
-   the flow today.
-3. **Confirm the drag by hand**, and the sync loop while there.
-4. **Syllabus parsing, or cut the claim.** The competitive table says Quarterly
+1. **Get one notification onto a real phone.** The pipeline returns 200 with
+   zero subscriptions; enabling the toggle on one device is the last unproven
+   step. `select status_code from net._http_response order by created desc` is
+   the check that matters, because `cron.job_run_details` says `succeeded` even
+   when the app rejects the call.
+2. **Confirm the sync loop by hand.** The drag is done; the conflict path
+   still has not been exercised on two real devices.
+3. **Syllabus parsing, or cut the claim.** The competitive table says Quarterly
    knows what to study and it does not. Decide by Sept 1 rather than carrying an
    untrue claim into recruiting.
 
 ## Blocked on Brydon
 
-- **Custom SMTP**, before students exist rather than after.
-- **Confirm the drag on a real pointer**, and the sync loop.
+- **A verified sending domain.** Resend's shared `onboarding@resend.dev` only
+  delivers to Brydon's own address, so no student can sign in until a domain is
+  verified, and that waits on the name.
+- **Confirm the sync loop** on two devices. The drag is confirmed.
 - **The name, then the domain.** Both still open, and the domain choice depends
   on the name.
 - **A decision on the three doors** into configuration.

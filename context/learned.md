@@ -51,6 +51,81 @@ gets a polite yes from everyone and teaches nothing. "Walk me through last Sunda
 
 ## From building
 
+### `service_role` bypasses RLS and still could not read the table (2026-08-27)
+
+With the secret finally matching, `/api/notify` went from 401 to 500:
+`permission denied for table push_subscription`. The key was right and the role
+was right.
+
+`0001` grants every table to `authenticated` and nothing to `service_role`,
+which was correct when it was written. The entire product ran in the browser as
+the signed-in student, and this project has "automatically expose new tables"
+off, so no default grant existed to paper over the gap. The notification sender
+is the first thing in Quarterly that is **not a student**: it runs on a schedule
+with no session and no `auth.uid()` to be.
+
+**The thing to carry: bypassing RLS is not the same as being allowed to reach
+the table.** RLS decides which rows, a grant decides whether the table exists
+for you at all, and `service_role` skipping the first says nothing about the
+second. Reasoning about it from "service_role can do anything" is what made this
+look impossible for a few minutes.
+
+`0004` grants `select, update` on `push_subscription` and `plan_state` and
+nothing else. `profile` and `app_event` are deliberately left out: the sender
+does not read them, and telemetry a server process can rewrite is not a
+measurement.
+
+**It failed silently for as long as it existed.** Every ten minutes the cron
+recorded `succeeded` while the app returned 500 into a table nobody was reading.
+Any scheduled job wants its response status checked once, by hand, before it is
+believed.
+
+### Everything about wiring notifications and sign-in lied at least once (2026-08-27)
+
+Four separate steps reported success while being wrong. Each one is a small
+gotcha; together they are the reason this took an evening rather than the twenty
+minutes it looks like.
+
+**`succeeded` in the cron log does not mean the app accepted the call.**
+`cron.job_run_details` said `succeeded` twice while `/api/notify` was returning
+401 both times. pg_net is asynchronous: `net.http_get` queues the request and
+returns a request id, which is the "1 row" in the log. The real answer lands in
+`net._http_response`, and that is the table to read:
+
+    select status_code, error_msg, created from net._http_response
+    order by created desc limit 3;
+
+401 rather than 503 is itself informative. The route only checks the header when
+`CRON_SECRET` is set, so a 401 proves the key reached Vercel and the values
+disagree, while a 503 would have meant the env var never arrived.
+
+**A placeholder in a pasted SQL statement runs perfectly happily.**
+`vault.update_secret(..., 'PASTE_THE_SECRET_FROM_ENV_LOCAL')` succeeded and
+stored the literal 31-character string. Nothing errors, because it is a valid
+secret; it is just the wrong one. Checking `length`, `left` and `right` of the
+decrypted secret against the known value diagnoses this without ever printing
+it. Better still, build the statement in the shell so no hand substitution
+exists to forget:
+
+    printf "select vault.update_secret((select id from vault.secrets where
+    name='quarterly_cron_secret'), '%s');" "$(grep '^CRON_SECRET=' .env.local |
+    cut -d= -f2)" | pbcopy
+
+**A first sign-in does not use the Magic Link template.** `signInWithOtp` with
+`shouldCreateUser: true` sends **Confirm signup** to an address with no user
+yet, and **Magic Link** on every sign-in after. They are separate templates and
+both need `{{ .Token }}` with no `{{ .ConfirmationURL }}`. Editing only Magic
+Link produces a first email containing a link and no code, which looks exactly
+like the SMTP work having failed.
+
+**Supabase's OTP length is a setting, and it was 8.** The app is built for six
+throughout, and `normaliseCode` does `slice(0, CODE_LENGTH)`, so an 8-digit code
+is silently truncated to its first six and rejected as wrong. The input simply
+refuses the last two digits. Fixed in the dashboard rather than in the app,
+because every string in the product says six. **Worth knowing that the app fails
+this case silently:** if the setting ever drifts again, the symptom is "the code
+does not work", with nothing anywhere naming the length as the cause.
+
 ### The Tailwind class that "produced no CSS" was never written down (2026-08-27)
 
 `/week` needed two container widths, 1080px for the calendar and 672px for the
@@ -100,9 +175,11 @@ the grid, which is present for the entire gesture and under the pointer the
 whole time.
 
 **And this is the third time this feature has broken without a test noticing.**
-Synthetic pointer events do not even enter the drag state, so it still ends with
-a human confirming it. The honest position is that this component cannot be
-verified here at all.
+Synthetic pointer events do not even enter the drag state, so it ends with a
+human confirming it. Brydon did, by thumb, on 2026-08-27: cross-day and
+drop-onto-occupied both work. The honest position stands that this component
+cannot be verified here at all, so every future change to it costs a real thumb
+again.
 
 ### A palette chosen by eye fails in ways nobody sees (2026-08-26)
 
