@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Availability, BusyBlock, FixedEvent, StudyBlock } from '@/lib/types';
 import { localParts, fmtTime, zonedInstant } from '@/lib/time';
 import { colorVar } from '@/lib/categories';
@@ -95,6 +95,25 @@ export function WeekGrid({
     dragRef.current = next;
     setDrag(next);
   };
+  /**
+   * The current time, as a minute of the day, for the line across today.
+   *
+   * Starts null and is filled in by the effect rather than read during render.
+   * The server has no idea what time it is where the student is, so rendering a
+   * position on the first pass is a hydration mismatch by construction, and the
+   * line is the one thing on this grid guaranteed to differ between the two.
+   *
+   * A minute is the right tick. The grid is 640px for a waking day, so a second
+   * moves it a third of a pixel and costs a render for nothing.
+   */
+  const [nowMin, setNowMin] = useState<number | null>(null);
+  useEffect(() => {
+    const tick = () => setNowMin(localParts(new Date(), tz).minutesOfDay);
+    tick();
+    const id = setInterval(tick, 60_000);
+    return () => clearInterval(id);
+  }, [tz]);
+
   // Show only the hours that matter. Rendering midnight to midnight wastes half
   // the screen on hours nobody is awake for.
   const starts = blocks.map((b) => minuteOfDay(b.start, tz));
@@ -248,6 +267,30 @@ export function WeekGrid({
                 {hourMarks.map((m) => (
                   <div key={m} className="absolute inset-x-0 border-t border-[var(--border)]/50" style={{ top: `${pct(m)}%` }} />
                 ))}
+
+                {/*
+                  Now, on today's column only.
+
+                  Drawn above the blocks so it is never buried, and
+                  `pointer-events-none` so it cannot swallow a tap or interrupt a
+                  drag passing under it. A dragged block carries `z-10` later in
+                  the DOM, so it still rides over the line rather than under it.
+
+                  Hidden when the clock is outside the drawn range. The grid
+                  starts half an hour before the day does, so at 6am the line
+                  would otherwise pin itself to the top edge and read as "your
+                  day is nearly over".
+                */}
+                {isToday && nowMin !== null && nowMin >= rangeStart && nowMin <= rangeEnd && (
+                  <div
+                    className="pointer-events-none absolute inset-x-0 z-10"
+                    style={{ top: `${pct(nowMin)}%` }}
+                    aria-hidden
+                  >
+                    <div className="h-px w-full bg-[var(--accent)]" />
+                    <div className="absolute -top-[3px] left-0 h-[7px] w-[7px] rounded-full bg-[var(--accent)]" />
+                  </div>
+                )}
 
                 {/* Time you don't have: work, class, sleep. Drawn first, behind everything. */}
                 {busyFor(availability.busy, weekday).map((b, i) => {
