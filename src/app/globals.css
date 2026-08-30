@@ -152,6 +152,29 @@ body {
   padding-right: env(safe-area-inset-right);
 }
 
+/*
+ * Room for the phone tab bar.
+ *
+ * The tab bar is `fixed`, so it takes no layout space and simply sits on top of
+ * whatever the page ended with. Pages were reserving 40px of their own bottom
+ * padding against a bar that measures 64px, so the last 24px of every screen
+ * was underneath it. That is why the landing page card was sliced through a
+ * sentence, and it happened on every page rather than on one.
+ *
+ * It belongs on `body` rather than in each page's padding for the same reason
+ * the bar itself is global: a new page should not have to know the bar exists
+ * to avoid being clipped by it. The extra 1rem is breathing room, so content
+ * ends above the bar instead of exactly against it.
+ *
+ * Matches the bar's own `sm:hidden`, and adds the home-indicator inset, which
+ * the bar also pads itself by.
+ */
+@media (max-width: 639px) {
+  body {
+    padding-bottom: calc(64px + 1rem + env(safe-area-inset-bottom));
+  }
+}
+
 /* Headings get tighter tracking as they get larger. Default tracking on a 36px
    heading is the single most common reason a page reads as unfinished. */
 h1 { letter-spacing: -0.022em; }
