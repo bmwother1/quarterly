@@ -9,6 +9,44 @@ delete them.
 
 ---
 
+## 2026-08-29 · Claude Code · Every blocker cleared, and three checks that lied
+
+A long session that started with three dashboard actions and ended in a design
+pass. All of it shipped.
+
+**The Supabase work is done.** `0002` ran so account deletion actually deletes,
+which closed the one place the product was lying to a student: the privacy page
+had promised it for days. Custom SMTP went in through Resend and **sign-in was
+run end to end for the first time**, which had never once been done. The
+notification cron went from inert to returning 200.
+
+**The interesting part was how much reported success while being wrong.** The
+cron logged `succeeded` twice while the app returned 401, because pg_net is
+asynchronous and the cron only records that it asked. A placeholder pasted into
+`vault.update_secret` stored itself happily as the secret. `service_role` bypasses
+RLS and still could not read the table, because `0001` granted only to
+`authenticated`; `0004` fixes that. A first sign-in sends the Confirm signup
+template rather than Magic Link, and Supabase's OTP length was 8 against an app
+built for 6, which `normaliseCode` silently truncates. Every one of those looked
+like something else.
+
+**Three items on the status file had already shipped** and were still listed as
+pending: the learned energy pattern, the returning-student experience, and later
+the drag, which Brydon confirmed by thumb. A session was minutes from rebuilding
+finished work.
+
+**The name went round again.** A collision-first search across roughly 450
+domains and a dozen trademark checks landed on Heron for the second time; Cusp,
+Cairn, Pika, Bower, Nuthatch and Tortoise all died on marks. Brydon parked it to
+keep thinking. Nothing bought, nothing renamed.
+
+**A design read closed the session.** Measured on a 375px phone rather than
+eyeballed, which was the right call: the type scale I was about to criticise
+turned out to be fine, and the real bugs were 63px of footer permanently behind
+the tab bar and a week grid showing three of fourteen columns. Fixed the first,
+and shipped the replan animation, whose first version passed 276 tests while
+animating nothing.
+
 ## 2026-08-26 · Claude Code · Colour, a code, a month, and a drag that never worked
 
 Three specified pieces of work, in order, plus two bugs Brydon found by using it.

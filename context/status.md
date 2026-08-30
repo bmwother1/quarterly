@@ -1,6 +1,6 @@
 # Status
 
-**Updated: 2026-08-27** · 34 days to launch (September 30)
+**Updated: 2026-08-29** · 32 days to launch (September 30)
 
 This file describes the present. It gets rewritten, not appended to.
 
@@ -8,8 +8,11 @@ Repo: `bmwother1/quarterly` (public). Live and current at
 `quarterly-alpha.vercel.app`. Pushes to `main` auto-deploy in about 20 seconds,
 confirmed working by watching a deploy land 27 seconds after a push. 276 tests.
 Supabase project `dxvekspnhqrcwqbqxleh` (West US Oregon); keys are in
-`.env.local` and in all three Vercel environments. Node lives at `~/.local/node` and is on Brydon's PATH but not in a
-fresh agent shell — prefix `export PATH="$HOME/.local/node/bin:$PATH"`.
+`.env.local` and in Vercel, along with `SUPABASE_SERVICE_ROLE_KEY` and
+`CRON_SECRET`. Custom SMTP runs through Resend on the shared
+`onboarding@resend.dev` sender, which only delivers to Brydon's own address.
+Node lives at `~/.local/node` and is on Brydon's PATH but not in a fresh agent
+shell — prefix `export PATH="$HOME/.local/node/bin:$PATH"`.
 
 ---
 
@@ -105,6 +108,14 @@ and has not been done.
 - **Account deletion** — a `security definer` function so a student can remove
   their auth row and cascade everything. `0002` run 2026-08-27 and verified:
   `prosecdef` true, so the function runs with owner rights as intended
+- **A line across today** — one accent pixel with a dot, on today's column only,
+  ticking once a minute. Hidden when the clock falls outside the drawn range, and
+  `pointer-events-none` so it cannot swallow a tap or interrupt a drag
+- **The replan is watched, not announced** — blocks travel to their new slots at
+  560ms with a 24ms stagger instead of teleporting while a banner explains what
+  moved. FLIP rather than a CSS transition, because a block moving day unmounts
+  from one column and mounts in another. See `learned.md` for why the first
+  version passed 276 tests while animating nothing
 - **Drag-to-move** — cross-day drags and drops onto occupied slots both work and
   blocks push each other aside. Confirmed by thumb on 2026-08-27, which is the
   only way it can be confirmed: synthetic pointer events never enter the drag
@@ -149,6 +160,16 @@ and has not been done.
 3. **Syllabus parsing, or cut the claim.** The competitive table says Quarterly
    knows what to study and it does not. Decide by Sept 1 rather than carrying an
    untrue claim into recruiting.
+4. **Stop using warning colour for a bad week.** A past unanswered block gets a
+   `--warn` border at 45% and the lapse banner is warn-coloured throughout. The
+   product's position is that falling behind is survivable and the palette
+   currently disagrees with the copy. An hour of token work.
+5. **What a phone shows instead of a seven-day grid.** The week renders 14
+   columns at 88px and a student sees three. Either the phone goes day-first
+   with the grid on larger screens, or each day becomes a density bar rather
+   than a readable column. **This one needs Brydon**, it is a product call.
+   Measurements and the rest of the design read are in the 29 Aug artifact,
+   "Quarterly at arm's length".
 
 ## Blocked on Brydon
 
@@ -158,6 +179,9 @@ and has not been done.
   what blocks this.
 - **Confirm the sync loop** on two devices. The drag is confirmed.
 - **A decision on the three doors** into configuration.
+- **What the phone shows instead of a seven-day grid.** See Next, item 5.
+- **The name.** Heron is the standing recommendation and Brydon is still
+  thinking. Free to change until students onboard on Sept 30.
 - **Whether paid testers are tagged separately.** Paying people to open the app
   measures the payment, not the product, so they must not pollute the retention
   cohort.

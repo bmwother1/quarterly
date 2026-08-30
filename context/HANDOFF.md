@@ -1,13 +1,13 @@
 # Quarterly — project brief
 
-*Generated 2026-08-28 from the project's `context/` files by `npm run handoff`.
+*Generated 2026-08-30 from the project's `context/` files by `npm run handoff`.
 Don't edit this by hand; edit the source files and regenerate.*
 
 This is the standing context for Quarterly. It covers the person building it,
 what's being built, where it stands, and what has already been decided — so a
 conversation can start from here instead of from scratch.
 
-**33 days to launch** (September 30 2026).
+**31 days to launch** (September 30 2026).
 
 ---
 
@@ -193,16 +193,19 @@ compound within a course.
 
 # Where things stand
 
-**Updated: 2026-08-27** · 34 days to launch (September 30)
+**Updated: 2026-08-29** · 32 days to launch (September 30)
 
 This file describes the present. It gets rewritten, not appended to.
 
 Repo: `bmwother1/quarterly` (public). Live and current at
 `quarterly-alpha.vercel.app`. Pushes to `main` auto-deploy in about 20 seconds,
-confirmed working by watching a deploy land 27 seconds after a push. 267 tests.
+confirmed working by watching a deploy land 27 seconds after a push. 276 tests.
 Supabase project `dxvekspnhqrcwqbqxleh` (West US Oregon); keys are in
-`.env.local` and in all three Vercel environments. Node lives at `~/.local/node` and is on Brydon's PATH but not in a
-fresh agent shell — prefix `export PATH="$HOME/.local/node/bin:$PATH"`.
+`.env.local` and in Vercel, along with `SUPABASE_SERVICE_ROLE_KEY` and
+`CRON_SECRET`. Custom SMTP runs through Resend on the shared
+`onboarding@resend.dev` sender, which only delivers to Brydon's own address.
+Node lives at `~/.local/node` and is on Brydon's PATH but not in a fresh agent
+shell — prefix `export PATH="$HOME/.local/node/bin:$PATH"`.
 
 ---
 
@@ -221,18 +224,25 @@ He intends to pay a group of friends weekly for feedback and run them through
 autumn. That makes Sept 30 a private beta and moves the first honest retention
 read to winter quarter. Interviews are parked at his instruction.
 
-Three things are blocked on dashboard actions he has not done, and each one
-makes a shipped feature inert:
+All three dashboard actions were done on 2026-08-27. `0002` ran, so account
+deletion works and the privacy page is accurate again.
+`SUPABASE_SERVICE_ROLE_KEY` was added in Vercel as a Secret and `0003` ran,
+returning job id 1, so the notification cron is scheduled every ten minutes.
+Custom SMTP went in the same night, through Resend, and **sign-in was run end to
+end for the first time: Brydon received a code and signed in.** Nothing is
+blocked on a dashboard action any more.
 
-1. **Account deletion fails.** `delete_own_account` does not exist because
-   `0002` was never run, so "Delete my data" wipes localStorage and leaves the
-   server copy. The privacy page promises otherwise, which makes this the one
-   live inaccuracy in the product.
-2. **Sign-in cannot complete.** No custom SMTP, so the template still sends a
-   link with no code in it, and Supabase will not let the template be edited
-   until SMTP exists.
-3. **Notifications will never send.** No `SUPABASE_SERVICE_ROLE_KEY` in Vercel
-   and no `pg_cron` job, so the toggle subscribes correctly into silence.
+The notification chain was then fixed end to end and **returns 200**: the cron
+fires, the app authenticates, and the sender reads its tables. It took three
+fixes, each hidden behind the one before it. The Vault secret did not match
+`CRON_SECRET` (401), and then `service_role` had no grant on the tables it
+reads, because `0001` granted only to `authenticated` (500). `0004` adds those
+grants.
+
+**Nothing has been delivered yet.** The endpoint reports `subscriptions: 0`,
+because the Settings toggle was subscribing into a broken pipeline for as long
+as it has existed and nobody has turned it on since. One phone needs to enable
+it before delivery is real.
 
 **Retention is measurable, not measured**, and now also unmeasurable by design
 until the paid-tester question is resolved: paying people to open the app buys
@@ -263,7 +273,7 @@ and has not been done.
 - **Backup** — export and import JSON, and now a server copy as well
 - **Accounts** — a six-digit code, no passwords, no links. Optional throughout:
   signed out is a supported state everywhere and the no-account product is
-  unchanged. Untestable until SMTP exists
+  unchanged. Confirmed working end to end on 2026-08-27
 - **Sync** — the plan mirrors to `plan_state` on change, debounced. When both
   copies changed since they were last level it reports a conflict and does
   nothing, because there is no merge and any automatic choice eats a week
@@ -286,10 +296,31 @@ and has not been done.
   because the link route means publishing an Apple calendar publicly
 - **Push notifications** — permission, subscription, service-worker handlers, a
   Settings toggle that detects the iOS home-screen requirement, and a sender
-  that runs the same engine the app uses. Nothing sends until the two dashboard
-  actions above are done
+  that runs the same engine the app uses. The key and the cron are both in
+  place as of 2026-08-27; a successful run has not been observed yet
 - **Account deletion** — a `security definer` function so a student can remove
-  their auth row and cascade everything. Written, not yet run
+  their auth row and cascade everything. `0002` run 2026-08-27 and verified:
+  `prosecdef` true, so the function runs with owner rights as intended
+- **A line across today** — one accent pixel with a dot, on today's column only,
+  ticking once a minute. Hidden when the clock falls outside the drawn range, and
+  `pointer-events-none` so it cannot swallow a tap or interrupt a drag
+- **The replan is watched, not announced** — blocks travel to their new slots at
+  560ms with a 24ms stagger instead of teleporting while a banner explains what
+  moved. FLIP rather than a CSS transition, because a block moving day unmounts
+  from one column and mounts in another. See `learned.md` for why the first
+  version passed 276 tests while animating nothing
+- **Drag-to-move** — cross-day drags and drops onto occupied slots both work and
+  blocks push each other aside. Confirmed by thumb on 2026-08-27, which is the
+  only way it can be confirmed: synthetic pointer events never enter the drag
+  state
+- **Learned energy pattern** — the scheduler plans against observed completion
+  rate by hour rather than the setup dropdown, but only with 24+ settled blocks,
+  evidence that separates, and disagreement with what the student said. A stated
+  preference locks it. Insights leads with the switch and offers a refusal
+- **The returning-student experience** — shipped 2026-08-24. `absence()` tells a
+  lapse from an away: two days or fewer still asks for answers, longer says
+  "Welcome back", offers "Plan from today", and releases the unanswered blocks
+  as skipped rather than making the student itemise last Tuesday
 
 ## In progress, not finished
 
@@ -298,37 +329,40 @@ and has not been done.
   guided alternative; `/setup` is now only reachable from the nav and from
   individual setup prompts. Two of the three should survive to launch and it is
   undecided which. **This one needs Brydon**, it is a product call.
-- **The returning-student experience.** Five days away and `/week` opens with a
-  red banner saying 15 blocks passed without an answer. Correct, and it reads
-  like being told off at exactly the moment week-4 retention is decided.
-- **Drag-to-move, unverified.** Cross-day drags and drops onto occupied slots
-  were both broken and are both fixed, and blocks now push each other aside.
-  Synthetic pointer events do not enter the drag state at all, so **this needs a
-  real thumb before it can be called working.** Third time this feature has
-  broken without a test noticing.
-- **The name.** `Quarterly` encodes the quarter system and the product is now a
-  general scheduler, which Brydon's own `product.md` said in August. A long
-  stretch on 2026-08-26 produced no decision: Slate collides with Technolutions,
-  which 2,000 universities use for admissions and retention, and Tessel collides
-  with a live TESSELL software trademark. Nothing is branded, so the cost of
-  changing is still near zero.
+- **The name, reopened and parked again on 2026-08-29.** Heron was chosen on a
+  collision-first search and is still the standing recommendation; see
+  `decisions.md` for what was checked and why Cusp, Cairn, Pika, Bower, Nuthatch
+  and Tortoise all lost. Brydon wants to keep thinking, so nothing is bought and
+  nothing is renamed.
+
+  **The deadline on this is Sept 30, not the launch date in general.** Renaming
+  is free today because nothing is branded and nobody has installed anything. It
+  stops being free the moment friends onboard, because the name is then on their
+  home screens and in every sign-in email, and changing it mid-beta puts a
+  rebrand in front of the only users there are, while retention is being read.
 
 ## Next, in order
 
-1. **Run `0002`, add the service_role key, run `0003`.** Three dashboard
-   actions that turn three shipped features from inert to working.
-2. **Custom SMTP**, which also unblocks testing the sign-in code. Resend sends
-   to the account owner's own address with no domain, which is enough to verify
-   the flow today.
-3. **Confirm the drag by hand**, and the sync loop while there.
-4. **Learned energy pattern** — replace the declared dropdown with observed
-   completion rate by hour. `observed.ts` already collects it and `Insights`
-   already reads it; the dropdown still overrides both.
-5. **Syllabus parsing, or cut the claim.** The competitive table says Quarterly
+1. **Get one notification onto a real phone.** The pipeline returns 200 with
+   zero subscriptions; enabling the toggle on one device is the last unproven
+   step. `select status_code from net._http_response order by created desc` is
+   the check that matters, because `cron.job_run_details` says `succeeded` even
+   when the app rejects the call.
+2. **Confirm the sync loop by hand.** The drag is done; the conflict path
+   still has not been exercised on two real devices.
+3. **Syllabus parsing, or cut the claim.** The competitive table says Quarterly
    knows what to study and it does not. Decide by Sept 1 rather than carrying an
    untrue claim into recruiting.
-6. Tailwind oddity: `max-w-*` utilities produced no CSS, so the calendar width
-   is set inline. It will bite again on a class that matters more.
+4. **Stop using warning colour for a bad week.** A past unanswered block gets a
+   `--warn` border at 45% and the lapse banner is warn-coloured throughout. The
+   product's position is that falling behind is survivable and the palette
+   currently disagrees with the copy. An hour of token work.
+5. **What a phone shows instead of a seven-day grid.** The week renders 14
+   columns at 88px and a student sees three. Either the phone goes day-first
+   with the grid on larger screens, or each day becomes a density bar rather
+   than a readable column. **This one needs Brydon**, it is a product call.
+   Measurements and the rest of the design read are in the 29 Aug artifact,
+   "Quarterly at arm's length".
 
 ## Owed to Brydon
 
@@ -370,7 +404,7 @@ higher-value feature.
 - **Spend it on students, not code.** Twelve interviews by Sept 6, eight with
   people who have no social reason to be nice about it.
 - Use it daily, with the real schedule. Still the closest proxy for retention.
-- Learned energy pattern, if there is time left after the interviews.
+- Learned energy pattern. Shipped Aug 27.
 
 ### Aug 31 → Sept 13 · the retention features
 - Push notifications. One a day, always carrying the block's reason.
@@ -392,6 +426,44 @@ there is something real. Nothing measures it until Supabase ships.
 ---
 
 # Recent sessions
+
+## 2026-08-29 · Claude Code · Every blocker cleared, and three checks that lied
+
+A long session that started with three dashboard actions and ended in a design
+pass. All of it shipped.
+
+**The Supabase work is done.** `0002` ran so account deletion actually deletes,
+which closed the one place the product was lying to a student: the privacy page
+had promised it for days. Custom SMTP went in through Resend and **sign-in was
+run end to end for the first time**, which had never once been done. The
+notification cron went from inert to returning 200.
+
+**The interesting part was how much reported success while being wrong.** The
+cron logged `succeeded` twice while the app returned 401, because pg_net is
+asynchronous and the cron only records that it asked. A placeholder pasted into
+`vault.update_secret` stored itself happily as the secret. `service_role` bypasses
+RLS and still could not read the table, because `0001` granted only to
+`authenticated`; `0004` fixes that. A first sign-in sends the Confirm signup
+template rather than Magic Link, and Supabase's OTP length was 8 against an app
+built for 6, which `normaliseCode` silently truncates. Every one of those looked
+like something else.
+
+**Three items on the status file had already shipped** and were still listed as
+pending: the learned energy pattern, the returning-student experience, and later
+the drag, which Brydon confirmed by thumb. A session was minutes from rebuilding
+finished work.
+
+**The name went round again.** A collision-first search across roughly 450
+domains and a dozen trademark checks landed on Heron for the second time; Cusp,
+Cairn, Pika, Bower, Nuthatch and Tortoise all died on marks. Brydon parked it to
+keep thinking. Nothing bought, nothing renamed.
+
+**A design read closed the session.** Measured on a 375px phone rather than
+eyeballed, which was the right call: the type scale I was about to criticise
+turned out to be fine, and the real bugs were 63px of footer permanently behind
+the tab bar and a week grid showing three of fourteen columns. Fixed the first,
+and shipped the replan animation, whose first version passed 276 tests while
+animating nothing.
 
 ## 2026-08-26 · Claude Code · Colour, a code, a month, and a drag that never worked
 
@@ -450,30 +522,6 @@ Ended with 198 tests and a live product with accounts. The sync loop has still
 never been watched end to end by anyone, because the magic link goes to an inbox
 no agent can reach.
 
-## 2026-08-22 · Claude Code · Onboarding got an ending
-
-Wired up the completion model that had sat in the repo for three days as a
-module no page imported, so it did nothing at all. The `/week` banner that could
-only say one thing and had no way to be answered is gone, replaced by one prompt
-at a time that a student can answer in either direction. The app now has a real
-notion of **live**: once every required step is resolved the prompts stop
-permanently, including for someone who later deletes every commitment.
-
-Built `/onboarding`, a five-step guided flow on the `OnboardingShell` component
-that was written last week and never used. `/start` keeps its two questions and
-stays the default door; this is the other one.
-
-The session started on the business plan that was owed, and turned into code
-halfway through when a mentor's input arrived. The mentor asked for a signup
-flow first and a calendar flow second; the signup half was pushed back on and
-built last instead, as a labelled mock, because there are no accounts until
-Supabase lands and putting an identity wall in front of a three-second first run
-trades away the best-measured thing this product has.
-
-One bug found by looking rather than by a test, again: `autoFocus` scrolled the
-page 302px on load, so a student on a phone landed mid-form having never seen
-the heading or the progress bar.
-
 ---
 
 # Recent decisions
@@ -481,6 +529,61 @@ the heading or the progress bar.
 *Older decisions and the full findings log stay in the repo, in
 `context/decisions.md` and `context/learned.md`. Ask for them if a question
 turns on history this brief doesn't cover.*
+
+## 2026-08-28 · The name is Heron, and the search had to change shape first
+
+**Decided:** the product is renamed **Heron**, on `heron.study`. `Quarterly`
+encoded the quarter system for a product that stopped being quarter-shaped in
+August.
+
+**Why the two previous attempts produced nothing.** Both searched for a name
+that was short, had a free `.com`, and was clear of software trademarks. That
+set is empty, and it is worth stating as a fact rather than a feeling: 213
+candidates were checked against the registry, real words and coined ones, and
+**213 were registered.** Three were confirmed by hand against whois rather than
+trusted from one source. `horalis.com` had been taken in December 2025.
+Domainers sweep anything pronounceable within weeks, so the `.com` constraint
+was doing all the killing and none of the choosing.
+
+Dropping `.com` rather than dropping "short" is what made it tractable, because
+the thing being sold is a name people say, and the domain is plumbing. Resend
+verifies any domain, and students have only ever seen a `vercel.app` URL.
+
+**What was rejected, and on what evidence.** Trellis: an LMS in education plus a
+registered TRELLIS mark. Kestrel: registered mark #6015386 in software products,
+plus Kestrel Software LLC. Kiln: registered mark plus an apps company filing for
+downloadable software. Crest: CREST Technologies in education and Raise Crest
+Education, on top of a famous consumer mark. Cadence, Lattice, Tempo, Stride and
+Lumen are large software or education companies outright. Lantern survived
+availability but carries three live software marks. Vesper was the runner-up and
+was set aside only because Samsung holds a VESPER mark whose class could not be
+established.
+
+**Why Heron specifically.** Two syllables, spells itself, unmistakable out loud.
+The only trademark hits are Blue Heron Scientific, HEREON with a different
+spelling, and a Shenzhen camera company; no bare HERON mark in productivity or
+education software surfaced. It also means something here: a heron stands still
+for a long time and moves exactly once, at the right moment, which is the
+product's whole thesis.
+
+**On the domain, and a correction.** `.study` names what a student uses it for
+and reads correctly to them. It also narrows the product to studying, which
+`product.md` already says it outgrew, so an escape hatch on a neutral TLD was
+the plan. There isn't one: `heron.co` has been registered since 2017 and
+`heron.so` since 2021. `heron.study` is $55 a year.
+
+**The availability check for non-`.com` TLDs was wrong and should not be reused.**
+`.com` went to Verisign's RDAP directly and three results were confirmed against
+whois, so those 213 hold. `.co`, `.so` and `.study` went through `rdap.org`,
+where a 404 can mean the registry has no RDAP endpoint rather than the domain
+being free, and every 404 was read as available. Vercel's registrar search
+caught it. **Check a domain at a registrar before believing it is available**,
+whatever a script says.
+
+**Worth revisiting if:** a clearance search turns up a live HERON mark in class 9
+or 41, or the product's audience stops being students. Note that none of the
+above is a clearance search. It is web research, and a lawyer's twenty minutes
+should precede any money or launch behind the name.
 
 ## 2026-08-26 · Two colour axes, and a code instead of a link
 
@@ -639,57 +742,19 @@ live" re-shows the confirmation on every reload.
 back in. `unskipStep` exists and clears `wentLiveAt`; nothing in the UI calls it
 yet. That is a real gap, and it is the deliberate kind.
 
-## 2026-08-21 · Import from any calendar; never write back
-
-**Decided:** one paste box at `/import` accepts Canvas, Google, Apple and
-Outlook. The server decides what a feed's contents mean from where it came
-from — Canvas produces assignments to schedule, everything else produces fixed
-events to schedule around. Quarterly does not publish a feed back out.
-
-**Why not write back, which was the obvious ask:** Google refreshes subscribed
-calendars every 12–24 hours and won't let you force it. For a static timetable
-that's fine; for a scheduler whose entire premise is that the plan changes when
-you fall behind, the copy in their calendar would routinely show a plan already
-replanned. Two sources of truth with the stale one being the calendar they
-actually check. Better to ship no write-sync than a wrong one.
-
-**Why not Google's API:** `calendar.events` is a sensitive scope requiring
-verification — video demo, written justification, Trust & Safety review — with
-real developers reporting five-plus weeks under review and no response. The
-roadmap had two-way Google sync in phase three, Aug 31 to Sept 13. It could not
-have landed, and building it first would have been how we found out.
-
-**What it actually needed:** recurrence. A Canvas feed is nearly all one-off
-deadlines so RRULE was ignored and nothing was lost. A personal calendar is the
-opposite — a timetable is *all* recurrence, and without expansion it imports as
-a single Tuesday lecture while the scheduler books over the rest of the term.
-
-**What it deliberately doesn't do:** monthly and yearly rules are counted and
-reported, never guessed at. Treating a monthly club meeting as weekly would put
-four times as much in a student's calendar as exists. All-day entries are
-dropped too — blacking out every hour of spring break is the opposite of the
-truth.
-
-**The security note:** widening the allowlist from one provider to four is
-exactly how the lookalike-domain bug gets reintroduced four more times.
-Suffix matching now lives in one place, and there's a test that tries
-`calendar.google.com.attacker.com` and its equivalent for every provider.
-
 ---
 
 # Currently waiting on Brydon
 
-- **Migration `0002`**, or deletion stays broken while the privacy page says it
-  works. This is the most urgent thing in the file.
-- **`SUPABASE_SERVICE_ROLE_KEY` into Vercel**, by hand in the dashboard. It
-  bypasses RLS entirely, so it is the one key that should never travel through a
-  chat.
-- **Migration `0003`**, with the cron secret and domain filled in.
-- **Custom SMTP**, before students exist rather than after.
-- **Confirm the drag on a real pointer**, and the sync loop.
-- **The name, then the domain.** Both still open, and the domain choice depends
-  on the name.
+- **Register `heron.study`, then verify it in Resend.** The
+  shared `onboarding@resend.dev` only delivers to Brydon's own address, so no
+  student can sign in until a real domain is verified. The name is no longer
+  what blocks this.
+- **Confirm the sync loop** on two devices. The drag is confirmed.
 - **A decision on the three doors** into configuration.
+- **What the phone shows instead of a seven-day grid.** See Next, item 5.
+- **The name.** Heron is the standing recommendation and Brydon is still
+  thinking. Free to change until students onboard on Sept 30.
 - **Whether paid testers are tagged separately.** Paying people to open the app
   measures the payment, not the product, so they must not pollute the retention
   cohort.
