@@ -125,12 +125,17 @@ and has not been done.
   guided alternative; `/setup` is now only reachable from the nav and from
   individual setup prompts. Two of the three should survive to launch and it is
   undecided which. **This one needs Brydon**, it is a product call.
-- **The name.** `Quarterly` encodes the quarter system and the product is now a
-  general scheduler, which Brydon's own `product.md` said in August. A long
-  stretch on 2026-08-26 produced no decision: Slate collides with Technolutions,
-  which 2,000 universities use for admissions and retention, and Tessel collides
-  with a live TESSELL software trademark. Nothing is branded, so the cost of
-  changing is still near zero.
+- **The name, reopened and parked again on 2026-08-29.** Heron was chosen on a
+  collision-first search and is still the standing recommendation; see
+  `decisions.md` for what was checked and why Cusp, Cairn, Pika, Bower, Nuthatch
+  and Tortoise all lost. Brydon wants to keep thinking, so nothing is bought and
+  nothing is renamed.
+
+  **The deadline on this is Sept 30, not the launch date in general.** Renaming
+  is free today because nothing is branded and nobody has installed anything. It
+  stops being free the moment friends onboard, because the name is then on their
+  home screens and in every sign-in email, and changing it mid-beta puts a
+  rebrand in front of the only users there are, while retention is being read.
 
 ## Next, in order
 
@@ -147,12 +152,11 @@ and has not been done.
 
 ## Blocked on Brydon
 
-- **A verified sending domain.** Resend's shared `onboarding@resend.dev` only
-  delivers to Brydon's own address, so no student can sign in until a domain is
-  verified, and that waits on the name.
+- **Register `heron.study`, then verify it in Resend.** The
+  shared `onboarding@resend.dev` only delivers to Brydon's own address, so no
+  student can sign in until a real domain is verified. The name is no longer
+  what blocks this.
 - **Confirm the sync loop** on two devices. The drag is confirmed.
-- **The name, then the domain.** Both still open, and the domain choice depends
-  on the name.
 - **A decision on the three doors** into configuration.
 - **Whether paid testers are tagged separately.** Paying people to open the app
   measures the payment, not the product, so they must not pollute the retention

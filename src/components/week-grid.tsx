@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Availability, BusyBlock, FixedEvent, StudyBlock } from '@/lib/types';
 import { localParts, fmtTime, zonedInstant } from '@/lib/time';
 import { colorVar } from '@/lib/categories';
+import { usePlanMotion } from '@/hooks/use-plan-motion';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -90,6 +91,17 @@ export function WeekGrid({
    */
   const dragRef = useRef<{ id: string; dateKey: string; minute: number } | null>(null);
   const [drag, setDrag] = useState<{ id: string; dateKey: string; minute: number } | null>(null);
+
+  /**
+   * Blocks travel to their new slots when the plan changes rather than
+   * teleporting. Measured against gridRef, so scrolling does not register as
+   * movement.
+   *
+   * Stood down while a drag is in progress: the dragged block is redrawn under
+   * the thumb on every pointer move, and animating that would fight the finger
+   * rather than follow it.
+   */
+  usePlanMotion(gridRef, drag === null);
 
   const setDragBoth = (next: { id: string; dateKey: string; minute: number } | null) => {
     dragRef.current = next;
@@ -391,6 +403,8 @@ export function WeekGrid({
                         setDragBoth({ id: block.id, dateKey, minute: minuteOfDay(block.start, tz) });
                       }}
                       title={`${block.course} · ${fmtTime(block.start, tz)}`}
+                      data-block-id={block.id}
+                      data-block-start={block.start}
                       className={`absolute inset-x-0.5 touch-none select-none overflow-hidden rounded px-1 py-0.5 text-left text-[10px] leading-tight ${
                         selected ? 'ring-2 ring-[var(--ink)]' : ''
                       } ${settled ? 'opacity-45' : 'cursor-grab active:cursor-grabbing'} ${

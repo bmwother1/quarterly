@@ -51,6 +51,45 @@ gets a polite yes from everyone and teaches nothing. "Walk me through last Sunda
 
 ## From building
 
+### A block id contains its start time, so a moved block is a different block (2026-08-29)
+
+The week grid replaced one set of block positions with another between frames
+and left a banner to explain what had moved. The welcome carousel has always
+animated the same event properly, because that movement is the argument the
+product makes, so the good version was only ever shown to people who had not
+signed up.
+
+The fix is FLIP: measure before and after, animate the element from where it was
+to where it now is. A CSS transition cannot do it, because a block is rendered by
+its own day column, so moving to another day means unmounting from one parent and
+mounting in another. Same structural fact that broke cross-day dragging three
+times.
+
+**The first version ran cleanly and animated nothing**, and the reason is worth
+keeping: a block id is `${assignmentOrCommitmentId}@${startInstant}`. That is
+deliberate, and `plan.ts` says why: session indexes restart on replan, so a
+finished session 1 and a freshly planned session 1 once shared an id and React
+dropped blocks. The consequence is that **a block that moves does not keep its
+id**, so matching on the id sees a delete and an insert, never a move.
+
+Anything that needs to follow a block across a replan must match on the part
+before the `@` and pair within that group in start order. The second CHEM session
+before is the second CHEM session after.
+
+**Two things this cost, both avoidable:**
+
+- The bug was invisible to the type checker, the linter and 276 tests. It was
+  found by instrumenting `Element.prototype.animate` in a real browser, driving a
+  real plan through `/start`, and counting calls. Animation correctness is not
+  reachable from the test suite at all, so it goes on the list with drag: it ends
+  with something driving the actual app.
+- The first attempt to force a move failed silently too. Clicking the day buttons
+  on `/setup` to select Mon through Sun *toggled off* the weekdays that were
+  already selected, so the new commitment landed on Saturday and Sunday only,
+  collided with nothing, and the replan correctly moved nothing. A test that
+  cannot fail is worse than no test, and "nothing happened" looked identical to
+  both a working animation with nothing to do and a broken one.
+
 ### `service_role` bypasses RLS and still could not read the table (2026-08-27)
 
 With the secret finally matching, `/api/notify` went from 401 to 500:

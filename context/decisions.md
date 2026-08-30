@@ -9,6 +9,63 @@ record of what was tried and abandoned is worth more than a tidy file.
 
 ---
 
+## 2026-08-28 · The name is Heron, and the search had to change shape first
+
+**Decided:** the product is renamed **Heron**, on `heron.study`. `Quarterly`
+encoded the quarter system for a product that stopped being quarter-shaped in
+August.
+
+**Why the two previous attempts produced nothing.** Both searched for a name
+that was short, had a free `.com`, and was clear of software trademarks. That
+set is empty, and it is worth stating as a fact rather than a feeling: 213
+candidates were checked against the registry, real words and coined ones, and
+**213 were registered.** Three were confirmed by hand against whois rather than
+trusted from one source. `horalis.com` had been taken in December 2025.
+Domainers sweep anything pronounceable within weeks, so the `.com` constraint
+was doing all the killing and none of the choosing.
+
+Dropping `.com` rather than dropping "short" is what made it tractable, because
+the thing being sold is a name people say, and the domain is plumbing. Resend
+verifies any domain, and students have only ever seen a `vercel.app` URL.
+
+**What was rejected, and on what evidence.** Trellis: an LMS in education plus a
+registered TRELLIS mark. Kestrel: registered mark #6015386 in software products,
+plus Kestrel Software LLC. Kiln: registered mark plus an apps company filing for
+downloadable software. Crest: CREST Technologies in education and Raise Crest
+Education, on top of a famous consumer mark. Cadence, Lattice, Tempo, Stride and
+Lumen are large software or education companies outright. Lantern survived
+availability but carries three live software marks. Vesper was the runner-up and
+was set aside only because Samsung holds a VESPER mark whose class could not be
+established.
+
+**Why Heron specifically.** Two syllables, spells itself, unmistakable out loud.
+The only trademark hits are Blue Heron Scientific, HEREON with a different
+spelling, and a Shenzhen camera company; no bare HERON mark in productivity or
+education software surfaced. It also means something here: a heron stands still
+for a long time and moves exactly once, at the right moment, which is the
+product's whole thesis.
+
+**On the domain, and a correction.** `.study` names what a student uses it for
+and reads correctly to them. It also narrows the product to studying, which
+`product.md` already says it outgrew, so an escape hatch on a neutral TLD was
+the plan. There isn't one: `heron.co` has been registered since 2017 and
+`heron.so` since 2021. `heron.study` is $55 a year.
+
+**The availability check for non-`.com` TLDs was wrong and should not be reused.**
+`.com` went to Verisign's RDAP directly and three results were confirmed against
+whois, so those 213 hold. `.co`, `.so` and `.study` went through `rdap.org`,
+where a 404 can mean the registry has no RDAP endpoint rather than the domain
+being free, and every 404 was read as available. Vercel's registrar search
+caught it. **Check a domain at a registrar before believing it is available**,
+whatever a script says.
+
+**Worth revisiting if:** a clearance search turns up a live HERON mark in class 9
+or 41, or the product's audience stops being students. Note that none of the
+above is a clearance search. It is web research, and a lawyer's twenty minutes
+should precede any money or launch behind the name.
+
+---
+
 ## 2026-08-26 · Two colour axes, and a code instead of a link
 
 **Decided:** colour carries two independent things. Category owns the hue family
