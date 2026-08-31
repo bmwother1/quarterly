@@ -201,13 +201,27 @@ export default function WeekPage() {
             </div>
           )}
 
+          {/*
+            Same container as the 'away' notice above, deliberately.
+            
+            An absence was made calm in August; a lapse never was, and it kept a
+            warn border, a warn heading, and a count of blocks that "passed
+            without an answer". `notify.ts` bans exactly that phrasing for the
+            recovery notice, on the grounds that a count of failures is never
+            the thing to lead with, and this banner was doing it on the screen
+            the student actually opens.
+
+            A lapse still asks, because two days is inside honest recall and the
+            answers are worth having. It just stops treating a normal week as an
+            error condition.
+          */}
           {gap.kind === 'lapse' && (
-            <div className="mb-6 rounded-lg border border-[var(--warn)]/40 bg-[var(--accent-soft)] p-4">
-              <h2 className="font-medium text-[var(--warn)]">
-                {missed.length} block{missed.length === 1 ? '' : 's'} passed without an answer
+            <div className="mb-6 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)]">
+              <h2 className="font-medium">
+                {missed.length} block{missed.length === 1 ? '' : 's'} still open
               </h2>
               <p className="mt-1 text-sm text-[var(--muted)]">
-                Mark them below, then rebuild the rest of the week around what&rsquo;s actually left.
+                Mark what happened and the rest of the week rebuilds around what&rsquo;s left.
                 Nothing moves until you say so.
               </p>
             </div>

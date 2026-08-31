@@ -108,6 +108,11 @@ and has not been done.
 - **Account deletion** — a `security definer` function so a student can remove
   their auth row and cascade everything. `0002` run 2026-08-27 and verified:
   `prosecdef` true, so the function runs with owner rights as intended
+- **A bad week is no longer an error state** — a past unanswered block is dashed
+  and neutral rather than warn-bordered, and the lapse banner uses the same calm
+  container as the away notice instead of a warn heading counting blocks that
+  "passed without an answer". `--warn` is now reserved for real errors and
+  destructive actions
 - **A line across today** — one accent pixel with a dot, on today's column only,
   ticking once a minute. Hidden when the clock falls outside the drawn range, and
   `pointer-events-none` so it cannot swallow a tap or interrupt a drag
@@ -160,11 +165,7 @@ and has not been done.
 3. **Syllabus parsing, or cut the claim.** The competitive table says Quarterly
    knows what to study and it does not. Decide by Sept 1 rather than carrying an
    untrue claim into recruiting.
-4. **Stop using warning colour for a bad week.** A past unanswered block gets a
-   `--warn` border at 45% and the lapse banner is warn-coloured throughout. The
-   product's position is that falling behind is survivable and the palette
-   currently disagrees with the copy. An hour of token work.
-5. **What a phone shows instead of a seven-day grid.** The week renders 14
+4. **What a phone shows instead of a seven-day grid.** The week renders 14
    columns at 88px and a student sees three. Either the phone goes day-first
    with the grid on larger screens, or each day becomes a density bar rather
    than a readable column. **This one needs Brydon**, it is a product call.

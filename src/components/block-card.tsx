@@ -33,7 +33,20 @@ export function BlockCard({
     <div
       className={`rise rounded-xl border p-3.5 shadow-[var(--shadow-sm)] transition-all duration-200 ${
         settled ? 'opacity-60' : 'hover:shadow-[var(--shadow-md)]'
-      } ${isPast && !settled ? 'border-[var(--warn)]/45' : 'border-[var(--border)]'} bg-[var(--surface)]`}
+      } ${
+        /*
+         * A block whose time passed without an answer is unresolved, not wrong.
+         * It used to carry a --warn border, which is the colour this app uses
+         * for a failed import and a delete button, and pointing that at a
+         * student for having a Tuesday is the palette disagreeing with the
+         * product. Dashed reads as open and awaiting an answer, which is what
+         * it actually is, and it still separates from a normal block at a
+         * glance.
+         */
+        isPast && !settled
+          ? 'border-dashed border-[var(--border-strong)]'
+          : 'border-[var(--border)]'
+      } bg-[var(--surface)]`}
     >
       <div className="flex items-start gap-3">
         <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colour }} aria-hidden />
