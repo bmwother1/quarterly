@@ -38,7 +38,7 @@ export default function Settings() {
   }
 
   return (
-    <main className="mx-auto max-w-2xl px-5 py-10 sm:py-14">
+    <main className="rise mx-auto max-w-2xl px-5 py-10 sm:py-14">
       <header className="mb-8 flex flex-wrap items-baseline justify-between gap-3">
         <h1 className="text-2xl font-semibold">Settings</h1>
 

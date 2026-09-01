@@ -137,7 +137,7 @@ export default function WeekPage() {
       // class name stitched together at runtime is a string it never sees, so
       // the utility is never generated. That is what broke here before, not the
       // `max-w-*` utilities themselves, which work everywhere else in the app.
-      className={`mx-auto w-full px-5 py-10 sm:py-14 ${
+      className={`rise mx-auto w-full px-5 py-10 sm:py-14 ${
         view === 'grid' ? 'max-w-[1080px]' : 'max-w-2xl'
       }`}
     >
@@ -305,6 +305,14 @@ export default function WeekPage() {
             ))}
           </div>
 
+          {/*
+            Keyed on the view so switching Calendar / List / Month replays the
+            same 320ms arrival the rest of the app uses on first paint. Without
+            it the whole screen is replaced between frames, which on the busiest
+            control in the product reads as a page load rather than a change of
+            lens.
+          */}
+          <div key={view} className="rise">
           {view === 'grid' && (
             <div className="mb-8 space-y-4">
               <WeekGrid
@@ -440,6 +448,7 @@ export default function WeekPage() {
             })}
           </div>
           )}
+          </div>
         </>
 
       {movedNotice && (

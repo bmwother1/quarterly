@@ -51,7 +51,7 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
   const isToday = date === localParts(now, TZ).dateKey;
 
   return (
-    <main className="mx-auto max-w-2xl px-5 py-10 sm:py-14">
+    <main className="rise mx-auto max-w-2xl px-5 py-10 sm:py-14">
       <nav className="mb-6 flex items-center justify-between gap-3 text-sm">
         <Link href={`/day/${addDays(date, -1)}`} className="text-[var(--muted)] hover:text-[var(--ink)]">
           ← Previous

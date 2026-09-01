@@ -145,7 +145,7 @@ export default function ImportPage() {
   }
 
   return (
-    <main className="mx-auto max-w-2xl px-5 py-10 sm:py-14">
+    <main className="rise mx-auto max-w-2xl px-5 py-10 sm:py-14">
       <h1 className="text-2xl font-semibold">Import a calendar</h1>
       <p className="mt-1.5 text-[var(--muted)]">
         Canvas, Google, Apple or Outlook. Paste a link, or import a file you exported.

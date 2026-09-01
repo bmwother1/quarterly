@@ -81,6 +81,49 @@ export function WeekGrid({
   const gridRef = useRef<HTMLDivElement>(null);
 
   /**
+   * Whether there is more week off either edge.
+   *
+   * Fourteen columns are rendered and a phone shows three, and the only thing
+   * saying so was the words "scroll sideways for next week" in the faintest
+   * grey in the palette. A soft edge is the standard way to say "this
+   * continues" without spending a sentence on it, and it has to know when it is
+   * lying: a fade still showing at the end of the scroll is worse than none,
+   * because it promises content that is not there.
+   */
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const [edges, setEdges] = useState({ start: false, end: false });
+
+  /*
+   * Measured imperatively rather than through onScroll and a mount effect.
+   *
+   * The first version did it the obvious way and got the fades backwards: a
+   * mount effect runs before the grid has been laid out, so `scrollWidth` still
+   * equals `clientWidth`, the arithmetic says there is nothing to the right, and
+   * nothing recomputes it afterwards. A ResizeObserver fires once the element
+   * actually has a size, which is the only moment the measurement is worth
+   * taking, and it also covers rotating the phone and the column count changing.
+   */
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+
+    const measure = () => {
+      const max = el.scrollWidth - el.clientWidth;
+      setEdges({ start: el.scrollLeft > 4, end: el.scrollLeft < max - 4 });
+    };
+
+    measure();
+    el.addEventListener('scroll', measure, { passive: true });
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+
+    return () => {
+      el.removeEventListener('scroll', measure);
+      observer.disconnect();
+    };
+  }, [days.length]);
+
+  /**
    * Drag state lives in a ref *and* in state.
    *
    * The ref is the source of truth for the handlers: a quick drag fires
@@ -186,7 +229,8 @@ export function WeekGrid({
         <span className="ml-auto">scroll sideways for next week</span>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="relative">
+        <div ref={scrollerRef} className="overflow-x-auto">
         <div
           ref={gridRef}
           className="flex gap-px"
@@ -435,6 +479,31 @@ export function WeekGrid({
           );
         })}
         </div>
+        </div>
+
+        {/*
+          Soft edges, so the week visibly continues past the screen instead of
+          being cut off. Rendered always and faded with opacity rather than
+          mounted and unmounted, so reaching the end of the scroll is a settle
+          rather than a pop. `pointer-events-none` keeps them out of the drag,
+          which runs across this exact area.
+        */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 left-0 w-10 transition-opacity duration-200"
+          style={{
+            opacity: edges.start ? 1 : 0,
+            background: 'linear-gradient(to right, var(--bg), transparent)',
+          }}
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 right-0 w-10 transition-opacity duration-200"
+          style={{
+            opacity: edges.end ? 1 : 0,
+            background: 'linear-gradient(to left, var(--bg), transparent)',
+          }}
+        />
       </div>
     </div>
   );
