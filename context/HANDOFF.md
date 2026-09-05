@@ -198,7 +198,9 @@ compound within a course.
 This file describes the present. It gets rewritten, not appended to.
 
 Repo: `bmwother1/quarterly` (public). Live and current at
-`quarterly-alpha.vercel.app`. Pushes to `main` auto-deploy in about 20 seconds,
+**`heron.study`**, registered at Name.com on 2026-09-05 and attached to Vercel;
+`quarterly-alpha.vercel.app` still works and is the fallback. Pushes to `main`
+auto-deploy in about 20 seconds,
 confirmed working by watching a deploy land 27 seconds after a push. 276 tests.
 Supabase project `dxvekspnhqrcwqbqxleh` (West US Oregon); keys are in
 `.env.local` and in Vercel, along with `SUPABASE_SERVICE_ROLE_KEY` and
@@ -344,17 +346,16 @@ and has not been done.
 - **Confirm the sync loop** on two devices. The drag is confirmed.
 - **A decision on the three doors** into configuration.
 - **What the phone shows instead of a seven-day grid.** See Next, item 5.
-- **A domain for Heron.** `heron.com`, `.app`, `.dev` and `.now` are all taken,
-  verified. `heron.io`, `.me`, `.sh`, `.today` and `.study` could not be checked
-  from here: rdap.org returns 404 for known-registered domains in those TLDs,
-  which is the exact trap that produced a wrong answer on 2026-08-28. **Check at
-  a registrar.** `heronplan.com` and `heronweek.com` are free and verified.
+- **DNS for `heron.study`.** Two records still to add, both Brydon's: Resend's
+  verification records so sign-in codes come from the domain rather than a
+  shared sender, and `https://heron.study/**` in Supabase's redirect allow-list.
+  Sign-in breaks the moment students use the new URL without the second one.
 - **Whether paid testers are tagged separately.** Paying people to open the app
   measures the payment, not the product, so they must not pollute the retention
   cohort.
 - **Deployment Protection** is still on, set to
   `all_except_custom_domains`. That means it never affected students and never
-  will: `quarterly-alpha.vercel.app` is public today and a custom domain will be
+  will: `heron.study` is public today, and so was the vercel.app URL before it
   too. It only walls off raw deploy URLs from Brydon himself. Worth switching
   off to stop wasting his own time, but it is not a launch item. Leave
   `gitForkProtection` on, since it stops a forked PR building with the Supabase
