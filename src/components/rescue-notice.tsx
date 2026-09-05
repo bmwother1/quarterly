@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { quarterlyStore } from '@/lib/store';
+import { heronStore } from '@/lib/store';
 import { fmtDay } from '@/lib/time';
 
 /**
@@ -17,11 +17,11 @@ import { fmtDay } from '@/lib/time';
  */
 export function RescueNotice({ tz }: { tz: string }) {
   const [dismissed, setDismissed] = useState(false);
-  const held = dismissed ? null : quarterlyStore.stashed();
+  const held = dismissed ? null : heronStore.stashed();
 
   if (!held) return null;
 
-  const current = quarterlyStore.getSnapshot();
+  const current = heronStore.getSnapshot();
   const before = held.state.commitments.length
     + held.state.availability.busy.filter((b) => b.kind !== 'sleep').length;
   const now = current.commitments.length
@@ -39,13 +39,13 @@ export function RescueNotice({ tz }: { tz: string }) {
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <button
-          onClick={() => { quarterlyStore.restoreStash(); quarterlyStore.discardStash(); setDismissed(true); }}
+          onClick={() => { heronStore.restoreStash(); heronStore.discardStash(); setDismissed(true); }}
           className="rounded-lg bg-[var(--accent)] px-3.5 py-2 text-sm font-medium text-[var(--accent-ink)]"
         >
           Put the other one back
         </button>
         <button
-          onClick={() => { quarterlyStore.discardStash(); setDismissed(true); }}
+          onClick={() => { heronStore.discardStash(); setDismissed(true); }}
           className="text-sm text-[var(--muted)] underline underline-offset-4"
         >
           This one is right

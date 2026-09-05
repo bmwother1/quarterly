@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { emptyState, type QuarterlyState } from '../src/lib/store.ts';
+import { emptyState, type HeronState } from '../src/lib/store.ts';
 import { steps, isLive, progress, nextPrompt, unresolved, applySleepHours } from '../src/lib/onboarding.ts';
 import type { Commitment } from '../src/lib/types.ts';
 
@@ -15,7 +15,7 @@ function commitment(id = 'c1'): Commitment {
 }
 
 /** A student who has done everything the flow asks for. */
-function completed(): QuarterlyState {
+function completed(): HeronState {
   const s = emptyState();
   s.commitments = [commitment()];
   s.availability = {
@@ -69,9 +69,9 @@ describe('when setup is finished', () => {
 
   test('any of the three routes to "something to plan" works', () => {
     for (const seed of [
-      (s: QuarterlyState) => { s.commitments = [commitment()]; },
-      (s: QuarterlyState) => { s.courses = [{ code: 'CHEM 142', fullName: 'CHEM 142 A', category: 'deadline' as const, shade: 0 }]; },
-      (s: QuarterlyState) => {
+      (s: HeronState) => { s.commitments = [commitment()]; },
+      (s: HeronState) => { s.courses = [{ code: 'CHEM 142', fullName: 'CHEM 142 A', category: 'deadline' as const, shade: 0 }]; },
+      (s: HeronState) => {
         s.assignments = [{
           id: 'a', title: 'HW', course: 'MATH', courseFull: 'MATH', kind: 'problem set',
           due: '2026-10-09T23:00:00.000Z', allDay: false, url: null, estimatedMinutes: 60,

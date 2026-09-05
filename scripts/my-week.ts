@@ -73,7 +73,7 @@ const commitments: Commitment[] = [
     minSessionMinutes: 45, bufferAfterMinutes: 0, windowStartMin: null, windowEndMin: null,
   },
   {
-    id: 'quarterly', title: 'Quarterly', category: 'project',
+    id: 'heron', title: 'Heron', category: 'project',
     sessionsPerWeek: 4, minutesPerSession: 90,
     importance: 0.9, demand: 0.85,
     lastDoneAt: null, doneThisWeek: 0, maxPerDay: 1, active: true, shade: 0,

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import webpush from 'web-push';
 import { nextNotice, violatesTone } from '@/lib/notify';
-import type { QuarterlyState } from '@/lib/store';
+import type { HeronState } from '@/lib/store';
 
 /**
  * The daily send.
@@ -100,7 +100,7 @@ export async function GET(request: Request) {
 
       // Signed in, notifications on, never synced a week. Nothing to say.
       if (!plan?.state) { quiet += 1; continue; }
-      const state = plan.state as QuarterlyState;
+      const state = plan.state as HeronState;
 
       const notice = nextNotice({
         blocks: state.blocks ?? [],

@@ -15,7 +15,7 @@
  * allowed to keep asking because the honest answer was "none".
  */
 
-import type { QuarterlyState } from './store.ts';
+import type { HeronState } from './store.ts';
 
 export type StepId = 'work' | 'fixed' | 'sleep' | 'calendars';
 export type StepState = 'todo' | 'done' | 'skipped';
@@ -41,13 +41,13 @@ export interface Step {
  */
 export type SkippedSteps = Partial<Record<StepId, boolean>>;
 
-function hasWork(s: QuarterlyState): boolean {
+function hasWork(s: HeronState): boolean {
   return s.commitments.some((c) => c.active)
     || s.assignments.some((a) => a.status === 'todo')
     || s.courses.length > 0;
 }
 
-function hasFixedTime(s: QuarterlyState): boolean {
+function hasFixedTime(s: HeronState): boolean {
   return s.availability.busy.some((b) => b.kind === 'work' || b.kind === 'class')
     || s.events.length > 0;
 }
@@ -57,15 +57,15 @@ function hasFixedTime(s: QuarterlyState): boolean {
  * student has looked at it — tracked by them having touched anything in setup,
  * which `sleepConfirmed` records.
  */
-function hasSleep(s: QuarterlyState): boolean {
+function hasSleep(s: HeronState): boolean {
   return s.sleepConfirmed === true;
 }
 
-function hasCalendars(s: QuarterlyState): boolean {
+function hasCalendars(s: HeronState): boolean {
   return s.courses.length > 0 || s.events.some((e) => e.id.startsWith('imp-'));
 }
 
-export function steps(state: QuarterlyState): Step[] {
+export function steps(state: HeronState): Step[] {
   const skipped: SkippedSteps = state.skippedSteps ?? {};
 
   const build = (
@@ -105,7 +105,7 @@ export function steps(state: QuarterlyState): Step[] {
 }
 
 /** A step still waiting on an answer, in either direction. */
-export function unresolved(state: QuarterlyState): Step[] {
+export function unresolved(state: HeronState): Step[] {
   return steps(state).filter((s) => s.state === 'todo');
 }
 
@@ -117,14 +117,14 @@ export function unresolved(state: QuarterlyState): Step[] {
  * required would block every student who signs up before their quarter is
  * published, which in August is all of them.
  */
-export function isLive(state: QuarterlyState): boolean {
+export function isLive(state: HeronState): boolean {
   const all = steps(state);
   const requiredDone = all.filter((s) => s.required).every((s) => s.state !== 'todo');
   return requiredDone && hasWork(state);
 }
 
 /** 0–1, for a progress indicator that reflects required work only. */
-export function progress(state: QuarterlyState): number {
+export function progress(state: HeronState): number {
   const required = steps(state).filter((s) => s.required);
   const resolved = required.filter((s) => s.state !== 'todo').length;
   return required.length === 0 ? 1 : resolved / required.length;
@@ -137,7 +137,7 @@ export function progress(state: QuarterlyState): number {
  * should not be met with three banners; the app asks about the most valuable
  * one and lets the rest go.
  */
-export function nextPrompt(state: QuarterlyState): Step | null {
+export function nextPrompt(state: HeronState): Step | null {
   if (isLive(state)) return null;
   const todo = unresolved(state);
   // Required first, then in declared order — which is roughly value order.
@@ -161,10 +161,10 @@ export function nextPrompt(state: QuarterlyState): Step | null {
  * here rather than at each call site.
  */
 export function applySleepHours(
-  state: QuarterlyState,
+  state: HeronState,
   wakeMin: number,
   bedMin: number,
-): QuarterlyState {
+): HeronState {
   const busy = state.availability.busy.filter((b) => b.kind !== 'sleep');
   for (let day = 0; day < 7; day++) {
     busy.push({ id: `sleep-${day}`, day, startMin: bedMin, endMin: wakeMin, label: 'Sleep', kind: 'sleep' });

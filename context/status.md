@@ -141,39 +141,9 @@ and has not been done.
   guided alternative; `/setup` is now only reachable from the nav and from
   individual setup prompts. Two of the three should survive to launch and it is
   undecided which. **This one needs Brydon**, it is a product call.
-- **The name, reopened and parked again on 2026-08-29.** Heron was chosen on a
-  collision-first search and is still the standing recommendation; see
-  `decisions.md` for what was checked and why Cusp, Cairn, Pika, Bower, Nuthatch
-  and Tortoise all lost. Brydon wants to keep thinking, so nothing is bought and
-  nothing is renamed.
-
-  **The deadline on this is Sept 30, not the launch date in general.** Renaming
-  is free today because nothing is branded and nobody has installed anything. It
-  stops being free the moment friends onboard, because the name is then on their
-  home screens and in every sign-in email, and changing it mid-beta puts a
-  rebrand in front of the only users there are, while retention is being read.
-
-## Next, in order
-
-1. **Get one notification onto a real phone.** The pipeline returns 200 with
-   zero subscriptions; enabling the toggle on one device is the last unproven
-   step. `select status_code from net._http_response order by created desc` is
-   the check that matters, because `cron.job_run_details` says `succeeded` even
-   when the app rejects the call.
-2. **Confirm the sync loop by hand.** The drag is done; the conflict path
-   still has not been exercised on two real devices.
-3. **Syllabus parsing, or cut the claim.** The competitive table says Quarterly
-   knows what to study and it does not. Decide by Sept 1 rather than carrying an
-   untrue claim into recruiting.
-4. **What a phone shows instead of a seven-day grid.** The week renders 14
-   columns at 88px and a student sees three. Either the phone goes day-first
-   with the grid on larger screens, or each day becomes a density bar rather
-   than a readable column. **This one needs Brydon**, it is a product call.
-   Measurements and the rest of the design read are in the 29 Aug artifact,
-   "Quarterly at arm's length".
-
-## Blocked on Brydon
-
+- **The name is Heron and the rename is done**, as of 2026-09-05. Code, copy,
+  metadata and manifest all say Heron. Four storage identifiers still say
+  `quarterly` on purpose and are commented as such.
 - **Register `heron.study`, then verify it in Resend.** The
   shared `onboarding@resend.dev` only delivers to Brydon's own address, so no
   student can sign in until a real domain is verified. The name is no longer
@@ -181,8 +151,11 @@ and has not been done.
 - **Confirm the sync loop** on two devices. The drag is confirmed.
 - **A decision on the three doors** into configuration.
 - **What the phone shows instead of a seven-day grid.** See Next, item 5.
-- **The name.** Heron is the standing recommendation and Brydon is still
-  thinking. Free to change until students onboard on Sept 30.
+- **A domain for Heron.** `heron.com`, `.app`, `.dev` and `.now` are all taken,
+  verified. `heron.io`, `.me`, `.sh`, `.today` and `.study` could not be checked
+  from here: rdap.org returns 404 for known-registered domains in those TLDs,
+  which is the exact trap that produced a wrong answer on 2026-08-28. **Check at
+  a registrar.** `heronplan.com` and `heronweek.com` are free and verified.
 - **Whether paid testers are tagged separately.** Paying people to open the app
   measures the payment, not the product, so they must not pollute the retention
   cohort.

@@ -69,12 +69,12 @@ const daysToLaunch = Math.round((Date.UTC(2026, 8, 30) - Date.parse(today)) / 86
 
 // Written to the reader — a Claude picking this up in a Cowork chat — so the
 // voice stays consistent throughout. Brydon pastes it; it isn't him speaking.
-const out = `# Quarterly — project brief
+const out = `# Heron — project brief
 
 *Generated ${today} from the project's \`context/\` files by \`npm run handoff\`.
 Don't edit this by hand; edit the source files and regenerate.*
 
-This is the standing context for Quarterly. It covers the person building it,
+This is the standing context for Heron. It covers the person building it,
 what's being built, where it stands, and what has already been decided — so a
 conversation can start from here instead of from scratch.
 ${daysToLaunch > 0 ? `\n**${daysToLaunch} days to launch** (September 30 2026).` : ''}

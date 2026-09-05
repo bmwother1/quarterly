@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Quarterly — Canvas feed reader
+ * Heron — Canvas feed reader
  * ------------------------------------------------------------------
  * Reads a Canvas calendar (iCal) feed and prints your real deadlines,
  * grouped by course and by week.
@@ -212,7 +212,7 @@ async function main() {
 
   if (!src) {
     console.log(`
-${C.b('Quarterly — Canvas feed reader')}
+${C.b('Heron — Canvas feed reader')}
 
   node read-feed.js "<your Canvas calendar feed URL>"
   node read-feed.js sample-feed.ics

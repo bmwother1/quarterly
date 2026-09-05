@@ -2,7 +2,7 @@
 
 import { useEffect, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
-import { quarterlyStore } from '@/lib/store';
+import { heronStore } from '@/lib/store';
 import { hasContent } from '@/lib/sync-rule';
 
 /**
@@ -29,11 +29,11 @@ export function EntryRouter({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   const state = useSyncExternalStore(
-    quarterlyStore.subscribe,
-    quarterlyStore.getSnapshot,
-    quarterlyStore.getServerSnapshot,
+    heronStore.subscribe,
+    heronStore.getSnapshot,
+    heronStore.getServerSnapshot,
   );
-  const hydrated = state !== quarterlyStore.getServerSnapshot();
+  const hydrated = state !== heronStore.getServerSnapshot();
 
   // Same test the sync uses, deliberately shared. It had drifted: this one
   // ignored `availability`, so a student who set up classes and shifts and

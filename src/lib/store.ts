@@ -17,7 +17,7 @@ import {
 } from './categories.ts';
 import { defaultAvailability } from './schedule/slots.ts';
 
-export interface QuarterlyState {
+export interface HeronState {
   version: number;
   courses: Course[];
   assignments: Assignment[];
@@ -83,6 +83,14 @@ export interface QuarterlyState {
    */
 }
 
+/**
+ * Deliberately still says `quarterly`, and must stay that way.
+ *
+ * The product was renamed to Heron on 2026-09-05. This string is not the
+ * product's name, it is where every existing install's week is kept. Renaming
+ * it to match would read as tidying and would silently empty the calendar of
+ * everyone already using this, including Brydon.
+ */
 const KEY = 'quarterly.state.v1';
 
 /**
@@ -96,10 +104,10 @@ const KEY = 'quarterly.state.v1';
  * which is worth more, because the next mistake in that function will be one
  * nobody predicted either.
  */
-const RESCUE = 'quarterly.rescue.v1';
+const RESCUE = 'heron.rescue.v1';
 const VERSION = 2;
 
-export function emptyState(): QuarterlyState {
+export function emptyState(): HeronState {
   return {
     version: VERSION,
     courses: [],
@@ -134,17 +142,17 @@ export function emptyState(): QuarterlyState {
  */
 
 /** A single frozen instance, so the server snapshot is always the same reference. */
-const SERVER_SNAPSHOT: QuarterlyState = Object.freeze(emptyState()) as QuarterlyState;
+const SERVER_SNAPSHOT: HeronState = Object.freeze(emptyState()) as HeronState;
 
-let cache: QuarterlyState | null = null;
+let cache: HeronState | null = null;
 const listeners = new Set<() => void>();
 
-function read(): QuarterlyState {
+function read(): HeronState {
   if (typeof window === 'undefined') return SERVER_SNAPSHOT;
   try {
     const raw = window.localStorage.getItem(KEY);
     if (!raw) return emptyState();
-    const parsed = JSON.parse(raw) as Partial<QuarterlyState>;
+    const parsed = JSON.parse(raw) as Partial<HeronState>;
     // Merge over a fresh empty state so a blob written by an older build can
     // never leave a field undefined and crash a render.
     return upgrade({ ...emptyState(), ...parsed });
@@ -167,7 +175,7 @@ function read(): QuarterlyState {
  * preserve the exact meaninglessness this replaced. They get mapped from what
  * the record actually says it is, and old `color` fields are dropped.
  */
-function upgrade(state: QuarterlyState): QuarterlyState {
+function upgrade(state: HeronState): HeronState {
   if (state.version === VERSION) return state;
 
   // Drops the v1 `color` field. Kept as a helper rather than inlined because
@@ -211,7 +219,7 @@ function upgrade(state: QuarterlyState): QuarterlyState {
 
 const range = (n: number) => Array.from({ length: n }, (_, i) => i);
 
-export const quarterlyStore = {
+export const heronStore = {
   subscribe(listener: () => void): () => void {
     listeners.add(listener);
     // Another tab writing to localStorage is a real update, not a stale one.
@@ -228,12 +236,12 @@ export const quarterlyStore = {
     };
   },
 
-  getSnapshot(): QuarterlyState {
+  getSnapshot(): HeronState {
     if (cache === null) cache = read();
     return cache;
   },
 
-  getServerSnapshot(): QuarterlyState {
+  getServerSnapshot(): HeronState {
     return SERVER_SNAPSHOT;
   },
 
@@ -243,7 +251,7 @@ export const quarterlyStore = {
    * true they would mark the device dirty on every sync and it would never stop
    * pushing.
    */
-  set(next: QuarterlyState, opts: { touch?: boolean } = {}): void {
+  set(next: HeronState, opts: { touch?: boolean } = {}): void {
     const touch = opts.touch !== false;
     if (touch) next = { ...next, lastModifiedAt: new Date().toISOString() };
     cache = next;
@@ -279,12 +287,12 @@ export const quarterlyStore = {
   },
 
   /** What is in the rescue slot, if anything. */
-  stashed(): { at: string; state: QuarterlyState } | null {
+  stashed(): { at: string; state: HeronState } | null {
     if (typeof window === 'undefined') return null;
     try {
       const raw = window.localStorage.getItem(RESCUE);
       if (!raw) return null;
-      const parsed = JSON.parse(raw) as { at: string; state: Partial<QuarterlyState> };
+      const parsed = JSON.parse(raw) as { at: string; state: Partial<HeronState> };
       return { at: parsed.at, state: { ...emptyState(), ...parsed.state, version: VERSION } };
     } catch {
       return null;

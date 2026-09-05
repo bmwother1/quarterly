@@ -3,7 +3,7 @@ import { categoryForCommitment, colorVar, nextShade, takenShades } from '@/lib/c
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useQuarterly } from '@/hooks/use-quarterly';
+import { useHeron } from '@/hooks/use-heron';
 import { DEFAULT_TZ } from '@/lib/time';
 import type { BusyBlock, Commitment, CommitmentCategory, EnergyPattern } from '@/lib/types';
 import { CATEGORY_DEMAND } from '@/lib/schedule/score';
@@ -26,7 +26,7 @@ export default function SetupPage() {
   const {
     state, hydrated, updateAvailability, updateCommitments, replan, setSleepHours,
     removeCommitment, undo, undoLabel, dismissUndo,
-  } = useQuarterly(TZ);
+  } = useHeron(TZ);
   const router = useRouter();
   const [saved, setSaved] = useState<string | null>(null);
   const av = state.availability;

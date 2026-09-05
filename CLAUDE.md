@@ -1,4 +1,4 @@
-# Quarterly
+# Heron
 
 A free study scheduler for university students. Reads Canvas deadlines, learns
 when the student actually has time, plans a week of study blocks, and rebuilds it

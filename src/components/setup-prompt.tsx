@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { isLive, nextPrompt, progress, type StepId } from '@/lib/onboarding';
-import type { QuarterlyState } from '@/lib/store';
+import type { HeronState } from '@/lib/store';
 
 /**
  * The one setup prompt a student sees, or nothing at all.
@@ -35,7 +35,7 @@ const RESOLVE: Record<StepId, { href: string; cta: string }> = {
 export function SetupPrompt({
   state, skipStep, confirmSleep, markLiveIfReady, ackLive,
 }: {
-  state: QuarterlyState;
+  state: HeronState;
   skipStep: (id: StepId) => void;
   confirmSleep: () => void;
   markLiveIfReady: () => void;

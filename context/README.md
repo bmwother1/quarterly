@@ -9,7 +9,7 @@ what the other already worked out.
 | File | What's in it | Changes |
 |---|---|---|
 | `founder.md` | Who Brydon is, what he can build, how he wants to work | Rarely |
-| `product.md` | What Quarterly is, who it's for, why it can win | Rarely |
+| `product.md` | What Heron is, who it's for, why it can win | Rarely |
 | `decisions.md` | Every real decision, why, and what was rejected | Append |
 | `learned.md` | Evidence — from research, from building, from students | Append |
 | `status.md` | What's shipped, what's next, what's blocked | Every session |

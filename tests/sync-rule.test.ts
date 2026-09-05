@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { emptyState, type QuarterlyState } from '../src/lib/store.ts';
+import { emptyState, type HeronState } from '../src/lib/store.ts';
 import { afterPull, afterPush, decideDirection, hasContent, type RemoteMeta } from '../src/lib/sync-rule.ts';
 import type { Commitment } from '../src/lib/types.ts';
 
@@ -15,7 +15,7 @@ function commitment(): Commitment {
 }
 
 /** A device with a real week on it. */
-function withWork(lastSyncedAt: string | null = null, lastModifiedAt: string | null = null): QuarterlyState {
+function withWork(lastSyncedAt: string | null = null, lastModifiedAt: string | null = null): HeronState {
   const s = emptyState();
   s.commitments = [commitment()];
   s.lastSyncedAt = lastSyncedAt;
@@ -78,7 +78,7 @@ describe('which copy of a week wins', () => {
   });
 
   test('a week built offline is not thrown away on first sign-in', () => {
-    // This was a silent data-loss path. A student used Quarterly signed out on
+    // This was a silent data-loss path. A student used Heron signed out on
     // their phone for a week, then signed in to an account they had already
     // used elsewhere. `lastSyncedAt` was null, which parses to 0, so the server
     // always looked newer and the phone's week vanished with nothing said.
@@ -145,7 +145,7 @@ describe('what a sync leaves behind', () => {
 
 describe('a work schedule counts as work', () => {
   /** A device where the student set up a timetable and nothing else. */
-  function timetableOnly(lastSyncedAt: string | null, lastModifiedAt: string | null): QuarterlyState {
+  function timetableOnly(lastSyncedAt: string | null, lastModifiedAt: string | null): HeronState {
     const s = emptyState();
     s.availability = {
       ...s.availability,

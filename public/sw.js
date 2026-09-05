@@ -1,5 +1,5 @@
 /**
- * Quarterly service worker.
+ * Heron service worker.
  *
  * The app already keeps everything in localStorage, so the only reason it fails
  * without a signal is that the page itself can't load. This fixes that, and it
@@ -12,6 +12,8 @@
  */
 
 const VERSION = 'v1';
+// Cache names, not the product name. Changing them orphans the caches every
+// installed app is already holding, for no gain. See src/lib/store.ts.
 const SHELL = `quarterly-shell-${VERSION}`;
 const ASSETS = `quarterly-assets-${VERSION}`;
 
@@ -34,7 +36,7 @@ self.addEventListener('activate', (event) => {
     caches.keys()
       .then((keys) => Promise.all(
         keys
-          .filter((k) => k.startsWith('quarterly-') && !k.endsWith(VERSION))
+          .filter((k) => k.startsWith('heron-') && !k.endsWith(VERSION))
           .map((k) => caches.delete(k)),
       ))
       .then(() => self.clients.claim()),
@@ -101,8 +103,8 @@ self.addEventListener('push', (event) => {
     notice = null;
   }
 
-  const title = notice?.title || 'Quarterly';
-  const body = notice?.body || 'Open Quarterly to see your week.';
+  const title = notice?.title || 'Heron';
+  const body = notice?.body || 'Open Heron to see your week.';
   const href = notice?.href || '/week';
 
   event.waitUntil(
@@ -112,7 +114,7 @@ self.addEventListener('push', (event) => {
       badge: '/icon',
       // One notification at a time. A stack of five nudges on a lock screen is
       // how an app gets muted, and the newest is always the useful one.
-      tag: 'quarterly-notice',
+      tag: 'heron-notice',
       renotify: true,
       data: { href },
     }),
@@ -122,7 +124,7 @@ self.addEventListener('push', (event) => {
 /**
  * Tapping it.
  *
- * Focuses an open Quarterly tab and navigates it rather than opening a second
+ * Focuses an open Heron tab and navigates it rather than opening a second
  * one. A student who taps three days running should not end up with three tabs.
  */
 self.addEventListener('notificationclick', (event) => {

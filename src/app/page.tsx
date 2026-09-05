@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { EntryRouter } from '@/components/entry-router';
 
 export const metadata = {
-  title: 'Quarterly',
+  title: 'Heron',
   description: 'Your week, planned around the life you actually have. Free for students.',
 };
 
@@ -25,7 +25,7 @@ export default function Landing() {
         <span className="text-[var(--accent)]">falling behind</span>.
       </h1>
       <p className="rise mt-5 text-lg leading-relaxed text-[var(--muted)]">
-        Every planner works until the week goes wrong. Quarterly is built for the Wednesday when
+        Every planner works until the week goes wrong. Heron is built for the Wednesday when
         it does: mark what you actually did, and it rebuilds the rest around what&rsquo;s left.
         Free for students.
       </p>
@@ -61,7 +61,7 @@ export default function Landing() {
         </Item>
 
         <Item title="It plans the hours, not just the list">
-          A to-do list tells you what&rsquo;s due. Quarterly works out when each piece actually
+          A to-do list tells you what&rsquo;s due. Heron works out when each piece actually
           happens, in sessions long enough to be worth sitting down for, around the time you
           already gave to class, work and sleep.
         </Item>
@@ -73,7 +73,7 @@ export default function Landing() {
         </Item>
 
         <Item title="It tells you when the week doesn&rsquo;t fit">
-          Most planners quietly overbook you and let Thursday find out. Quarterly shows you what
+          Most planners quietly overbook you and let Thursday find out. Heron shows you what
           it couldn&rsquo;t fit and why, while you can still do something about it.
         </Item>
       </section>

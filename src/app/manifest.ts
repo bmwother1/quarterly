@@ -9,8 +9,8 @@ import type { MetadataRoute } from 'next';
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Quarterly',
-    short_name: 'Quarterly',
+    name: 'Heron',
+    short_name: 'Heron',
     description: 'Your week, planned around the life you actually have.',
     // '/' decides: the week if there is one, the landing page if not. Pointing
     // this straight at /week got it wrong for anyone who installed before

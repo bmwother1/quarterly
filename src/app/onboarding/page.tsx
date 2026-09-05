@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useQuarterly } from '@/hooks/use-quarterly';
+import { useHeron } from '@/hooks/use-heron';
 import { OnboardingShell, Continue } from '@/components/onboarding-shell';
 import { categoryForCommitment, nextShade, takenShades } from '@/lib/categories';
 import { CATEGORY_DEMAND } from '@/lib/schedule/score';
@@ -46,7 +46,7 @@ export default function Onboarding() {
   const {
     state, hydrated, updateCommitments, updateAvailability,
     confirmSleep, setSleepHours, skipStep, markLiveIfReady, replan,
-  } = useQuarterly(TZ);
+  } = useHeron(TZ);
   const router = useRouter();
 
   const [step, setStep] = useState(1);
@@ -175,7 +175,7 @@ export default function Onboarding() {
       <OnboardingShell
         stepNumber={1} stepCount={STEPS}
         title="What do you want to make time for?"
-        blurb="One thing is enough. Quarterly works out when it happens, around everything else in your week."
+        blurb="One thing is enough. Heron works out when it happens, around everything else in your week."
         onSkip={() => { skipStep('work'); setStep(2); }}
         skipLabel="Skip for now"
         footer={<Continue onClick={addCommitment} disabled={!title.trim()} />}

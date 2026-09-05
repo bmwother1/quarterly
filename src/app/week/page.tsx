@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useQuarterly } from '@/hooks/use-quarterly';
+import { useHeron } from '@/hooks/use-heron';
 import { BlockCard } from '@/components/block-card';
 import { WeekGrid } from '@/components/week-grid';
 import { MonthGrid } from '@/components/month-grid';
@@ -25,7 +25,7 @@ export default function WeekPage() {
     state, hydrated, replan, complete, drop, moveBlock,
     addEvent, updateEvent, removeEvent, addTask, undo, undoLabel, dismissUndo,
     skipStep, confirmSleep, markLiveIfReady, ackLive, startFresh,
-  } = useQuarterly(TZ);
+  } = useHeron(TZ);
   // Fixed at mount so every render agrees on "now" — reading the clock during
   // render is impure and drifts between the server and client passes.
   const [now] = useState(() => new Date());

@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState, useSyncExternalStore } from 'react';
 import type { Assignment, Availability, Commitment, FixedEvent, WorkKind } from '@/lib/types';
-import { quarterlyStore, type QuarterlyState } from '@/lib/store';
+import { heronStore, type HeronState } from '@/lib/store';
 import { planWeek } from '@/lib/schedule/plan';
 import { applyCompletion, applyLearnedEstimates, dropRemaining, resetWeeklyTallies, type Completion } from '@/lib/schedule/complete';
 import {
@@ -19,14 +19,14 @@ import { logEvent } from '@/supabase/events';
  * anything that would differ between them can wait a beat rather than causing a
  * mismatch. Everything after that reads real stored state directly.
  */
-export function useQuarterly(tz: string) {
+export function useHeron(tz: string) {
   const state = useSyncExternalStore(
-    quarterlyStore.subscribe,
-    quarterlyStore.getSnapshot,
-    quarterlyStore.getServerSnapshot,
+    heronStore.subscribe,
+    heronStore.getSnapshot,
+    heronStore.getServerSnapshot,
   );
 
-  const hydrated = state !== quarterlyStore.getServerSnapshot();
+  const hydrated = state !== heronStore.getServerSnapshot();
 
   /**
    * One step of undo, for the actions that destroy something.
@@ -36,19 +36,19 @@ export function useQuarterly(tz: string) {
    * about their week. A single step covers the realistic case (you just tapped
    * the wrong thing) without pretending to be a document editor.
    */
-  const undoRef = useRef<{ state: QuarterlyState; label: string } | null>(null);
+  const undoRef = useRef<{ state: HeronState; label: string } | null>(null);
   const [undoLabel, setUndoLabel] = useState<string | null>(null);
 
-  const mutate = useCallback((fn: (prev: QuarterlyState) => QuarterlyState) => {
-    quarterlyStore.set(fn(quarterlyStore.getSnapshot()));
+  const mutate = useCallback((fn: (prev: HeronState) => HeronState) => {
+    heronStore.set(fn(heronStore.getSnapshot()));
   }, []);
 
   /** Mutate, remembering the state before it so it can be put back. */
-  const mutateUndoable = useCallback((label: string, fn: (prev: QuarterlyState) => QuarterlyState) => {
-    const before = quarterlyStore.getSnapshot();
+  const mutateUndoable = useCallback((label: string, fn: (prev: HeronState) => HeronState) => {
+    const before = heronStore.getSnapshot();
     undoRef.current = { state: before, label };
     setUndoLabel(label);
-    quarterlyStore.set(fn(before));
+    heronStore.set(fn(before));
   }, []);
 
   const undo = useCallback(() => {
@@ -56,7 +56,7 @@ export function useQuarterly(tz: string) {
     if (!held) return;
     undoRef.current = null;
     setUndoLabel(null);
-    quarterlyStore.set(held.state);
+    heronStore.set(held.state);
   }, []);
 
   const dismissUndo = useCallback(() => {
@@ -78,7 +78,7 @@ export function useQuarterly(tz: string) {
    * either way goes through exactly the same path — there is no "quick" version
    * that skips a constraint.
    */
-  const planInto = useCallback((prev: QuarterlyState, from: Date): QuarterlyState => {
+  const planInto = useCallback((prev: HeronState, from: Date): HeronState => {
     const commitments = resetWeeklyTallies(prev.commitments, prev.lastPlannedAt, from, tz);
     const assignments = applyLearnedEstimates(prev.assignments);
     const settled = prev.blocks.filter((b) => b.status !== 'planned' || b.pinned);
@@ -243,11 +243,11 @@ export function useQuarterly(tz: string) {
    */
   const addEvent = useCallback((e: Omit<FixedEvent, 'id'>): string | null => {
     const event: FixedEvent = { ...e, id: `e-${Date.now()}` };
-    const before = quarterlyStore.getSnapshot();
+    const before = heronStore.getSnapshot();
     const clashes = collisionsWith(before.blocks, [event]);
 
     mutate((prev) => {
-      const withEvent: QuarterlyState = {
+      const withEvent: HeronState = {
         ...prev,
         events: [...prev.events, event].sort((a, b) => a.start.localeCompare(b.start)),
         // A pinned block still loses to an appointment — an event has a real
@@ -263,13 +263,13 @@ export function useQuarterly(tz: string) {
 
   /** Change an existing one-off. Editing beats delete-and-retype for a typo. */
   const updateEvent = useCallback((id: string, patch: Partial<Omit<FixedEvent, 'id'>>): string | null => {
-    const before = quarterlyStore.getSnapshot();
+    const before = heronStore.getSnapshot();
     const moved = before.events.find((e) => e.id === id);
     const next = moved ? { ...moved, ...patch } : null;
     const clashes = next ? collisionsWith(before.blocks, [next]) : [];
 
     mutate((prev) => {
-      const updated: QuarterlyState = {
+      const updated: HeronState = {
         ...prev,
         events: prev.events
           .map((e) => (e.id === id ? { ...e, ...patch } : e))
@@ -330,8 +330,8 @@ export function useQuarterly(tz: string) {
   }, [mutateUndoable]);
 
   /** Replace everything, from an imported backup. */
-  const replaceAll = useCallback((next: QuarterlyState) => {
-    quarterlyStore.set(next);
+  const replaceAll = useCallback((next: HeronState) => {
+    heronStore.set(next);
   }, []);
 
   /**
@@ -398,7 +398,7 @@ export function useQuarterly(tz: string) {
     mutate((prev) => (prev.liveNoticeSeen ? prev : { ...prev, liveNoticeSeen: true }));
   }, [mutate]);
 
-  const reset = useCallback(() => quarterlyStore.clear(), []);
+  const reset = useCallback(() => heronStore.clear(), []);
 
   return {
     state, hydrated, mutate, replan, complete, drop, moveBlock, replaceAll,

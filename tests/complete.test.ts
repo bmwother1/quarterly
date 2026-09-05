@@ -328,7 +328,7 @@ describe('backup', () => {
     // written can't come back undefined and crash a render.
     const { fromBackup } = await import('../src/lib/backup.ts');
     const old = JSON.stringify({
-      format: 'quarterly-backup', version: 1, exportedAt: '2026-08-01T00:00:00.000Z',
+      format: 'heron-backup', version: 1, exportedAt: '2026-08-01T00:00:00.000Z',
       state: { courses: [], assignments: [], commitments: [], blocks: [], availability: { busy: [] } },
     });
     const r = fromBackup(old);
@@ -348,7 +348,7 @@ describe('backup', () => {
   test('a damaged backup is caught before it reaches a render', async () => {
     const { fromBackup } = await import('../src/lib/backup.ts');
     const damaged = JSON.stringify({
-      format: 'quarterly-backup', version: 1,
+      format: 'heron-backup', version: 1,
       state: { commitments: 'not-a-list', availability: { busy: [] } },
     });
     const r = fromBackup(damaged);

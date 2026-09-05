@@ -10,19 +10,19 @@
  * what sync will do — just manually.
  */
 
-import type { QuarterlyState } from './store.ts';
+import type { HeronState } from './store.ts';
 import { emptyState } from './store.ts';
 
 export interface BackupFile {
-  format: 'quarterly-backup';
+  format: 'heron-backup';
   version: number;
   exportedAt: string;
-  state: QuarterlyState;
+  state: HeronState;
 }
 
-export function toBackup(state: QuarterlyState): BackupFile {
+export function toBackup(state: HeronState): BackupFile {
   return {
-    format: 'quarterly-backup',
+    format: 'heron-backup',
     version: 1,
     exportedAt: new Date().toISOString(),
     state,
@@ -30,11 +30,11 @@ export function toBackup(state: QuarterlyState): BackupFile {
 }
 
 export function backupFilename(now = new Date()): string {
-  return `quarterly-${now.toISOString().slice(0, 10)}.json`;
+  return `heron-${now.toISOString().slice(0, 10)}.json`;
 }
 
 export type ImportResult =
-  | { ok: true; state: QuarterlyState; summary: string }
+  | { ok: true; state: HeronState; summary: string }
   | { ok: false; error: string };
 
 /**
@@ -59,14 +59,14 @@ export function fromBackup(raw: string): ImportResult {
   }
 
   const file = parsed as Partial<BackupFile>;
-  if (file.format !== 'quarterly-backup') {
-    return { ok: false, error: 'That looks like a different kind of file. Expected a Quarterly backup.' };
+  if (file.format !== 'heron-backup') {
+    return { ok: false, error: 'That looks like a different kind of file. Expected a Heron backup.' };
   }
   if (typeof file.state !== 'object' || file.state === null) {
     return { ok: false, error: 'That backup is missing its contents.' };
   }
 
-  const state: QuarterlyState = { ...emptyState(), ...file.state };
+  const state: HeronState = { ...emptyState(), ...file.state };
 
   // Anything that should be a list must be one, or a render downstream throws.
   for (const key of ['courses', 'assignments', 'commitments', 'events', 'blocks', 'unscheduled'] as const) {

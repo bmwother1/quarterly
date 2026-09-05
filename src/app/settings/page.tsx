@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useQuarterly } from '@/hooks/use-quarterly';
+import { useHeron } from '@/hooks/use-heron';
 import { ThemePicker } from '@/components/theme-provider';
 import { Insights } from '@/components/insights';
 import { BackupControls } from '@/components/backup-controls';
@@ -21,7 +21,7 @@ const TZ = DEFAULT_TZ;
  * removes most of the reading.
  */
 export default function Settings() {
-  const { state, hydrated, updateAvailability, replaceAll, reset, reopenSetup } = useQuarterly(TZ);
+  const { state, hydrated, updateAvailability, replaceAll, reset, reopenSetup } = useHeron(TZ);
   const [saved, setSaved] = useState<string | null>(null);
 
   function flash(text: string) {

@@ -1,5 +1,5 @@
 /**
- * Quarterly — domain types
+ * Heron — domain types
  *
  * Everything the scheduler touches is defined here. Dates are ISO strings at
  * every boundary (storage, API, props) and only become `Date` objects inside
@@ -165,7 +165,7 @@ export interface Course {
  * Something that recurs on a weekly quota rather than having a deadline.
  *
  * Runs five times a week. Six hours on a side project. Gym, practice, reading.
- * This is the primitive that lets Quarterly work outside a quarter, when there
+ * This is the primitive that lets Heron work outside a quarter, when there
  * is no Canvas feed and no due dates, and it's the only genuinely new concept
  * needed for that: everything else was already a busy block or an assignment.
  *

@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import Link from 'next/link';
-import { useQuarterly } from '@/hooks/use-quarterly';
+import { useHeron } from '@/hooks/use-heron';
 import { categoryForCommitment, nextShade, takenShades } from '@/lib/categories';
 import { CATEGORY_DEMAND } from '@/lib/schedule/score';
 import { DEFAULT_TZ } from '@/lib/time';
@@ -35,7 +35,7 @@ const EXAMPLES: Array<{ title: string; category: CommitmentCategory; per: number
 
 
 export default function Start() {
-  const { state, hydrated, updateCommitments, replan } = useQuarterly(TZ);
+  const { state, hydrated, updateCommitments, replan } = useHeron(TZ);
   const router = useRouter();
 
   const [title, setTitle] = useState('');
@@ -92,7 +92,7 @@ export default function Start() {
         What do you want to make time for?
       </h1>
       <p className="mt-3 text-[var(--muted)]">
-        One thing is enough to start. Quarterly works out when it happens, around everything else
+        One thing is enough to start. Heron works out when it happens, around everything else
         in your week.
       </p>
 

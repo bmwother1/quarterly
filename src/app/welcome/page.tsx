@@ -7,7 +7,7 @@ import { WeekSketch, PLANNED, MISSED, REBUILT } from '@/components/week-sketch';
 /**
  * Three screens, before anything is asked for.
  *
- * **Why this exists at all.** Told about Quarterly, people say "doesn't Outlook
+ * **Why this exists at all.** Told about Heron, people say "doesn't Outlook
  * do this?" and "isn't that what Monday does?". That is not a copywriting
  * failure; the landing page already leads with the right sentence. It is that a
  * description of a scheduler and a description of a calendar use the same words,

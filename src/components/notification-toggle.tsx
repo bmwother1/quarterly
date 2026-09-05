@@ -45,7 +45,7 @@ export function NotificationToggle() {
   if (state === 'needs-install') {
     return (
       <div className="space-y-1.5 text-sm text-[var(--muted)]">
-        <p className="font-medium text-[var(--ink)]">Add Quarterly to your home screen first.</p>
+        <p className="font-medium text-[var(--ink)]">Add Heron to your home screen first.</p>
         <p>
           On iPhone, notifications only work from the installed app, not from a Safari tab.
           Tap Share, then <strong className="text-[var(--ink)]">Add to Home Screen</strong>, and

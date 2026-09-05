@@ -11,6 +11,12 @@ record of what was tried and abandoned is worth more than a tidy file.
 
 ## 2026-08-28 · The name is Heron, and the search had to change shape first
 
+**Executed 2026-09-05.** Code, copy, metadata and manifest renamed in one pass.
+Four storage identifiers deliberately still say `quarterly` and are commented as
+such: the localStorage key, the Supabase auth storage key, and the two service
+worker cache names. Renaming those would read as tidying and would empty the
+calendar of, or sign out, everyone already using it.
+
 **Decided:** the product is renamed **Heron**, on `heron.study`. `Quarterly`
 encoded the quarter system for a product that stopped being quarter-shaped in
 August.

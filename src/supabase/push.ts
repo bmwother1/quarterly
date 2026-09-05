@@ -90,7 +90,7 @@ export async function enablePush(): Promise<EnableResult> {
   if (state === 'needs-install') {
     return {
       ok: false, state,
-      message: 'On iPhone, add Quarterly to your home screen first. Share, then Add to Home Screen. Notifications only work from there.',
+      message: 'On iPhone, add Heron to your home screen first. Share, then Add to Home Screen. Notifications only work from there.',
     };
   }
   if (state === 'unsupported') {

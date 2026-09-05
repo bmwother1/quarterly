@@ -53,7 +53,7 @@ export function logEvent(kind: EventKind, detail?: Detail): void {
         // who is trying to look at their week, and retrying would risk
         // double-counting the very numbers this exists to keep honest.
         if (error && process.env.NODE_ENV === 'development') {
-          console.warn(`[quarterly] event "${kind}" not recorded:`, error.message);
+          console.warn(`[heron] event "${kind}" not recorded:`, error.message);
         }
       });
   }).catch(() => {});

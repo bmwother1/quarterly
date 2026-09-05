@@ -1,5 +1,5 @@
 /**
- * Turning any calendar feed into things Quarterly understands.
+ * Turning any calendar feed into things Heron understands.
  *
  * Two destinations, decided by where the feed came from:
  *

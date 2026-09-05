@@ -18,7 +18,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
  * with `detectSessionInUrl` handles the whole magic-link round trip on its own.
  * Adding cookie-based session refresh would be machinery serving no request.
  *
- * **Why null is a supported answer.** Quarterly works today with no account at
+ * **Why null is a supported answer.** Heron works today with no account at
  * all, and that has to keep being true. A student who never signs in must get
  * exactly the product they get now. So every caller treats a missing client as
  * "stay local", never as an error, and the app degrades to what it already was.
@@ -49,6 +49,8 @@ export function supabase(): SupabaseClient | null {
       // is the entire reason no callback route is needed.
       detectSessionInUrl: true,
       flowType: 'pkce',
+      // Renaming this signs out everyone currently signed in. It is a storage
+      // key, not the product name, and it stays as it is. See store.ts.
       storageKey: 'quarterly.auth',
     },
   });

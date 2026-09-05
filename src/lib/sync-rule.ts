@@ -1,4 +1,4 @@
-import type { QuarterlyState } from './store.ts';
+import type { HeronState } from './store.ts';
 
 /**
  * Which copy of a student's week wins, when there are two.
@@ -45,14 +45,14 @@ export interface RemoteMeta {
  * so counting them would make every device look non-empty and no first sign-in
  * would ever pull.
  */
-export function hasContent(s: QuarterlyState): boolean {
+export function hasContent(s: HeronState): boolean {
   return s.commitments.length > 0
     || s.assignments.length > 0
     || s.events.length > 0
     || s.availability.busy.some((b) => b.kind !== 'sleep');
 }
 
-export function decideDirection(local: QuarterlyState, remote: RemoteMeta | null): SyncDirection {
+export function decideDirection(local: HeronState, remote: RemoteMeta | null): SyncDirection {
   const seen = local.lastSyncedAt ? Date.parse(local.lastSyncedAt) : 0;
 
   /**
@@ -95,7 +95,7 @@ export function decideDirection(local: QuarterlyState, remote: RemoteMeta | null
  * makes the next change detector fire immediately, and auto-push loops forever
  * against the network until something gives.
  */
-export function afterPush(local: QuarterlyState, at: string): QuarterlyState {
+export function afterPush(local: HeronState, at: string): HeronState {
   return { ...local, lastSyncedAt: at };
 }
 
@@ -109,7 +109,7 @@ export function afterPush(local: QuarterlyState, at: string): QuarterlyState {
  * modification time is what carries across; `at` is only a fallback for a copy
  * written before that field existed.
  */
-export function afterPull(remote: QuarterlyState, at: string): QuarterlyState {
+export function afterPull(remote: HeronState, at: string): HeronState {
   return {
     ...remote,
     lastSyncedAt: at,

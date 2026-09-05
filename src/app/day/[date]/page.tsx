@@ -2,7 +2,7 @@
 
 import { use, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useQuarterly } from '@/hooks/use-quarterly';
+import { useHeron } from '@/hooks/use-heron';
 import { BlockCard } from '@/components/block-card';
 import { DayBar, DayStats } from '@/components/day-bar';
 import { breakdownForDay } from '@/lib/schedule/day';
@@ -20,7 +20,7 @@ const TZ = DEFAULT_TZ;
  */
 export default function DayPage({ params }: { params: Promise<{ date: string }> }) {
   const { date } = use(params);
-  const { state, hydrated, complete, drop } = useQuarterly(TZ);
+  const { state, hydrated, complete, drop } = useHeron(TZ);
   const [now] = useState(() => new Date());
 
   const colorFor = useMemo(() => {

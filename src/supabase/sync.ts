@@ -1,7 +1,7 @@
 'use client';
 
 import { supabase } from './client';
-import { quarterlyStore, type QuarterlyState } from '@/lib/store';
+import { heronStore, type HeronState } from '@/lib/store';
 import { afterPull, afterPush, decideDirection, type SyncDirection } from '@/lib/sync-rule';
 
 /**
@@ -21,7 +21,7 @@ import { afterPull, afterPush, decideDirection, type SyncDirection } from '@/lib
  */
 
 interface RemotePlan {
-  state: QuarterlyState;
+  state: HeronState;
   updated_at: string;
   revision: number;
 }
@@ -44,7 +44,7 @@ export async function push(userId: string): Promise<boolean> {
   const client = supabase();
   if (!client) return false;
 
-  const state = quarterlyStore.getSnapshot();
+  const state = heronStore.getSnapshot();
   const now = new Date().toISOString();
 
   const { error } = await client
@@ -59,7 +59,7 @@ export async function push(userId: string): Promise<boolean> {
   // `touch: false` because recording a sync is not a student editing their
   // week. Left true, every push would mark the device dirty again and it would
   // push forever.
-  quarterlyStore.set(afterPush(quarterlyStore.getSnapshot(), now), { touch: false });
+  heronStore.set(afterPush(heronStore.getSnapshot(), now), { touch: false });
   return true;
 }
 
@@ -70,10 +70,10 @@ export async function pull(userId: string): Promise<boolean> {
   // Everything this device holds, kept before the server copy lands on top.
   // The decision above is meant to be right; this is what makes it survivable
   // when it isn't.
-  quarterlyStore.stash();
+  heronStore.stash();
 
   const at = new Date().toISOString();
-  quarterlyStore.set(afterPull(remote.state, at), { touch: false });
+  heronStore.set(afterPull(remote.state, at), { touch: false });
   return true;
 }
 
@@ -86,7 +86,7 @@ export async function pull(userId: string): Promise<boolean> {
 export async function syncOnSignIn(userId: string): Promise<SyncDirection> {
   const remote = await fetchRemote(userId);
   const decision = decideDirection(
-    quarterlyStore.getSnapshot(),
+    heronStore.getSnapshot(),
     remote ? { updatedAt: remote.updated_at, hasContent: true } : null,
   );
 
@@ -132,11 +132,11 @@ export async function ensureProfile(userId: string): Promise<void> {
 export function startAutoPush(userId: string, quietMs = 2000): () => void {
   let timer: ReturnType<typeof setTimeout> | null = null;
   let stopped = false;
-  let lastPushed: string | null = quarterlyStore.getSnapshot().lastModifiedAt ?? null;
+  let lastPushed: string | null = heronStore.getSnapshot().lastModifiedAt ?? null;
 
-  const unsubscribe = quarterlyStore.subscribe(() => {
+  const unsubscribe = heronStore.subscribe(() => {
     if (stopped) return;
-    const modified = quarterlyStore.getSnapshot().lastModifiedAt ?? null;
+    const modified = heronStore.getSnapshot().lastModifiedAt ?? null;
     // A sync write bumps lastSyncedAt but not lastModifiedAt, so this is what
     // stops the push from retriggering itself forever.
     if (modified === lastPushed) return;
@@ -144,7 +144,7 @@ export function startAutoPush(userId: string, quietMs = 2000): () => void {
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => {
       if (stopped) return;
-      const at = quarterlyStore.getSnapshot().lastModifiedAt ?? null;
+      const at = heronStore.getSnapshot().lastModifiedAt ?? null;
       lastPushed = at;
       void push(userId).catch(() => {
         // Failed pushes are not retried here. The next edit will try again, and

@@ -80,7 +80,7 @@ export function SiteHeader() {
             <span className="h-5 w-1 rounded-sm bg-[var(--accent)]" />
             <span className="h-3.5 w-1 rounded-sm bg-[var(--border-strong)]" />
           </span>
-          Quarterly
+          Heron
         </Link>
 
         {/* Laptops get the links inline; phones get them at the bottom instead. */}
@@ -152,13 +152,13 @@ export function SiteFooter() {
         // Clears the tab bar on a phone so the last row isn't sitting under it.
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 5.5rem)' }}
       >
-        <span>Quarterly · free for students</span>
+        <span>Heron · free for students</span>
         <nav className="flex gap-4">
           <Link href="/privacy" className="underline underline-offset-4 hover:text-[var(--muted)]">
             Privacy
           </Link>
           <a
-            href="https://github.com/bmwother1/quarterly"
+            href="https://github.com/bmwother1/heron"
             className="underline underline-offset-4 hover:text-[var(--muted)]"
             rel="noreferrer"
           >

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
 import { THEMES, DEFAULT_THEME, cssVars } from '@/lib/themes';
 
-const KEY = 'quarterly.theme';
+const KEY = 'heron.theme';
 
 let cache: string | null = null;
 const listeners = new Set<() => void>();

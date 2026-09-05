@@ -17,10 +17,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: { default: "Quarterly", template: "%s · Quarterly" },
+  title: { default: "Heron", template: "%s · Heron" },
   description: "Your week, planned around the life you actually have. Free for students.",
-  applicationName: "Quarterly",
-  appleWebApp: { capable: true, title: "Quarterly", statusBarStyle: "black-translucent" },
+  applicationName: "Heron",
+  appleWebApp: { capable: true, title: "Heron", statusBarStyle: "black-translucent" },
   formatDetection: { telephone: false },
 };
 

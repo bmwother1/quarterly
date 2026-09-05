@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useQuarterly } from '@/hooks/use-quarterly';
+import { useHeron } from '@/hooks/use-heron';
 import { logEvent } from '@/supabase/events';
 import { eventsFromICS } from '@/lib/calendar/import';
 import { looksLikeCalendar } from '@/lib/canvas/ics';
@@ -25,7 +25,7 @@ type Result =
  * to choose here. Fewer decisions is the entire point of a one-stop import.
  */
 export default function ImportPage() {
-  const { state, mutate, replan } = useQuarterly(TZ);
+  const { state, mutate, replan } = useHeron(TZ);
   const [url, setUrl] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<{ error: string; hint?: string } | null>(null);
@@ -287,7 +287,7 @@ export default function ImportPage() {
       <section className="mt-8 rounded-xl border border-[var(--border)] p-4 text-sm text-[var(--muted)]">
         <p className="font-medium text-[var(--ink)]">Treat these links like passwords</p>
         <p className="mt-1">
-          Anyone holding one can read that calendar. Quarterly uses it once to fetch, then forgets
+          Anyone holding one can read that calendar. Heron uses it once to fetch, then forgets
           it — nothing is stored, so refreshing later means pasting again.{' '}
           <Link href="/privacy" className="underline underline-offset-4">The privacy page</Link>{' '}
           spells out exactly what that means.

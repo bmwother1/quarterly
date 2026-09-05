@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import type { QuarterlyState } from '@/lib/store';
+import type { HeronState } from '@/lib/store';
 import { toBackup, backupFilename, fromBackup } from '@/lib/backup';
 
 /**
@@ -14,13 +14,13 @@ import { toBackup, backupFilename, fromBackup } from '@/lib/backup';
 export function BackupControls({
   state, onImport, onMessage,
 }: {
-  state: QuarterlyState;
-  onImport: (next: QuarterlyState) => void;
+  state: HeronState;
+  onImport: (next: HeronState) => void;
   onMessage: (text: string) => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState<{ state: QuarterlyState; summary: string } | null>(null);
+  const [pending, setPending] = useState<{ state: HeronState; summary: string } | null>(null);
 
   function download() {
     const blob = new Blob([JSON.stringify(toBackup(state), null, 2)], { type: 'application/json' });

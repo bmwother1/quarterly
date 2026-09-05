@@ -1,8 +1,8 @@
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'Privacy · Quarterly',
-  description: 'What Quarterly stores, what it does not, and where your data lives.',
+  title: 'Privacy · Heron',
+  description: 'What Heron stores, what it does not, and where your data lives.',
 };
 
 /**
@@ -39,7 +39,7 @@ export default function Privacy() {
       <p className="mt-2 text-sm text-[var(--faint)]">Last updated 24 August 2026</p>
 
       <p className="mt-6 text-[var(--muted)]">
-        Short version: Quarterly works with no account at all, and in that mode your schedule
+        Short version: Heron works with no account at all, and in that mode your schedule
         never leaves your browser. If you make an account, your week and a small usage log are
         stored on our server so they survive a lost phone. You can delete all of it, permanently,
         from Settings.
@@ -174,7 +174,7 @@ export default function Privacy() {
           Email <a href="mailto:bmwother1@gmail.com" className="underline underline-offset-4">
           bmwother1@gmail.com</a>. The code is{' '}
           <a
-            href="https://github.com/bmwother1/quarterly"
+            href="https://github.com/bmwother1/heron"
             className="underline underline-offset-4"
             rel="noreferrer"
           >
