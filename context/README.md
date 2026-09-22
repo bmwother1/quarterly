@@ -15,6 +15,7 @@ what the other already worked out.
 | `status.md` | What's shipped, what's next, what's blocked | Every session |
 | `sessions.md` | One short entry per session, newest first | Every session |
 | `roadmap.md` | What gets built next, and what the retention number decides | Rarely |
+| `growth.md` | The 1000-user bet: channels, weekly targets, gates, what not to do | Rarely |
 | `HANDOFF.md` | Generated. The single file to paste into a Cowork chat | `npm run handoff` |
 
 ## Reading it efficiently
@@ -32,6 +33,7 @@ deliberately short. Everything else is read **on demand**, using this routing:
 | "Why is it built this way?" | `decisions.md` only |
 | "Should we build X?" | `product.md`, `decisions.md` |
 | Pitching, applying, writing copy | `product.md`, `learned.md` |
+| Marketing, launch, users, the bet | `growth.md` |
 | Picking up after a break | `status.md`, `sessions.md` |
 | Starting a Cowork chat | paste `HANDOFF.md` |
 

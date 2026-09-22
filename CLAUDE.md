@@ -22,6 +22,7 @@ when an idea is bad before writing the code.
 | Pitch, application, copy | `context/product.md`, `context/learned.md` |
 | Picking up after a break | `context/status.md`, `context/sessions.md` |
 | "What are we building next?" | `context/roadmap.md` |
+| Marketing, launch, getting users | `context/growth.md` |
 | Who Brydon is | `context/founder.md` |
 
 `context/README.md` explains the system and how to update it. Run `/wrap` at the
