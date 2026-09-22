@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useHeron } from '@/hooks/use-heron';
+import { useNarrow } from '@/hooks/use-narrow';
 import { BlockCard } from '@/components/block-card';
 import { WeekGrid } from '@/components/week-grid';
 import { MonthGrid } from '@/components/month-grid';
@@ -28,7 +29,24 @@ export default function WeekPage() {
   // Fixed at mount so every render agrees on "now" — reading the clock during
   // render is impure and drifts between the server and client passes.
   const [now] = useState(() => new Date());
-  const [view, setView] = useState<'grid' | 'list' | 'month'>('grid');
+  /**
+   * Which lens the week is shown through.
+   *
+   * The calendar is the default on a laptop and the wrong default on a phone.
+   * `week-grid.tsx` sets a minimum width of 92px across fourteen columns, so the
+   * grid is 1288px wide; on a 375px screen that is two and a half visible days
+   * and a sideways scroll to find the rest. The first thing a student sees is
+   * then a fragment of their week, and the drag-to-move interaction is unusable
+   * at that column width.
+   *
+   * `null` means "nobody has chosen", not "grid". Once a student picks a lens
+   * that choice wins at every size, including picking Calendar on a phone,
+   * which is theirs to do. Deriving the fallback instead of storing it is what
+   * keeps rotating a tablet from silently overriding a deliberate choice.
+   */
+  const narrow = useNarrow();
+  const [chosenView, setChosenView] = useState<'grid' | 'list' | 'month' | null>(null);
+  const view = chosenView ?? (narrow ? 'list' : 'grid');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
@@ -274,7 +292,7 @@ export default function WeekPage() {
             {(['grid', 'list', 'month'] as const).map((v) => (
               <button
                 key={v}
-                onClick={() => setView(v)}
+                onClick={() => setChosenView(v)}
                 className={`rounded-full px-3.5 py-1.5 transition-colors ${
                   view === v
                     ? 'bg-[var(--accent)] text-[var(--accent-ink)]'
