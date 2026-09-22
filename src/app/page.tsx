@@ -32,7 +32,7 @@ export default function Landing() {
 
       <div className="rise mt-8 flex flex-col gap-3 sm:flex-row">
         <Link
-          href="/welcome"
+          href="/start"
           className="rounded-xl bg-[var(--accent)] px-5 py-3.5 text-center font-medium text-[var(--accent-ink)] shadow-[var(--shadow-md)] transition-transform active:scale-[0.98]"
         >
           Plan my week
@@ -44,6 +44,12 @@ export default function Landing() {
           Import my calendar
         </Link>
       </div>
+
+      <p className="rise mt-3 text-sm">
+        <Link href="/welcome" className="text-[var(--muted)] underline underline-offset-4 hover:text-[var(--ink)]">
+          Or see how it works first
+        </Link>
+      </p>
 
       <p className="rise mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
         <span className="rounded-full bg-[var(--accent-soft)] px-2.5 py-1 font-medium text-[var(--accent)]">

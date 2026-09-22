@@ -147,7 +147,7 @@ export default function Welcome() {
 
         {last ? (
           <Link
-            href="/onboarding"
+            href="/start"
             className="block w-full rounded-xl bg-[var(--accent)] px-5 py-3.5 text-center font-medium text-[var(--accent-ink)] shadow-[var(--shadow-md)]"
           >
             Get started

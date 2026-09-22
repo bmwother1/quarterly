@@ -159,7 +159,7 @@ export default function Start() {
                     : 'border border-[var(--border)] text-[var(--muted)]'
                 }`}
               >
-                {m < 60 ? `${m} min` : `${m / 60}h${m % 60 ? ' 30' : ''}`}
+                {m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)}h ${m % 60}` : `${m / 60}h`}
               </button>
             ))}
           </div>

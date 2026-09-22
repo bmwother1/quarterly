@@ -19,6 +19,32 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: { default: "Heron", template: "%s · Heron" },
   description: "Your week, planned around the life you actually have. Free for students.",
+  /**
+   * Link previews, which are load-bearing here.
+   *
+   * Distribution is word of mouth: one student texts another a link. Without
+   * these tags iMessage, Instagram DMs and Discord all render heron.study as a
+   * bare blue URL, which reads as spam from a stranger. The preview is the
+   * first impression far more often than the landing page is.
+   *
+   * `metadataBase` has to be absolute or Next emits relative OG URLs, which
+   * most scrapers silently drop.
+   */
+  metadataBase: new URL("https://heron.study"),
+  openGraph: {
+    type: "website",
+    siteName: "Heron",
+    title: "A plan that survives you falling behind",
+    description:
+      "Heron works out when each piece of work actually happens, around class, work and sleep. Free, no account needed.",
+    url: "https://heron.study",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "A plan that survives you falling behind",
+    description:
+      "Heron works out when each piece of work actually happens, around class, work and sleep. Free, no account needed.",
+  },
   applicationName: "Heron",
   appleWebApp: { capable: true, title: "Heron", statusBarStyle: "black-translucent" },
   formatDetection: { telephone: false },

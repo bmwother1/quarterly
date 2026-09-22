@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
-import { isLive, nextPrompt, progress, type StepId } from '@/lib/onboarding';
+import { isLive, nextPrompt, type StepId } from '@/lib/onboarding';
 import type { HeronState } from '@/lib/store';
 
 /**
@@ -75,7 +75,6 @@ export function SetupPrompt({
   if (!step) return null;
 
   const { href, cta } = RESOLVE[step.id];
-  const pct = Math.round(progress(state) * 100);
 
   /**
    * "The default is fine" is an answer, not a refusal, so it marks sleep done
@@ -86,9 +85,14 @@ export function SetupPrompt({
 
   return (
     <div className="mb-6 rounded-xl border border-[var(--accent)]/30 bg-[var(--accent-soft)] p-4">
-      <div className="mb-2 flex items-baseline justify-between gap-3 text-xs text-[var(--faint)]">
-        <span className="font-medium tracking-wide">Finish setting up</span>
-        <span>{pct}%</span>
+      {/*
+        No percentage. A completion meter is a score, and this product refused
+        streaks and scores on the grounds that planners punish imperfection.
+        A progress bar seconds after a flow whose whole point was avoiding setup
+        is the same mistake wearing a different hat.
+      */}
+      <div className="mb-2 text-xs font-medium tracking-wide text-[var(--faint)]">
+        One more thing
       </div>
       <h2 className="font-medium">{step.title}</h2>
       <p className="mt-1 text-sm text-[var(--muted)]">{step.blurb}</p>

@@ -14,7 +14,6 @@ import { RescueNotice } from '@/components/rescue-notice';
 import { DEFAULT_TZ, addDays, fmtDay, fmtTime, localParts } from '@/lib/time';
 import { missedBlocks } from '@/lib/schedule/complete';
 import { absence } from '@/lib/schedule/absence';
-import { nextNotice } from '@/lib/notify';
 import type { StudyBlock } from '@/lib/types';
 import { categoryForCommitment, colorVar, type Category } from '@/lib/categories';
 
@@ -92,19 +91,6 @@ export default function WeekPage() {
   const gap = useMemo(() => absence(state.blocks, now, TZ), [state.blocks, now]);
 
   // What the app would send right now, if delivery existed. Shown rather than
-  // hidden because the tone is the risky part, and it's easier to judge a real
-  // message against a real week than to argue about copy in the abstract.
-  const notice = useMemo(
-    () => nextNotice({
-      blocks: state.blocks,
-      assignments: state.assignments,
-      commitments: state.commitments,
-      now,
-      tz: TZ,
-      lastSentAt: null,
-    }),
-    [state.blocks, state.assignments, state.commitments, now],
-  );
   const selected = useMemo(
     () => state.blocks.find((b) => b.id === selectedId) ?? null,
     [state.blocks, selectedId],
@@ -253,18 +239,13 @@ export default function WeekPage() {
             />
           )}
 
-          {notice && (
-            <div className="mb-6 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)]">
-              <p className="text-xs uppercase tracking-wide text-[var(--faint)]">
-                Next notification · preview
-              </p>
-              <p className="mt-1.5 font-medium">{notice.title}</p>
-              <p className="mt-0.5 text-sm text-[var(--muted)]">{notice.body}</p>
-              <p className="mt-2 text-xs text-[var(--faint)]">
-                Delivery isn&rsquo;t wired up yet. This is what you&rsquo;d have received.
-              </p>
-            </div>
-          )}
+          {/*
+            The notification preview used to live here and told students
+            "delivery isn't wired up yet". Shipping an admission that a feature
+            is broken, to someone who has been using the app for ten seconds, is
+            worse than shipping nothing. It comes back when delivery works, and
+            it belongs in Settings rather than above the calendar.
+          */}
 
           {state.unscheduled.length > 0 && (
             <div className="mb-8 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
