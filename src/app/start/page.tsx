@@ -1,9 +1,10 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useHeron } from '@/hooks/use-heron';
+import { useNarrow } from '@/hooks/use-narrow';
 import { categoryForCommitment, nextShade, takenShades } from '@/lib/categories';
 import { CATEGORY_DEMAND } from '@/lib/schedule/score';
 import { DEFAULT_TZ } from '@/lib/time';
@@ -42,6 +43,25 @@ export default function Start() {
   const [category, setCategory] = useState<CommitmentCategory>('learning');
   const [perWeek, setPerWeek] = useState(3);
   const [minutes, setMinutes] = useState(60);
+
+  /**
+   * Focus the field on a laptop and never on a phone.
+   *
+   * `autoFocus` was doing more harm than good here. On iOS it does not open the
+   * keyboard at all, because Safari only does that for a real gesture, so it
+   * buys nothing. On Android it does open it, and the keyboard then covers the
+   * bottom half of the screen, which on this page is where "How often?" and the
+   * button both live. Either way it scrolls the field into view and pushes the
+   * question off the top.
+   *
+   * `preventScroll` for the same reason `/onboarding` uses it: the convenience
+   * of a ready cursor is not worth moving the page out from under someone.
+   */
+  const narrow = useNarrow();
+  const field = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!narrow && hydrated) field.current?.focus({ preventScroll: true });
+  }, [narrow, hydrated]);
 
   if (!hydrated) {
     return (
@@ -99,30 +119,47 @@ export default function Start() {
       <div className="mt-7 space-y-5">
         <div>
           <input
+            ref={field}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') begin(); }}
             aria-label="What you want to make time for"
             placeholder="Studying for CHEM 142"
-            autoFocus
             className="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3.5 text-base outline-none placeholder:text-[var(--faint)] focus:border-[var(--accent)]"
           />
           {/* An empty box is a harder question than a list of answers. */}
           <div className="mt-2.5 flex flex-wrap gap-1.5">
-            {EXAMPLES.map((e) => (
-              <button
-                key={e.title}
-                onClick={() => {
-                  setTitle(e.title);
-                  setCategory(e.category);
-                  setPerWeek(e.per);
-                  setMinutes(e.mins);
-                }}
-                className="rounded-full border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--muted)] transition-colors hover:bg-[var(--raised)] hover:text-[var(--ink)]"
-              >
-                {e.title}
-              </button>
-            ))}
+            {EXAMPLES.map((e) => {
+              // Tapping an example fills four fields at once, so it has to look
+              // chosen afterwards. Without this the page silently changed three
+              // answers below the fold and nothing on screen said which example
+              // did it.
+              const picked = title === e.title;
+              return (
+                <button
+                  key={e.title}
+                  onClick={() => {
+                    setTitle(e.title);
+                    setCategory(e.category);
+                    setPerWeek(e.per);
+                    setMinutes(e.mins);
+                  }}
+                  aria-pressed={picked}
+                  className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                    picked
+                      // Accent *text*, not just an accent fill. Measured in dark
+                      // mode, --accent-soft sits at 1.11:1 against the page, so
+                      // as a selected state the fill is invisible and the border
+                      // was carrying it alone. The fill still earns its place in
+                      // light mode; the colour change is what reads in both.
+                      ? 'border-[var(--accent)] bg-[var(--accent-soft)] font-medium text-[var(--accent)]'
+                      : 'border-[var(--border)] text-[var(--muted)] hover:bg-[var(--raised)] hover:text-[var(--ink)]'
+                  }`}
+                >
+                  {e.title}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -165,13 +202,24 @@ export default function Start() {
           </div>
         </div>
 
-        <button
-          onClick={begin}
-          disabled={!title.trim()}
-          className="w-full rounded-xl bg-[var(--accent)] px-5 py-3.5 font-medium text-[var(--accent-ink)] shadow-[var(--shadow-md)] transition-transform active:scale-[0.98] disabled:bg-transparent disabled:text-[var(--faint)] disabled:shadow-none disabled:ring-1 disabled:ring-[var(--border)]"
-        >
-          Plan my week
-        </button>
+        {/*
+          Pinned to the bottom of a phone screen.
+          Measured at 375x812: this page is 1154px tall and the button sat at
+          795px, so the action that completes the most-defended screen in the
+          product was below the fold on every phone, before Safari's own chrome
+          takes another hundred pixels. Sticky rather than fixed so it sits in
+          normal flow on a laptop and needs no spacer.
+        */}
+        <div className="sticky bottom-0 -mx-5 border-t border-[var(--border)] bg-[var(--bg)] px-5 pt-4 sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0"
+             style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+          <button
+            onClick={begin}
+            disabled={!title.trim()}
+            className="w-full rounded-xl bg-[var(--accent)] px-5 py-3.5 font-medium text-[var(--accent-ink)] shadow-[var(--shadow-md)] transition-transform active:scale-[0.98] disabled:bg-transparent disabled:text-[var(--faint)] disabled:shadow-none disabled:ring-1 disabled:ring-[var(--border)]"
+          >
+            Plan my week
+          </button>
+        </div>
 
         <p className="text-center text-sm text-[var(--faint)]">
           No account. Nothing to install.{' '}

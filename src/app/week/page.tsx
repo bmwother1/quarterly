@@ -247,16 +247,6 @@ export default function WeekPage() {
           </div>
           )}
 
-          {hasInputs && (
-            <SetupPrompt
-              state={state}
-              skipStep={skipStep}
-              confirmSleep={confirmSleep}
-              markLiveIfReady={markLiveIfReady}
-              ackLive={ackLive}
-            />
-          )}
-
           {/*
             The notification preview used to live here and told students
             "delivery isn't wired up yet". Shipping an admission that a feature
@@ -448,6 +438,24 @@ export default function WeekPage() {
           </div>
           )}
           </div>
+
+          {/*
+            Setup sits under the week, not over it.
+            A student arrives here having asked for one thing: to see a plan. It
+            used to render above the calendar, so the first screen after a
+            two-question setup was another setup card, and the thing they came
+            for started roughly 900px down. Below the plan it reads as "and
+            here's how to make it better", which is what it is.
+          */}
+          {hasInputs && (
+            <SetupPrompt
+              state={state}
+              skipStep={skipStep}
+              confirmSleep={confirmSleep}
+              markLiveIfReady={markLiveIfReady}
+              ackLive={ackLive}
+            />
+          )}
         </>
 
       {movedNotice && (
