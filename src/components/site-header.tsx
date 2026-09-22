@@ -53,6 +53,26 @@ const TABS = [
   },
 ];
 
+/**
+ * Routes where the visitor is not a user yet.
+ *
+ * The app chrome used to render on every route including the landing page, so a
+ * first-time visitor saw Week / Plan / Settings and could tap straight into an
+ * empty week, skipping the funnel the whole product depends on. An empty week
+ * is a terrible first impression and it is nobody's fault but ours for offering
+ * it.
+ *
+ * Keyed on the route rather than on whether the device has a saved week,
+ * deliberately. Reading local storage to decide what chrome to draw means the
+ * server and the first client render disagree, and the bar flickers in on every
+ * cold load. The route is known before either happens.
+ *
+ * `/import` is deliberately not here: it is in the header nav for people who
+ * already use Heron, so it is app chrome even though the landing page links to
+ * it.
+ */
+const ENTRY_ROUTES = new Set(['/', '/welcome', '/start', '/onboarding']);
+
 function Icon({ children }: { children: React.ReactNode }) {
   return (
     <svg
@@ -67,6 +87,7 @@ function Icon({ children }: { children: React.ReactNode }) {
 
 export function SiteHeader() {
   const pathname = usePathname();
+  const entry = ENTRY_ROUTES.has(pathname);
 
   return (
     <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-[var(--bg)]/85 backdrop-blur-md">
@@ -74,7 +95,10 @@ export function SiteHeader() {
         className="mx-auto flex max-w-[1080px] items-center justify-between gap-4 px-5 py-3"
         style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
       >
-        <Link href="/week" className="flex items-center gap-2 font-semibold tracking-tight">
+        <Link
+          href={entry ? '/' : '/week'}
+          className="flex items-center gap-2 font-semibold tracking-tight"
+        >
           <span className="flex h-5 w-5 items-end gap-[2px]" aria-hidden>
             <span className="h-2.5 w-1 rounded-sm bg-[var(--border-strong)]" />
             <span className="h-5 w-1 rounded-sm bg-[var(--accent)]" />
@@ -84,6 +108,7 @@ export function SiteHeader() {
         </Link>
 
         {/* Laptops get the links inline; phones get them at the bottom instead. */}
+        {!entry && (
         <nav className="hidden gap-5 text-sm sm:flex">
           {TABS.map((t) => {
             const active = pathname === t.href;
@@ -107,16 +132,34 @@ export function SiteHeader() {
             Import
           </Link>
         </nav>
+        )}
       </div>
     </header>
   );
 }
 
-/** The phone tab bar. Fixed to the bottom, where the thumb already is. */
+/**
+ * The phone tab bar. Fixed to the bottom, where the thumb already is.
+ *
+ * It renders its own spacer rather than relying on a global `body` padding.
+ * That padding used to live in `globals.css` unconditionally, which was right
+ * while the bar was on every page and wrong the moment it wasn't: hiding the
+ * bar on the landing page would have left 64px of dead space under the footer.
+ * Pages still do not have to know the bar exists, which was the point of the
+ * global rule; the bar just accounts for itself now.
+ */
 export function TabBar() {
   const pathname = usePathname();
 
+  if (ENTRY_ROUTES.has(pathname)) return null;
+
   return (
+    <>
+    <div
+      aria-hidden
+      className="sm:hidden"
+      style={{ height: 'calc(64px + 1rem + env(safe-area-inset-bottom))' }}
+    />
     <nav
       aria-label="Main"
       className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--border)] bg-[var(--bg)]/92 backdrop-blur-md sm:hidden"
@@ -141,6 +184,7 @@ export function TabBar() {
         })}
       </div>
     </nav>
+    </>
   );
 }
 
