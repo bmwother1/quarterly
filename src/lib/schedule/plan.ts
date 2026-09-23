@@ -767,6 +767,17 @@ export function planWeek(
         if (g.ms + holdMs > o.endMs) break;
         candidates.push(g);
       }
+      // And a window's own start, when it is off the hour. A 4:15 to 5:30
+      // window holding an hour and a buffer has no hour boundary inside it
+      // that leaves room, so without this it could never be used at all.
+      if (p.windowStartMin !== null && p.windowStartMin % 60 !== 0) {
+        const hour = Math.floor(p.windowStartMin / 60);
+        const ms = grid[hour].ms + (p.windowStartMin % 60) * 60_000;
+        if (ms > o.startMs && ms + holdMs <= o.endMs) {
+          const at = candidates.findIndex((c) => c.ms > ms);
+          candidates.splice(at === -1 ? candidates.length : at, 0, { ms, hour, minuteOfDay: p.windowStartMin });
+        }
+      }
 
       // How much of this day is still free, 0-1. Used to push work off a day
       // that's already stacked and onto one that's genuinely open.

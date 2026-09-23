@@ -235,6 +235,26 @@ describe('scheduling recurring commitments', () => {
     assert.equal(block!.minutes, 45);
   });
 
+  test('a window that starts off the hour can still be used', () => {
+    // Found by `npm run sweep`. Start times were only ever tried on the hour
+    // and at the start of a gap. An hour's session and its shower in a 4:15 to
+    // 5:30 window can only start at 4:15 or 4:30: 4:00 is before the window
+    // and 5:00 runs past it, so it was never placed and reported every week as
+    // "the week ran out before you hit the target".
+    const gym = commitment({
+      id: 'gym', title: 'Gym', category: 'fitness', sessionsPerWeek: 3,
+      minutesPerSession: 60, bufferAfterMinutes: 15, minSessionMinutes: 60,
+      windowStartMin: 16 * 60 + 15, windowEndMin: 17 * 60 + 30,
+    });
+    const r = planWeek([], defaultAvailability(), { now: MONDAY, tz: TZ, commitments: [gym] });
+
+    assert.ok(r.blocks.length > 0, `nothing planned: ${r.unscheduled.map((u) => u.reason).join(', ')}`);
+    for (const b of r.blocks) {
+      const start = localParts(new Date(b.start), TZ).minutesOfDay;
+      assert.ok(start >= 16 * 60 + 15 && start + 60 + 15 <= 17 * 60 + 30, `starts at ${start} min, outside the window`);
+    }
+  });
+
   test('a hard time window is respected', () => {
     // Running is low-demand, so a low-energy hour "fits" perfectly and the
     // scheduler will happily put a run at 11pm for someone asleep at midnight.
