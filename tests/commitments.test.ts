@@ -1,9 +1,10 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import type { Commitment, Availability } from '../src/lib/types.ts';
+import type { Commitment, Availability, StudyBlock } from '../src/lib/types.ts';
 import { defaultAvailability } from '../src/lib/schedule/slots.ts';
 import { planWeek } from '../src/lib/schedule/plan.ts';
+import { resetWeeklyTallies } from '../src/lib/schedule/complete.ts';
 import { energyAt, quotaPressure, importanceFactor, fitForDemand } from '../src/lib/schedule/score.ts';
 import { localParts, zonedInstant } from '../src/lib/time.ts';
 
@@ -232,6 +233,26 @@ describe('scheduling recurring commitments', () => {
     const block = r.blocks.find((b) => b.commitmentId === 'long');
     assert.ok(block, 'expected a trimmed session rather than nothing');
     assert.equal(block!.minutes, 45);
+  });
+
+  test('a window that starts off the hour can still be used', () => {
+    // Found by `npm run sweep`. Start times were only ever tried on the hour
+    // and at the start of a gap. An hour's session and its shower in a 4:15 to
+    // 5:30 window can only start at 4:15 or 4:30: 4:00 is before the window
+    // and 5:00 runs past it, so it was never placed and reported every week as
+    // "the week ran out before you hit the target".
+    const gym = commitment({
+      id: 'gym', title: 'Gym', category: 'fitness', sessionsPerWeek: 3,
+      minutesPerSession: 60, bufferAfterMinutes: 15, minSessionMinutes: 60,
+      windowStartMin: 16 * 60 + 15, windowEndMin: 17 * 60 + 30,
+    });
+    const r = planWeek([], defaultAvailability(), { now: MONDAY, tz: TZ, commitments: [gym] });
+
+    assert.ok(r.blocks.length > 0, `nothing planned: ${r.unscheduled.map((u) => u.reason).join(', ')}`);
+    for (const b of r.blocks) {
+      const start = localParts(new Date(b.start), TZ).minutesOfDay;
+      assert.ok(start >= 16 * 60 + 15 && start + 60 + 15 <= 17 * 60 + 30, `starts at ${start} min, outside the window`);
+    }
   });
 
   test('a hard time window is respected', () => {
@@ -483,5 +504,72 @@ describe('weekly quotas are weekly', () => {
     // Without this the loop passes by matching nothing, which is the same
     // silent-success failure the reason bug was hiding behind in the first place.
     assert.ok(checked > 5, `only ${checked} reasons were in the expected shape`);
+  });
+
+  /** A session of `c` already on the calendar: done unless told otherwise. */
+  function session(c: Commitment, dateKey: string, startMin: number, over: Partial<StudyBlock> = {}): StudyBlock {
+    const start = zonedInstant(dateKey, startMin, TZ);
+    return {
+      id: `${c.id}@${start.toISOString()}`, assignmentId: null, commitmentId: c.id,
+      course: c.title, title: c.title, start: start.toISOString(),
+      end: new Date(start.getTime() + c.minutesPerSession * 60_000).toISOString(),
+      minutes: c.minutesPerSession, method: 'training', why: '', sessionIndex: 1, sessionCount: 1,
+      status: 'done', actualMinutes: c.minutesPerSession, ...over,
+    };
+  }
+
+  function perWeek(blocks: StudyBlock[], week: string): number {
+    return blocks.filter((b) => b.status !== 'skipped' && weekOf(b.start, TZ) === week).length;
+  }
+
+  test('a pinned session counts toward its week', () => {
+    // Found by `npm run sweep`. The quota counted sessions done, not sessions
+    // on the calendar, so a run dragged to Thursday was one run too many.
+    const run = commitment({ id: 'run', title: 'Run', sessionsPerWeek: 3, minutesPerSession: 30 });
+    const pinned = session(run, '2026-10-08', 18 * 60, { status: 'planned', actualMinutes: null, pinned: true });
+
+    const plan = planWeek([], defaultAvailability(), {
+      tz: TZ, commitments: [run], now: MONDAY, existingBlocks: [pinned],
+    });
+
+    const n = perWeek([pinned, ...plan.blocks], '2026-10-05');
+    assert.ok(n <= 3, `${n} runs this week against a target of 3`);
+  });
+
+  test('a session done before the week\'s first replan still counts', () => {
+    // Found by `npm run sweep`. The tally resets when the last plan was in an
+    // earlier week, which also wipes anything done this week before the first
+    // replan: plan Sunday night, run Monday morning, replan at noon, and the
+    // week gets its whole quota on top of the run.
+    const run = commitment({ id: 'run', title: 'Run', sessionsPerWeek: 3, minutesPerSession: 30, doneThisWeek: 4 });
+    const ran = session(run, '2026-10-05', 7 * 60);
+    const noon = zonedInstant('2026-10-05', 12 * 60, TZ);
+    const sunday = zonedInstant('2026-10-04', 21 * 60, TZ).toISOString();
+
+    const plan = planWeek([], defaultAvailability(), {
+      tz: TZ, commitments: resetWeeklyTallies([run], sunday, noon, TZ), now: noon, existingBlocks: [ran],
+    });
+
+    const n = perWeek([ran, ...plan.blocks], '2026-10-05');
+    assert.ok(n <= 3, `${n} runs this week against a target of 3`);
+  });
+
+  test('a daily limit above one is still a limit', () => {
+    // Found by `npm run sweep`. Only a limit of one was ever enforced. Two a day
+    // with two days of the week left put three on each.
+    const reading = commitment({ id: 'read', title: 'Reading', sessionsPerWeek: 6, minutesPerSession: 30, maxPerDay: 2 });
+    const saturday = zonedInstant('2026-10-10', 12 * 60, TZ);
+    const done = [session(reading, '2026-10-10', 9 * 60)];
+
+    const plan = planWeek([], { ...defaultAvailability(), maxDailyMinutes: 600 }, {
+      tz: TZ, commitments: [reading], now: saturday, existingBlocks: done,
+    });
+
+    const perDay = new Map<string, number>();
+    for (const b of [...done, ...plan.blocks]) {
+      const day = localParts(new Date(b.start), TZ).dateKey;
+      perDay.set(day, (perDay.get(day) ?? 0) + 1);
+    }
+    for (const [day, n] of perDay) assert.ok(n <= 2, `${n} sessions on ${day} against a limit of 2`);
   });
 });

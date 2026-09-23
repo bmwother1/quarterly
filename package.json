@@ -15,7 +15,8 @@
     "handoff": "node scripts/handoff.ts",
     "my-week": "node scripts/my-week.ts",
     "first-run": "node scripts/first-run.ts",
-    "palette": "node scripts/check-palette.ts"
+    "palette": "node scripts/check-palette.ts",
+    "sweep": "node scripts/sweep.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

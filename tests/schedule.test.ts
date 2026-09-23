@@ -6,7 +6,7 @@ import type { Assignment, Availability, WorkKind } from '../src/lib/types.ts';
 import { assignmentsFromICS } from '../src/lib/canvas/interpret.ts';
 import { defaultAvailability, freeSlots, mergeIntervals, subtract } from '../src/lib/schedule/slots.ts';
 import { planWeek, dueInstant } from '../src/lib/schedule/plan.ts';
-import { urgency, fitAt, energyAt, spacingFactor, confidenceFactor, methodFor } from '../src/lib/schedule/score.ts';
+import { urgency, fitAt, energyAt, spacingFactor, confidenceFactor, methodFor, scoreSlot } from '../src/lib/schedule/score.ts';
 import { localParts, zonedInstant, addDays } from '../src/lib/time.ts';
 
 const TZ = 'America/Los_Angeles';
@@ -158,6 +158,32 @@ describe('scoring', () => {
     assert.ok(confidenceFactor(0.1) > confidenceFactor(0.9));
     // Bounded — a single shaky item must not swamp everything else.
     assert.ok(confidenceFactor(0) <= 2);
+  });
+
+  test('work touched this morning is never explained as neglected', () => {
+    // Found by `npm run sweep`: "you haven't touched MATH 124 in 0 days,
+    // spacing it out is what makes it stick". The headline term was picked by
+    // its share of its own maximum, and spacing at its floor, for work touched
+    // an hour ago, still out-shared low urgency and a small grade weight.
+    const now = new Date('2026-10-05T19:00:00Z');
+    const b = scoreSlot({
+      kind: 'problem set', weight: 0.01, confidence: 0.9,
+      lastTouched: new Date(now.getTime() - 3 * 3_600_000).toISOString(),
+      dueAt: new Date(now.getTime() + 12 * 86_400_000),
+      slotStart: new Date(now.getTime() + 86_400_000),
+      energy: 'morning', localHour: 21, now,
+    });
+    assert.notEqual(b.dominant, 'spacing');
+
+    // A week of neglect still headlines.
+    const neglected = scoreSlot({
+      kind: 'problem set', weight: 0.01, confidence: 0.9,
+      lastTouched: new Date(now.getTime() - 9 * 86_400_000).toISOString(),
+      dueAt: new Date(now.getTime() + 12 * 86_400_000),
+      slotStart: new Date(now.getTime() + 86_400_000),
+      energy: 'morning', localHour: 21, now,
+    });
+    assert.equal(neglected.dominant, 'spacing');
   });
 
   test('writing shifts from drafting to revising', () => {
@@ -348,6 +374,30 @@ describe('the planner', () => {
     assert.ok(!result.blocks.some((b) => b.assignmentId === 'old'), 'past-due work should not be scheduled by default');
     assert.ok(result.blocks.some((b) => b.assignmentId === 'new'));
     assert.deepEqual(result.overdue.map((a) => a.id), ['old']);
+  });
+
+  test('a deadline that is exactly now is past', () => {
+    // Found by `npm run sweep`. The overdue filter said "not yet" and the
+    // placement said "already", so the work got the three-day runway meant for
+    // overdue items and landed hours after its deadline, explained as due soon.
+    const assignments = [
+      makeAssignment({ id: 'now', kind: 'problem set', title: 'Due this minute', due: MONDAY_8AM.toISOString() }),
+    ];
+    const result = planWeek(assignments, openWeek(), { now: MONDAY_8AM, tz: TZ });
+    assert.ok(!result.blocks.some((b) => b.assignmentId === 'now'), 'work due this minute was scheduled after its deadline');
+    assert.deepEqual(result.overdue.map((a) => a.id), ['now']);
+  });
+
+  test('work due within the hour or so says "1 hour", not "1 hours"', () => {
+    // Found reading `npm run sweep` output. Anything due in half an hour to an
+    // hour and a half explained itself as "due in 1 hours".
+    const due = new Date(MONDAY_8AM.getTime() + 70 * 60_000);
+    const assignments = [makeAssignment({ id: 'soon', kind: 'discussion', title: 'Post', due: due.toISOString(), estimatedMinutes: 25 })];
+    const result = planWeek(assignments, openWeek(), { now: MONDAY_8AM, tz: TZ });
+
+    const why = result.blocks.find((b) => b.assignmentId === 'soon')?.why ?? '';
+    assert.match(why, /due in 1 hour\b/, `expected the deadline in the reason, got "${why}"`);
+    assert.doesNotMatch(why, /1 hours/);
   });
 
   test('past deadlines can be opted back in', () => {

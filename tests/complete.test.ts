@@ -6,7 +6,7 @@ import {
   applyCompletion, markAssignmentDone, applyLearnedEstimates,
   missedBlocks, resetWeeklyTallies,
 } from '../src/lib/schedule/complete.ts';
-import { zonedInstant } from '../src/lib/time.ts';
+import { localParts, zonedInstant } from '../src/lib/time.ts';
 
 const TZ = 'America/Los_Angeles';
 const NOW = zonedInstant('2026-10-07', 18 * 60, TZ);   // a Wednesday evening
@@ -220,9 +220,117 @@ describe('replanning around what already happened', () => {
     const r = planWeek([], av, { now: monday, tz: TZ, commitments: [runs], existingBlocks: [ranAlready] });
 
     const mondayRuns = r.blocks.filter(
-      (b) => b.commitmentId === 'run' && b.start.startsWith('2026-10-05'),
+      (b) => b.commitmentId === 'run' && localParts(new Date(b.start), TZ).dateKey === '2026-10-05',
     );
     assert.equal(mondayRuns.length, 0, 'replanning scheduled a second run on a day already run');
+  });
+});
+
+describe('a pinned session is work already planned', () => {
+  test('it counts toward the assignment it belongs to', async () => {
+    // Found by `npm run sweep`. Sessions were built from the estimate less the
+    // time logged, so a session the student had pinned was planned again on
+    // top of itself: a two-hour problem set with an hour pinned for Thursday
+    // got two more hours.
+    const { planWeek } = await import('../src/lib/schedule/plan.ts');
+    const { defaultAvailability } = await import('../src/lib/schedule/slots.ts');
+
+    const av = { ...defaultAvailability(), energy: 'steady' as const, maxDailyMinutes: 600 };
+    const monday = zonedInstant('2026-10-05', 8 * 60, TZ);
+    const pset = assignment({ id: 'pset', estimatedMinutes: 120 });
+    const pinned = block({
+      id: 'pin', assignmentId: 'pset', pinned: true, minutes: 60,
+      start: zonedInstant('2026-10-08', 14 * 60, TZ).toISOString(),
+      end: zonedInstant('2026-10-08', 15 * 60, TZ).toISOString(),
+    });
+
+    const r = planWeek([pset], av, { now: monday, tz: TZ, existingBlocks: [pinned] });
+
+    const planned = [pinned, ...r.blocks.filter((b) => b.assignmentId === 'pset')].reduce((t, b) => t + b.minutes, 0);
+    assert.ok(planned <= 120, `${planned} minutes planned for a 120-minute problem set`);
+    assert.ok(r.blocks.some((b) => b.assignmentId === 'pset'), 'the unpinned hour went unplanned');
+  });
+});
+
+describe('the daily ceiling counts what already happened', () => {
+  const MON = '2026-10-05';
+  const at = (minutes: number) => zonedInstant(MON, minutes, TZ).toISOString();
+
+  /**
+   * `replan` in use-heron.ts without the React: blocks the student reported on
+   * or pinned are kept and handed to the planner, and the rest are replaced.
+   */
+  async function replanAt(now: Date, blocks: StudyBlock[], maxDailyMinutes: number) {
+    const { planWeek } = await import('../src/lib/schedule/plan.ts');
+    const { defaultAvailability } = await import('../src/lib/schedule/slots.ts');
+
+    const av = { ...defaultAvailability(), energy: 'steady' as const, maxDailyMinutes };
+    // More due Wednesday than the days before it can hold, so the planner always
+    // wants Monday and only the ceiling can stop it.
+    const work = ['MATH 124', 'CHEM 142', 'CSE 121'].map((course, i) => assignment({
+      id: `hw${i}`, course, estimatedMinutes: 300,
+      due: zonedInstant('2026-10-07', 23 * 60, TZ).toISOString(),
+    }));
+
+    const settled = blocks.filter((b) => b.status !== 'planned' || b.pinned);
+    const r = planWeek(work, av, { now, tz: TZ, existingBlocks: settled });
+    return { total: studied([...settled, ...r.blocks]), added: studied(r.blocks) };
+  }
+
+  /** Study on Monday, local time: what was reported for settled blocks, the length of planned ones. */
+  function studied(blocks: StudyBlock[]): number {
+    return blocks
+      .filter((b) => localParts(new Date(b.start), TZ).dateKey === MON)
+      .reduce((t, b) => t + (b.status === 'planned' ? b.minutes : b.actualMinutes ?? 0), 0);
+  }
+
+  test('two hours done by noon leave one hour of a three-hour day', async () => {
+    const { total, added } = await replanAt(zonedInstant(MON, 12 * 60, TZ), [
+      block({ id: 'am', assignmentId: 'hw0', status: 'done', actualMinutes: 120, minutes: 120, start: at(9 * 60), end: at(11 * 60) }),
+      // Left over from the morning's plan. The replan replaces it.
+      block({ id: 'old', assignmentId: 'hw1', start: at(14 * 60), end: at(15 * 60) }),
+    ], 180);
+
+    assert.ok(total <= 180, `Monday holds ${total} minutes against a 180-minute ceiling`);
+    assert.ok(added > 0, 'the hour still left on Monday went unused');
+  });
+
+  test('a pinned block later today counts against the ceiling', async () => {
+    const { total } = await replanAt(zonedInstant(MON, 12 * 60, TZ), [
+      block({ id: 'am', assignmentId: 'hw0', status: 'done', actualMinutes: 60, start: at(9 * 60), end: at(10 * 60) }),
+      block({ id: 'pin', assignmentId: 'hw1', pinned: true, start: at(15 * 60), end: at(16 * 60) }),
+    ], 180);
+
+    assert.ok(total <= 180, `Monday holds ${total} minutes against a 180-minute ceiling`);
+  });
+
+  test('an evening replan after a morning of work still plans the evening', async () => {
+    // The plausible wrong fix. Today's free time is counted from now, so the
+    // morning was never in it. Taking the morning off the buffered free time as
+    // well as off the ceiling charges it twice: 7pm to 10pm buffers to 144
+    // minutes, less 120 is 24, and 24 is too short to place anything.
+    const { total, added } = await replanAt(zonedInstant(MON, 19 * 60, TZ), [
+      block({ id: 'am', assignmentId: 'hw0', status: 'done', actualMinutes: 120, minutes: 120, start: at(9 * 60), end: at(11 * 60) }),
+    ], 240);
+
+    assert.ok(total <= 240, `Monday holds ${total} minutes against a 240-minute ceiling`);
+    assert.ok(added >= 100, `only ${added} of the 120 minutes left on Monday were planned`);
+  });
+
+  test('a partial charges what was spent and a skip charges nothing', async () => {
+    const { total, added } = await replanAt(zonedInstant(MON, 12 * 60, TZ), [
+      // 30 minutes of a 90-minute block.
+      block({ id: 'part', assignmentId: 'hw0', status: 'partial', actualMinutes: 30, minutes: 90, start: at(8 * 60), end: at(9 * 60 + 30) }),
+      block({ id: 'skip', assignmentId: 'hw1', status: 'skipped', actualMinutes: 0, start: at(10 * 60), end: at(11 * 60) }),
+      // Pinned and not reported yet. It is still on the calendar and can still
+      // be ticked off, so it counts at full length until then.
+      block({ id: 'unsaid', assignmentId: 'hw2', pinned: true, minutes: 45, start: at(11 * 60), end: at(11 * 60 + 45) }),
+    ], 180);
+
+    assert.ok(total <= 180, `Monday holds ${total} minutes against a 180-minute ceiling`);
+    // 105 minutes are left. Charging the partial at its planned 90, or the skip
+    // at its 60, leaves at most 45.
+    assert.ok(added >= 100, `only ${added} of the 105 minutes left on Monday were planned`);
   });
 });
 
@@ -250,6 +358,33 @@ describe('block identity', () => {
 
     const all = [done, ...second.blocks];
     const ids = all.map((b) => b.id);
+    assert.equal(new Set(ids).size, ids.length, `duplicate block ids: ${ids.join(', ')}`);
+  });
+
+  test('a block moved by hand does not share an id with what is planned in its old place', async () => {
+    // Found by `npm run sweep`. An id names the time a block was planned for,
+    // and a moved block keeps it. The replan then fills the freed hour with a
+    // new session of the same thing, under the same id, and ticking either one
+    // marks both done and logs the minutes twice.
+    const { planWeek } = await import('../src/lib/schedule/plan.ts');
+    const { defaultAvailability } = await import('../src/lib/schedule/slots.ts');
+
+    const av = { ...defaultAvailability(), energy: 'steady' as const, maxDailyMinutes: 600 };
+    const monday = zonedInstant('2026-10-05', 8 * 60, TZ);
+    const runs = commitment({ id: 'run', sessionsPerWeek: 5 });
+
+    const first = planWeek([], av, { now: monday, tz: TZ, commitments: [runs] });
+    const b = first.blocks[0];
+    const thursday = zonedInstant('2026-10-08', 7 * 60 + 15, TZ).getTime();
+    const moved = {
+      ...b, pinned: true,
+      start: new Date(thursday).toISOString(),
+      end: new Date(thursday + b.minutes * 60_000).toISOString(),
+    };
+
+    const second = planWeek([], av, { now: monday, tz: TZ, commitments: [runs], existingBlocks: [moved] });
+
+    const ids = [moved, ...second.blocks].map((x) => x.id);
     assert.equal(new Set(ids).size, ids.length, `duplicate block ids: ${ids.join(', ')}`);
   });
 });
@@ -299,7 +434,7 @@ describe('one-off fixed events', () => {
     const filler = commitment({ id: 'f', title: 'Filler', sessionsPerWeek: 5, minutesPerSession: 60, maxPerDay: 1 });
     const r = planWeek([], av, { now: monday, tz: TZ, commitments: [filler], events: [wedding] });
 
-    const onWeddingDay = r.blocks.filter((b) => b.start.startsWith('2026-10-06'));
+    const onWeddingDay = r.blocks.filter((b) => localParts(new Date(b.start), TZ).dateKey === '2026-10-06');
     assert.equal(onWeddingDay.length, 0, 'the whole day was taken');
     assert.ok(r.blocks.length > 0, 'other days should still be planned');
   });

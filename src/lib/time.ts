@@ -24,13 +24,32 @@ export interface LocalParts {
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+/**
+ * One formatter per zone, made once.
+ *
+ * Building an `Intl.DateTimeFormat` costs far more than using one: profiling a
+ * plan put 84% of the planner's time inside this function, nearly all of it in
+ * the constructor, because every call built a fresh one. The formatter holds no
+ * state between calls, so sharing it changes nothing but the time.
+ */
+const formatters = new Map<string, Intl.DateTimeFormat>();
+
+function formatterFor(tz: string): Intl.DateTimeFormat {
+  let fmt = formatters.get(tz);
+  if (!fmt) {
+    fmt = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      hour12: false,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', weekday: 'short',
+    });
+    formatters.set(tz, fmt);
+  }
+  return fmt;
+}
+
 export function localParts(d: Date, tz = DEFAULT_TZ): LocalParts {
-  const fmt = new Intl.DateTimeFormat('en-US', {
-    timeZone: tz,
-    hour12: false,
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', weekday: 'short',
-  });
+  const fmt = formatterFor(tz);
 
   const p: Record<string, string> = {};
   for (const part of fmt.formatToParts(d)) p[part.type] = part.value;

@@ -91,7 +91,10 @@ export interface Availability {
    * they change it knowing what their own blocks say.
    */
   energyLocked?: boolean;
-  /** Hard ceiling on scheduled study minutes in any one day. */
+  /**
+   * Hard ceiling on study minutes in any one day, counting what is already done
+   * or pinned that day, not just what a replan adds.
+   */
   maxDailyMinutes: number;
   /**
    * Per-weekday ceiling, 0 = Monday. `null` falls back to `maxDailyMinutes`.

@@ -34,7 +34,7 @@
 
 import type { Assignment, Availability, Commitment, FixedEvent, StudyBlock, WorkKind } from '../types.ts';
 import { DEFAULT_TZ, localParts, weekdayOf, zonedInstant } from '../time.ts';
-import { freeMinutesByDay, freeSlots } from './slots.ts';
+import { freeMinutesByDay, freeSlots, type FreeSlot } from './slots.ts';
 import { effectiveEnergy } from './observed.ts';
 import {
   CATEGORY_METHOD,
@@ -100,6 +100,8 @@ export interface PlanOptions {
    * Without these, replanning at noon happily schedules a second run on a day
    * the student already ran, and drops new work on top of the hours they just
    * spent. The past is not free time.
+   *
+   * They also count against their day's ceiling. See `alreadyOnTheDay`.
    */
   existingBlocks?: StudyBlock[];
   /**
@@ -195,8 +197,12 @@ interface Pending {
   weekDaysLeft: number;
   /** Slot-independent rank: how much this deserves time at all, before asking when. */
   priority: number;
-  /** Sessions must land on separate days: exams, and anything done once a day. */
-  separateDays: boolean;
+  /**
+   * Most sessions of this one day may hold. One for exam prep, which is the
+   * point of spacing it, and for anything done once a day; a commitment's own
+   * limit otherwise; no limit for the rest of coursework.
+   */
+  dayLimit: number;
   /** Shortest session worth placing. Below this, report short instead. */
   minMinutes: number;
   /** Reserved after the block and not part of it: shower, pack-up, travel. */
@@ -264,7 +270,13 @@ export function dueInstant(a: Assignment, tz: string): Date {
 
 /** Break an assignment's remaining work into sessions of a sane length. */
 function buildSessions(a: Assignment, opts: Required<PlanOptions>): Pending[] {
-  const remaining = Math.max(0, a.estimatedMinutes - a.actualMinutes);
+  // Time logged is spent, and a session the student pinned is already planned.
+  // Leaving the pinned one out planned it twice, and took the hour from
+  // whatever else needed it.
+  const pinned = opts.existingBlocks
+    .filter((b) => b.assignmentId === a.id && b.status === 'planned')
+    .reduce((t, b) => t + b.minutes, 0);
+  const remaining = Math.max(0, a.estimatedMinutes - a.actualMinutes - pinned);
   if (remaining < MIN_SESSION_MINUTES / 2) return [];
 
   const preferred = SESSION_MINUTES[a.kind];
@@ -307,7 +319,7 @@ function buildSessions(a: Assignment, opts: Required<PlanOptions>): Pending[] {
     weekDaysLeft: 0,
     priority,
     // Spacing exam prep across days is the entire point of spacing it.
-    separateDays: a.kind === 'exam' || a.kind === 'quiz',
+    dayLimit: a.kind === 'exam' || a.kind === 'quiz' ? 1 : Infinity,
     // Coursework is happy to be trimmed: partial progress beats none.
     minMinutes: MIN_SESSION_MINUTES,
     bufferAfterMinutes: 0,
@@ -330,6 +342,22 @@ function buildCommitmentSessions(c: Commitment, opts: Required<PlanOptions>): Pe
   const today = localParts(opts.now, opts.tz);
   const horizonEnd = new Date(opts.now.getTime() + opts.days * 86_400_000);
   const out: Pending[] = [];
+
+  // Sessions of this already on the calendar, by the Monday of their week:
+  // reported ones, and planned ones a replan kept because they were pinned.
+  const thisMonday = addDaysKey(today.dateKey, -today.weekday);
+  const weekFloorMs = zonedInstant(thisMonday, 0, opts.tz).getTime();
+  const onCalendar = new Map<string, { reported: number; planned: number }>();
+  for (const b of opts.existingBlocks) {
+    if (b.commitmentId !== c.id || b.status === 'skipped') continue;
+    if (new Date(b.start).getTime() < weekFloorMs) continue;
+    const p = localParts(new Date(b.start), opts.tz);
+    const monday = addDaysKey(p.dateKey, -p.weekday);
+    const week = onCalendar.get(monday) ?? { reported: 0, planned: 0 };
+    if (b.status === 'planned') week.planned += 1;
+    else week.reported += 1;
+    onCalendar.set(monday, week);
+  }
 
   // A quota resets weekly, so each week in the horizon gets its own set of
   // sessions with its own deadline. Planning only the current week leaves every
@@ -354,13 +382,24 @@ function buildCommitmentSessions(c: Commitment, opts: Required<PlanOptions>): Pe
     const weekEnd = zonedInstant(addDaysKey(weekStartKey, daysLeftInWeek - 1), 23 * 60 + 59, opts.tz);
     const placeBy = weekEnd < horizonEnd ? weekEnd : horizonEnd;
 
-    // Only the current week knows what's already been done. A later week that
-    // is only partly inside the horizon gets a proportional share rather than a
-    // full quota — otherwise a horizon ending on Monday morning generates a
-    // whole week of runs for a six-hour sliver.
+    // A later week that is only partly inside the horizon gets a proportional
+    // share rather than a full quota, or a horizon ending on Monday morning
+    // generates a whole week of runs for a six-hour sliver.
+    //
+    // Either way, sessions already on that week's calendar come off it. For the
+    // current week the tally and the calendar each miss something. The tally
+    // resets when the week's first replan comes after a session was already
+    // done, and never counts a pinned one. The calendar misses a session dropped
+    // with "I'm not doing this", which raises the tally and leaves no block.
+    // The larger of the two, plus what is pinned, misses neither.
+    const here = onCalendar.get(addDaysKey(thisMonday, weekOffset * 7)) ?? { reported: 0, planned: 0 };
+    const already = weekOffset === 0
+      ? Math.max(c.doneThisWeek, here.reported) + here.planned
+      : here.reported + here.planned;
+
     let remaining: number;
     if (weekOffset === 0) {
-      remaining = Math.max(0, c.sessionsPerWeek - c.doneThisWeek);
+      remaining = Math.max(0, c.sessionsPerWeek - already);
 
       // A once-a-day habit cannot happen more times than there are days left.
       // Signing up on a Friday and asking for four runs a week isn't a capacity
@@ -373,7 +412,10 @@ function buildCommitmentSessions(c: Commitment, opts: Required<PlanOptions>): Pe
         daysLeftInWeek,
         (horizonEnd.getTime() - weekStart.getTime()) / 86_400_000,
       );
-      remaining = Math.round(c.sessionsPerWeek * (daysInHorizon / 7));
+      remaining = Math.max(0, Math.min(
+        Math.round(c.sessionsPerWeek * (daysInHorizon / 7)),
+        c.sessionsPerWeek - already,
+      ));
     }
 
     if (remaining > 0) {
@@ -403,11 +445,10 @@ function buildCommitmentSessions(c: Commitment, opts: Required<PlanOptions>): Pe
           // The week this session is counted against. For the current week
           // this is just now, so nothing changes for work due imminently.
           notBefore: weekStart,
-          // Only the current week has sessions already behind it.
-          weekSession: (weekOffset === 0 ? c.doneThisWeek : 0) + i + 1,
+          weekSession: already + i + 1,
           weekDaysLeft: daysLeftInWeek,
           priority: decayed,
-          separateDays: c.maxPerDay <= 1,
+          dayLimit: Math.max(1, c.maxPerDay),
           minMinutes: clamp(c.minSessionMinutes || MIN_SESSION_MINUTES, MIN_SESSION_MINUTES, minutes),
           bufferAfterMinutes: Math.max(0, c.bufferAfterMinutes ?? 0),
           windowStartMin: c.windowStartMin,
@@ -428,6 +469,59 @@ function buildCommitmentSessions(c: Commitment, opts: Required<PlanOptions>): Pe
 function addDaysKey(dateKey: string, n: number): string {
   const [y, m, d] = dateKey.split('-').map(Number);
   return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+}
+
+/**
+ * Study already on each day, from the blocks this plan has to keep.
+ *
+ * Two numbers, because a day's allowance is the smaller of two limits and a
+ * block can count against one without the other. `studied` is effort, charged
+ * against the ceiling wherever in the day it happened. `held` is the part of the
+ * block's time inside the free time the buffer is measured from.
+ *
+ * They differ in the case that matters most. Today's free time starts at now, so
+ * two hours done this morning were never in it. Taking them off the buffered
+ * free time as well as the ceiling charges them twice, and a replan at 7pm after
+ * a morning's work plans nothing at all.
+ *
+ * Done and partial blocks charge what was reported, not their planned length:
+ * half an hour of a ninety-minute block leaves an hour of the day. A skipped
+ * block charges nothing. A block still marked planned charges its full length,
+ * even once its time has passed: it is still on the calendar and can still be
+ * ticked off, and a ceiling that holds only until then is not one. Marking it
+ * skipped gives the time back.
+ */
+function alreadyOnTheDay(
+  blocks: StudyBlock[],
+  slots: FreeSlot[],
+  tz: string,
+): Map<string, { studied: number; held: number }> {
+  const out = new Map<string, { studied: number; held: number }>();
+
+  for (const b of blocks) {
+    const studied =
+      b.status === 'skipped' ? 0
+      : b.status === 'planned' ? b.minutes
+      : b.actualMinutes ?? b.minutes;
+    if (studied <= 0) continue;
+
+    const startMs = new Date(b.start).getTime();
+    const endMs = new Date(b.end).getTime();
+    const dateKey = localParts(new Date(startMs), tz).dateKey;
+
+    let heldMs = 0;
+    for (const s of slots) {
+      if (s.dateKey !== dateKey) continue;
+      heldMs += Math.max(0, Math.min(endMs, s.end.getTime()) - Math.max(startMs, s.start.getTime()));
+    }
+
+    const day = out.get(dateKey) ?? { studied: 0, held: 0 };
+    day.studied += studied;
+    day.held += Math.round(heldMs / 60_000);
+    out.set(dateKey, day);
+  }
+
+  return out;
 }
 
 /** Half an hour of daylight between two blocks is enough to reset the clock. */
@@ -492,18 +586,27 @@ export function planWeek(
     return perDay ?? availability.maxDailyMinutes;
   };
 
+  // The ceiling is on the day, not on this run of the planner. Without charging
+  // what is already there, a student who did two hours by noon and replans is
+  // offered the full three again.
+  const already = alreadyOnTheDay(opts.existingBlocks, slots, tz);
+
   const capacity = new Map<string, number>();
   const capacityTotal = new Map<string, number>();
   for (const [dateKey, minutes] of freeByDay) {
-    const usable = Math.min(dailyCap(dateKey), Math.floor(minutes * (1 - opts.bufferFraction)));
-    capacity.set(dateKey, usable);
-    capacityTotal.set(dateKey, usable);
+    const ceiling = dailyCap(dateKey);
+    const fillable = Math.floor(minutes * (1 - opts.bufferFraction));
+    const { studied, held } = already.get(dateKey) ?? { studied: 0, held: 0 };
+    capacity.set(dateKey, Math.max(0, Math.min(ceiling - studied, fillable - held)));
+    // The day's whole allowance, so a day with work already in it reads as fuller.
+    capacityTotal.set(dateKey, Math.min(ceiling, fillable));
   }
 
   const horizonEnd = now.getTime() + (opts.days + 30) * 86_400_000;
   const live = assignments.filter((a) => a.status === 'todo' && new Date(a.due).getTime() < horizonEnd);
 
-  const overdue = live.filter((a) => dueInstant(a, tz).getTime() < now.getTime());
+  // Due this very minute is past: placement below already treats it that way.
+  const overdue = live.filter((a) => dueInstant(a, tz).getTime() <= now.getTime());
   const pending = [
     ...(opts.includeOverdue ? live : live.filter((a) => !overdue.includes(a)))
       .flatMap((a) => buildSessions(a, opts)),
@@ -570,13 +673,15 @@ export function planWeek(
   }
   openings.sort((a, b) => a.startMs - b.startMs);
 
-  // Days a commitment already happened on, so "five times a week" stays five days.
-  const settledDaysByKey = new Map<string, Set<string>>();
+  // Sessions of each commitment already on each day, so "five times a week"
+  // stays five days and "twice a day" stays twice.
+  const settledPerDay = new Map<string, Map<string, number>>();
   for (const b of opts.existingBlocks) {
     if (!b.commitmentId || b.status === 'skipped') continue;
-    const set = settledDaysByKey.get(b.commitmentId) ?? new Set<string>();
-    set.add(localParts(new Date(b.start), tz).dateKey);
-    settledDaysByKey.set(b.commitmentId, set);
+    const days = settledPerDay.get(b.commitmentId) ?? new Map<string, number>();
+    const dateKey = localParts(new Date(b.start), tz).dateKey;
+    days.set(dateKey, (days.get(dateKey) ?? 0) + 1);
+    settledPerDay.set(b.commitmentId, days);
   }
 
   // Every hour boundary in the horizon, resolved once. Fit only varies by the
@@ -595,6 +700,8 @@ export function planWeek(
   }
 
   const blocks: StudyBlock[] = [];
+  // Ids already on the calendar. See where a block's id is made.
+  const takenIds = new Set(opts.existingBlocks.map((b) => b.id));
   const spansByCourse = new Map<string, Span[]>();
   const nowMs = now.getTime();
   const breakMs = opts.breakMinutes * 60_000;
@@ -619,11 +726,15 @@ export function planWeek(
       p.notBefore.getTime(),
     );
 
-    const spaced = p.separateDays;
-    const usedDays = new Set([
-      ...siblings.filter((q) => q.placed).map((q) => localParts(new Date(q.placed!.start), tz).dateKey),
-      ...(p.commitment ? settledDaysByKey.get(p.commitment.id) ?? [] : []),
-    ]);
+    // How many of this each day already holds, against how many it may. A
+    // commitment has its own daily limit; only a limit of one used to be
+    // enforced, so twice a day with two days left put three on each.
+    const perDay = new Map(p.commitment ? settledPerDay.get(p.commitment.id) : undefined);
+    for (const q of siblings) {
+      if (!q.placed) continue;
+      const dateKey = localParts(new Date(q.placed.start), tz).dateKey;
+      perDay.set(dateKey, (perDay.get(dateKey) ?? 0) + 1);
+    }
 
     const spans = spansByCourse.get(p.group) ?? [];
     const placeByMs = p.placeBy.getTime();
@@ -633,7 +744,7 @@ export function planWeek(
     for (let i = 0; i < openings.length; i++) {
       const o = openings[i];
       if (o.endMs <= earliestMs) continue;
-      if (spaced && usedDays.has(o.dateKey)) continue;
+      if ((perDay.get(o.dateKey) ?? 0) >= p.dayLimit) continue;
 
       const dayLeft = capacity.get(o.dateKey) ?? 0;
       if (dayLeft < MIN_SESSION_MINUTES) continue;
@@ -655,6 +766,17 @@ export function planWeek(
         if (g.ms <= o.startMs) continue;
         if (g.ms + holdMs > o.endMs) break;
         candidates.push(g);
+      }
+      // And a window's own start, when it is off the hour. A 4:15 to 5:30
+      // window holding an hour and a buffer has no hour boundary inside it
+      // that leaves room, so without this it could never be used at all.
+      if (p.windowStartMin !== null && p.windowStartMin % 60 !== 0) {
+        const hour = Math.floor(p.windowStartMin / 60);
+        const ms = grid[hour].ms + (p.windowStartMin % 60) * 60_000;
+        if (ms > o.startMs && ms + holdMs <= o.endMs) {
+          const at = candidates.findIndex((c) => c.ms > ms);
+          candidates.splice(at === -1 ? candidates.length : at, 0, { ms, hour, minuteOfDay: p.windowStartMin });
+        }
       }
 
       // How much of this day is still free, 0-1. Used to push work off a day
@@ -714,11 +836,20 @@ export function planWeek(
         })
       : null;
 
+    // Keyed by start instant, not session index. Index restarts at 1 on every
+    // replan, so a completed session 1 and a freshly planned session 1 shared
+    // an id — React saw duplicate keys and dropped or duplicated blocks.
+    //
+    // The start instant is not enough on its own either. A block moved by hand
+    // keeps the id of the time it was planned for, and this session may be
+    // landing in exactly that freed time. Sharing an id, ticking one marks both.
+    const baseId = `${p.key}@${new Date(startMs).toISOString()}`;
+    let id = baseId;
+    for (let n = 2; takenIds.has(id); n++) id = `${baseId}~${n}`;
+    takenIds.add(id);
+
     const block: StudyBlock = {
-      // Keyed by start instant, not session index. Index restarts at 1 on every
-      // replan, so a completed session 1 and a freshly planned session 1 shared
-      // an id — React saw duplicate keys and dropped or duplicated blocks.
-      id: `${p.key}@${new Date(startMs).toISOString()}`,
+      id,
       assignmentId: p.assignment?.id ?? null,
       commitmentId: p.commitment?.id ?? null,
       course: p.group,
@@ -832,7 +963,10 @@ function splitOpening(
 function relativeDue(dueAt: Date, now: Date, tz: string): string {
   const hours = (dueAt.getTime() - now.getTime()) / 3_600_000;
   if (hours < 0) return 'past due';
-  if (hours < 24) return `due in ${Math.max(1, Math.round(hours))} hours`;
+  if (hours < 24) {
+    const n = Math.max(1, Math.round(hours));
+    return `due in ${n} hour${n === 1 ? '' : 's'}`;
+  }
 
   const days = Math.round(hours / 24);
   if (days === 1) return 'due tomorrow';
@@ -875,7 +1009,7 @@ function explain(
   const when = relativeDue(p.dueAt, now, tz);
   const session = p.count > 1 ? `Session ${p.index} of ${p.count} — ` : '';
 
-  if (p.dueAt < now) return 'Past due. Worth clearing before it starts costing you elsewhere.';
+  if (p.dueAt <= now) return 'Past due. Worth clearing before it starts costing you elsewhere.';
 
   switch (breakdown!.dominant) {
     case 'urgency':

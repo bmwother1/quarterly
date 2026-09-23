@@ -9,6 +9,130 @@ record of what was tried and abandoned is worth more than a tidy file.
 
 ---
 
+## 2026-09-23 · Whatever is on the calendar counts, everywhere
+
+**Decided:** a session already on the calendar, reported or pinned, counts
+against every limit it belongs to: the day's ceiling (2026-09-22), the
+commitment's weekly quota and daily limit, and the assignment's remaining work.
+For the current week's quota the planner takes the larger of the stored tally
+and the sessions reported this week, then adds the pinned ones. The Sunday quota
+notice uses the same count.
+
+**Why:** `npm run sweep` found the same mistake three times. A pinned run was not
+in the weekly quota (a 5-a-week habit got 6), a pinned hour of a problem set was
+not in its remaining work (it was planned twice), and a limit of two a day was
+never enforced at all. Each is the planner counting only what was reported and
+ignoring what the student had already put on the calendar.
+
+**Why the larger of two counts, not either one.** The tally is wiped when the
+week's first replan comes after a session was already done (plan Sunday night,
+run Monday morning, replan at noon), so it can read low. The blocks miss a
+session dropped with "I'm not doing this", which raises the tally and leaves no
+block, so they can read low too. Neither is ever high by mistake.
+
+**Rejected:**
+- Fixing `resetWeeklyTallies` to recount from blocks. It does not receive the
+  blocks, the hook calls it, and the tally would still miss drops.
+- Deriving the quota from blocks alone and deleting `doneThisWeek`. Drops need
+  somewhere to live, and the notification engine reads it.
+
+**Revisit when:** drops get a block of their own (a skipped block marked
+"dropped" would do), at which point the tally can go and the blocks are the
+whole truth.
+
+---
+
+## 2026-09-23 · A reason has to be pulling to be the headline
+
+**Decided:** spacing ("you haven't touched this in N days") can only be a block's
+reason once the work has sat for two days.
+
+**Why:** the sweep's copy check found 715 blocks in 400 scenarios reading "you
+haven't touched MATH 124 in 0 days". `scoreSlot` picks the headline term by its
+share of its own maximum, and spacing's floor (work touched an hour ago) is
+1.0 / 1.8 = 0.56, higher than low urgency, a small weight or high confidence
+ever reach. The term doing the least work was becoming the explanation.
+
+**Rejected, for now:** measuring every term by where it sits in its own range,
+(value − min) / (max − min), which is what the comment in `scoreSlot` says it
+does. It is the principled fix and it changes the reason on most blocks, which
+is a product change to make awake, not overnight. The narrow fix only changes
+blocks whose reason was false.
+
+**Revisit when:** the reasons are next looked at as copy. Weight at its floor
+("worth about 1% of your grade") has the same shape and is not false, just weak.
+
+---
+
+## 2026-09-23 · The sweep checks promises, and warns about quality
+
+**Decided:** `npm run sweep` runs seeded simulated students through the app's own
+replan path and fails only on a broken promise: over a ceiling, an overlap,
+past a deadline, over the work left, under the session floor, over a quota or
+daily limit or outside a window, non-deterministic, over 100ms, duplicate ids, a
+reason that does not read. A day with room left empty while work went unplanned
+is a warning, as is a commitment whose window cannot hold one session.
+
+**Why:** the tests prove the rules someone thought of, one at a time. Every bug
+the sweep found on its first night passed all of them: nine broken promises,
+most reduced to a single assignment or commitment. The warnings are not
+failures because some are the planner's honest trade-offs (sessions run in
+order; the earliest good hour beats a later better one), and a check that fails
+on those gets ignored.
+
+**Rejected:** adding it to `npm run check` straight away. It exits 1 on sessions
+under 25 minutes, which needs Brydon's call first, and a check that is red on
+day one teaches everyone to skip it.
+
+**Revisit when:** the session-floor question is settled. Then it goes into
+`check` at a few hundred scenarios, with the full 5,000 kept for before a
+release.
+
+---
+
+## 2026-09-22 · Work already on a day counts against its ceiling
+
+**Decided:** every block a plan keeps counts against its day's ceiling, on every
+path into the planner, with no option to turn it off. Done and partial blocks
+charge the minutes the student reported, a block still marked planned charges
+its length, and a skipped block charges nothing. A day's allowance is the
+smaller of two limits, worked out separately: the ceiling less everything
+charged, and the buffered free time less the part of those blocks inside it.
+
+**Why:** the ceiling is documented as a hard limit on a day, and it was only a
+limit on one run of the planner. A student with a three-hour ceiling who did two
+hours by noon and pressed Replan was offered three more, five in all, and pinned
+blocks counted for nothing. The replan is the moment a student is behind, and
+the moment they are most likely to believe whatever the plan says they can do.
+
+**Why two limits, not one subtraction.** Today's free time is counted from now,
+so the morning's hours were never in it. Subtracting them from the allowance
+after the buffer is applied charges them twice whenever free time is the tighter
+limit, which is most evenings: a 7pm replan after two hours in the morning
+planned nothing at all. That version passes the obvious tests and was the first
+one written. A test now pins the evening case.
+
+**Why an unreported planned block counts.** It is still on the calendar and can
+still be ticked off. The first version here charged nothing for a block whose
+time had passed unreported, since a replan drops unpinned ones as if they never
+happened. `npm run refresh` caught it: a block ending at 9:50 was not charged at
+a 10am refresh, and once ticked the day held 340 minutes against 300. Marking the
+block skipped gives the time back.
+
+**Rejected:**
+- `chargeExistingToCap`, an option defaulting to off, written the same day for
+  `fitNewWork` on the feed branch. Every caller that passes existing blocks
+  wants them charged, and a hard ceiling that holds only when the caller
+  remembers a flag is this bug waiting for the next caller.
+- Charging planned length for done and partial blocks. Thirty minutes of a
+  ninety-minute block would cost the hour the student is trying to catch up in.
+
+**Revisit when:** a student says a replan offered too little on a day they know
+has room. That points at unreported blocks nobody went back to mark, and the fix
+is asking about them, not uncounting them.
+
+---
+
 ## 2026-08-28 · The name is Heron, and the search had to change shape first
 
 **Executed 2026-09-05.** Code, copy, metadata and manifest renamed in one pass.
