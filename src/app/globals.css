@@ -44,10 +44,27 @@
   --warn: #c02a1e;
   --ok: #2f6b43;
 
-  --shadow-sm: 0 1px 2px rgb(25 23 20 / 0.05);
-  --shadow-md: 0 2px 4px rgb(25 23 20 / 0.04), 0 8px 20px -8px rgb(25 23 20 / 0.10);
+  /* Elevation. Two levels, and most of the interface uses neither: hierarchy
+     comes from type, space and colour. Level 1 is for things that float over
+     the page and can be touched (the +, a toast, a block being dragged).
+     Level 2 is for things that cover the page (the sheet). */
+  --elevation-1: 0 1px 2px rgb(25 23 20 / 0.06), 0 4px 12px -4px rgb(25 23 20 / 0.16);
+  --elevation-2: 0 2px 6px rgb(25 23 20 / 0.05), 0 20px 48px -16px rgb(25 23 20 / 0.32);
 
+  /* Motion. Enter decelerates, exit accelerates and is quicker, a move sits
+     between them. Nothing is longer than 300ms. */
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  /* A damped spring (ratio 0.72, 4% overshoot), for anything the finger
+     puts down. */
+  --ease-spring: linear(0, 0.042, 0.143, 0.274, 0.415, 0.55, 0.671, 0.774, 0.857, 0.921, 0.968, 1.001, 1.022, 1.033, 1.038, 1.038, 1.035, 1.031, 1.025, 1.02, 1.015, 1.011, 1.007, 1.004, 1);
+  --dur-exit: 120ms;
+  --dur-enter: 180ms;
+  --dur-move: 240ms;
+
+  /* The old names, kept until every screen has moved to the two levels. */
+  --shadow-sm: var(--elevation-1);
+  --shadow-md: var(--elevation-2);
 
   /* How far the floating + sits off the bottom. Larger on a phone, where it has
      to clear the tab bar. */
@@ -105,8 +122,8 @@
     --warn: #f2604a;
     --ok: #5cbd85;
 
-    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
-    --shadow-md: 0 2px 4px rgb(0 0 0 / 0.3), 0 12px 28px -10px rgb(0 0 0 / 0.6);
+    --elevation-1: 0 1px 2px rgb(0 0 0 / 0.5), 0 4px 14px -4px rgb(0 0 0 / 0.6);
+    --elevation-2: 0 2px 6px rgb(0 0 0 / 0.4), 0 24px 56px -16px rgb(0 0 0 / 0.75);
 
     --series-1: #3987e5;
     --series-2: #d95926;
@@ -129,11 +146,57 @@
   --color-surface: var(--surface);
   --color-raised: var(--raised);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-faint: var(--faint);
   --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
   --color-warn: var(--warn);
+  --color-ok: var(--ok);
+
+  --shadow-float: var(--elevation-1);
+  --shadow-overlay: var(--elevation-2);
+
+  --ease-out: var(--ease);
+  --ease-in: var(--ease-exit);
+}
+
+/*
+ * The system. Everything on screen is built from these and nothing else.
+ *
+ * Type, six steps. xs, sm and base keep Tailwind's names and sizes (12, 14,
+ * 16px) because two hundred call sites already use them correctly. Above
+ * that the steps are named for their job, and tracking tightens as the size
+ * grows: default tracking on a large heading is the most common reason a page
+ * reads as unfinished.
+ *
+ *   xs       12/16   meta: times in the grid, captions, labels
+ *   sm       14/20   secondary text and every control
+ *   base     16/24   body, and the name of a block
+ *   title    20/26   section headings, the next block
+ *   heading  26/32   page titles
+ *   display  36/40   the landing page, once
+ *
+ * Radius, three values: sm (4px) for marks and blocks in the grid, md (10px)
+ * for anything you press or type into, full for pills and dots.
+ *
+ * Spacing is Tailwind's 4px scale, whole steps only.
+ */
+@theme {
+  --text-title: 1.25rem;
+  --text-title--line-height: 1.625rem;
+  --text-title--letter-spacing: -0.011em;
+  --text-heading: 1.625rem;
+  --text-heading--line-height: 2rem;
+  --text-heading--letter-spacing: -0.019em;
+  --text-display: 2.25rem;
+  --text-display--line-height: 2.5rem;
+  --text-display--letter-spacing: -0.028em;
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.625rem;
 }
 
 @media (min-width: 640px) {
@@ -146,6 +209,11 @@ body {
   font-family: var(--font-geist-sans), ui-sans-serif, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  /* Every time and duration in this app is a number that changes, and a
+     proportional 1 is narrower than a 4. Tabular figures everywhere means a
+     column of times lines up and a ticking number never nudges its
+     neighbours. */
+  font-variant-numeric: tabular-nums;
   /* Installed as a PWA there is no browser chrome, so the notch and the home
      indicator are the app's problem to avoid. */
   padding-left: env(safe-area-inset-left);
@@ -162,27 +230,196 @@ body {
 h1 { letter-spacing: -0.022em; }
 h2 { letter-spacing: -0.014em; }
 
-/* One visible focus treatment everywhere, rather than the browser default in
-   some places and nothing in others. */
-:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+/*
+ * One visible focus treatment everywhere, rather than the browser default in
+ * some places and nothing in others.
+ *
+ * It used to set `border-radius: 4px` as well, which reshaped whatever had
+ * focus: a 12px button went square the moment you tabbed to it. The outline
+ * follows the element's own radius now. Fields draw it over their border
+ * instead of outside it, so a focused input has one ring, not two.
+ */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-  border-radius: 4px;
+}
+:where(input, select, textarea):focus-visible {
+  outline-offset: -1px;
 }
 
-/* Tap targets on iOS shouldn't flash grey. */
-button, a { -webkit-tap-highlight-color: transparent; }
+/* Tap targets on iOS shouldn't flash grey, and a double tap on a button
+   should not zoom the page. */
+button, a, label { -webkit-tap-highlight-color: transparent; }
+:where(button, a[href], [role="button"], label, summary) { touch-action: manipulation; }
+
+/*
+ * Press states on everything tappable.
+ *
+ * Declared once here with zero specificity, so every button and link in the
+ * app answers a press without each one having to remember to. A button
+ * sinks slightly; a text link dims, because a transform does nothing to an
+ * inline element.
+ */
+:where(button, [role="button"], a[href], summary) {
+  transition-property: color, background-color, border-color, opacity, transform;
+  transition-duration: var(--dur-exit);
+  transition-timing-function: var(--ease);
+}
+:where(button:not(:disabled), [role="button"], summary):active {
+  transform: scale(0.97);
+}
+:where(a[href]):active {
+  opacity: 0.6;
+}
 
 /* Numbers that change should not reflow the layout around them. */
 .tabular-nums { font-variant-numeric: tabular-nums; }
 
-@keyframes rise {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: none; }
+/*
+ * The few components worth naming.
+ *
+ * Buttons come in four kinds and each screen gets exactly one primary.
+ * Secondary is outlined, quiet is text, danger is outlined in the warn
+ * colour. They live in the components layer so a utility on the element
+ * still wins, which is how width and padding get adjusted in place.
+ */
+@layer components {
+  .btn-primary, .btn-secondary, .btn-quiet, .btn-danger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.5rem;
+    padding: 0 1rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 500;
+    white-space: nowrap;
+    user-select: none;
+    cursor: pointer;
+  }
+  /* 44px on a touchscreen, the smallest target a thumb reliably hits. */
+  @media (pointer: coarse) {
+    .btn-primary, .btn-secondary, .btn-quiet, .btn-danger { min-height: 2.75rem; }
+  }
+  .btn-lg { min-height: 3rem; padding: 0 1.25rem; font-size: 1rem; line-height: 1.5rem; }
+
+  .btn-primary { background: var(--accent); color: var(--accent-ink); }
+  .btn-secondary { border-color: var(--border-strong); color: var(--ink); }
+  .btn-quiet { color: var(--muted); padding: 0 0.75rem; }
+  .btn-danger { border-color: color-mix(in oklab, var(--warn) 55%, transparent); color: var(--warn); }
+
+  @media (hover: hover) {
+    .btn-primary:hover:not(:disabled) { background: color-mix(in oklab, var(--accent) 88%, var(--ink)); }
+    .btn-secondary:hover:not(:disabled),
+    .btn-quiet:hover:not(:disabled) { background: color-mix(in oklab, var(--ink) 5%, transparent); color: var(--ink); }
+    .btn-danger:hover:not(:disabled) { background: color-mix(in oklab, var(--warn) 8%, transparent); }
+  }
+
+  /* Disabled text is exempt from the contrast minimum, and --faint is the
+     one place that colour is still used for text. */
+  .btn-primary:disabled, .btn-secondary:disabled, .btn-quiet:disabled, .btn-danger:disabled {
+    background: transparent;
+    border-color: var(--border);
+    color: var(--faint);
+    cursor: not-allowed;
+  }
+
+  /* Text you type. 16px, because iOS zooms the whole page into any field
+     smaller than that and leaves it zoomed. */
+  .field {
+    min-height: 2.75rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 1rem;
+    line-height: 1.5rem;
+  }
+  .field::placeholder { color: var(--muted); }
+  .field:disabled { opacity: 0.5; }
+
+  /* A choice among a few. Selected carries the accent in its text and
+     border as well as its fill: --accent-soft sits at 1.11:1 against the
+     page in dark mode, so a fill alone would be invisible. */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.25rem;
+    padding: 0 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 9999px;
+    color: var(--muted);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    cursor: pointer;
+  }
+  @media (pointer: coarse) { .chip { min-height: 2.5rem; } }
+  .chip[aria-pressed="true"] {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 500;
+  }
+  @media (hover: hover) {
+    .chip:hover:not([aria-pressed="true"]) { color: var(--ink); border-color: var(--border-strong); }
+  }
+
+  /* Two or three lenses on the same thing. The selected one is lifted out
+     of the track by colour, not by a shadow. */
+  .segmented {
+    display: inline-flex;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    border-radius: 9999px;
+    background: color-mix(in oklab, var(--ink) 6%, transparent);
+  }
+  .segmented > button {
+    min-height: 2rem;
+    padding: 0 0.875rem;
+    border-radius: 9999px;
+    color: var(--muted);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+  @media (pointer: coarse) { .segmented > button { min-height: 2.25rem; } }
+  .segmented > button[aria-pressed="true"] {
+    background: var(--surface);
+    color: var(--ink);
+    font-weight: 500;
+    box-shadow: 0 0 0 1px var(--border);
+  }
 }
 
-/* Content arrives rather than appearing. Short enough not to feel slow. */
-.rise { animation: rise 0.32s var(--ease) both; }
+/*
+ * Motion.
+ *
+ * `.rise` is opacity only, on purpose. It used to translate as well, and an
+ * element with a transform animation filling in place becomes the containing
+ * block for every `position: fixed` element inside it. On /week that pinned
+ * the +, the undo toast and the add sheet to the bottom of the page instead
+ * of the screen. A page container must never carry a transform.
+ *
+ * `.enter` does translate, and is for leaf content only: a row, a card, a
+ * banner. `--i` staggers it.
+ */
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes fade-out { to { opacity: 0; } }
+@keyframes enter { from { opacity: 0; transform: translateY(4px); } }
+@keyframes sheet-up { from { transform: translateY(100%); } }
+@keyframes sheet-down { to { transform: translateY(100%); } }
+@keyframes pop-in { from { opacity: 0; transform: scale(0.97); } }
+@keyframes pop-out { to { opacity: 0; transform: scale(0.97); } }
+
+.rise { animation: fade-in var(--dur-enter) var(--ease) backwards; }
+.enter {
+  animation: enter var(--dur-enter) var(--ease) backwards;
+  animation-delay: calc(min(var(--i, 0), 12) * 24ms);
+}
 
 /*
  * A block moving between days on the miniature week.
@@ -196,9 +433,8 @@ button, a { -webkit-tap-highlight-color: transparent; }
  * The overshoot easing is deliberate too. A linear move reads as a diagram
  * updating; a slight settle reads as something being placed.
  *
- * The global prefers-reduced-motion rule above already collapses this, so a
- * student who has asked their phone to stop moving things gets the end state
- * immediately.
+ * The prefers-reduced-motion rule below collapses this, so a student who has
+ * asked their phone to stop moving things gets the end state immediately.
  */
 .sketch-block {
   transition:
@@ -208,10 +444,17 @@ button, a { -webkit-tap-highlight-color: transparent; }
     opacity 320ms var(--ease);
 }
 
+/* Instant, and nothing moves. A press still answers, by dimming. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
+  :where(button:not(:disabled), [role="button"], summary):active {
+    transform: none;
+    opacity: 0.7;
   }
 }
