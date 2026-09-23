@@ -34,7 +34,7 @@
 
 import type { Assignment, Availability, Commitment, FixedEvent, StudyBlock, WorkKind } from '../types.ts';
 import { DEFAULT_TZ, localParts, weekdayOf, zonedInstant } from '../time.ts';
-import { freeMinutesByDay, freeSlots } from './slots.ts';
+import { freeMinutesByDay, freeSlots, type FreeSlot } from './slots.ts';
 import { effectiveEnergy } from './observed.ts';
 import {
   CATEGORY_METHOD,
@@ -100,6 +100,8 @@ export interface PlanOptions {
    * Without these, replanning at noon happily schedules a second run on a day
    * the student already ran, and drops new work on top of the hours they just
    * spent. The past is not free time.
+   *
+   * They also count against their day's ceiling. See `alreadyOnTheDay`.
    */
   existingBlocks?: StudyBlock[];
   /**
@@ -430,6 +432,59 @@ function addDaysKey(dateKey: string, n: number): string {
   return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
 }
 
+/**
+ * Study already on each day, from the blocks this plan has to keep.
+ *
+ * Two numbers, because a day's allowance is the smaller of two limits and a
+ * block can count against one without the other. `studied` is effort, charged
+ * against the ceiling wherever in the day it happened. `held` is the part of the
+ * block's time inside the free time the buffer is measured from.
+ *
+ * They differ in the case that matters most. Today's free time starts at now, so
+ * two hours done this morning were never in it. Taking them off the buffered
+ * free time as well as the ceiling charges them twice, and a replan at 7pm after
+ * a morning's work plans nothing at all.
+ *
+ * Done and partial blocks charge what was reported, not their planned length:
+ * half an hour of a ninety-minute block leaves an hour of the day. A skipped
+ * block charges nothing. A block still marked planned charges its full length,
+ * even once its time has passed: it is still on the calendar and can still be
+ * ticked off, and a ceiling that holds only until then is not one. Marking it
+ * skipped gives the time back.
+ */
+function alreadyOnTheDay(
+  blocks: StudyBlock[],
+  slots: FreeSlot[],
+  tz: string,
+): Map<string, { studied: number; held: number }> {
+  const out = new Map<string, { studied: number; held: number }>();
+
+  for (const b of blocks) {
+    const studied =
+      b.status === 'skipped' ? 0
+      : b.status === 'planned' ? b.minutes
+      : b.actualMinutes ?? b.minutes;
+    if (studied <= 0) continue;
+
+    const startMs = new Date(b.start).getTime();
+    const endMs = new Date(b.end).getTime();
+    const dateKey = localParts(new Date(startMs), tz).dateKey;
+
+    let heldMs = 0;
+    for (const s of slots) {
+      if (s.dateKey !== dateKey) continue;
+      heldMs += Math.max(0, Math.min(endMs, s.end.getTime()) - Math.max(startMs, s.start.getTime()));
+    }
+
+    const day = out.get(dateKey) ?? { studied: 0, held: 0 };
+    day.studied += studied;
+    day.held += Math.round(heldMs / 60_000);
+    out.set(dateKey, day);
+  }
+
+  return out;
+}
+
 /** Half an hour of daylight between two blocks is enough to reset the clock. */
 const CHAIN_GAP_MS = 30 * 60_000;
 
@@ -492,12 +547,20 @@ export function planWeek(
     return perDay ?? availability.maxDailyMinutes;
   };
 
+  // The ceiling is on the day, not on this run of the planner. Without charging
+  // what is already there, a student who did two hours by noon and replans is
+  // offered the full three again.
+  const already = alreadyOnTheDay(opts.existingBlocks, slots, tz);
+
   const capacity = new Map<string, number>();
   const capacityTotal = new Map<string, number>();
   for (const [dateKey, minutes] of freeByDay) {
-    const usable = Math.min(dailyCap(dateKey), Math.floor(minutes * (1 - opts.bufferFraction)));
-    capacity.set(dateKey, usable);
-    capacityTotal.set(dateKey, usable);
+    const ceiling = dailyCap(dateKey);
+    const fillable = Math.floor(minutes * (1 - opts.bufferFraction));
+    const { studied, held } = already.get(dateKey) ?? { studied: 0, held: 0 };
+    capacity.set(dateKey, Math.max(0, Math.min(ceiling - studied, fillable - held)));
+    // The day's whole allowance, so a day with work already in it reads as fuller.
+    capacityTotal.set(dateKey, Math.min(ceiling, fillable));
   }
 
   const horizonEnd = now.getTime() + (opts.days + 30) * 86_400_000;

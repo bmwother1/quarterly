@@ -6,7 +6,7 @@ import {
   applyCompletion, markAssignmentDone, applyLearnedEstimates,
   missedBlocks, resetWeeklyTallies,
 } from '../src/lib/schedule/complete.ts';
-import { zonedInstant } from '../src/lib/time.ts';
+import { localParts, zonedInstant } from '../src/lib/time.ts';
 
 const TZ = 'America/Los_Angeles';
 const NOW = zonedInstant('2026-10-07', 18 * 60, TZ);   // a Wednesday evening
@@ -223,6 +223,88 @@ describe('replanning around what already happened', () => {
       (b) => b.commitmentId === 'run' && b.start.startsWith('2026-10-05'),
     );
     assert.equal(mondayRuns.length, 0, 'replanning scheduled a second run on a day already run');
+  });
+});
+
+describe('the daily ceiling counts what already happened', () => {
+  const MON = '2026-10-05';
+  const at = (minutes: number) => zonedInstant(MON, minutes, TZ).toISOString();
+
+  /**
+   * `replan` in use-heron.ts without the React: blocks the student reported on
+   * or pinned are kept and handed to the planner, and the rest are replaced.
+   */
+  async function replanAt(now: Date, blocks: StudyBlock[], maxDailyMinutes: number) {
+    const { planWeek } = await import('../src/lib/schedule/plan.ts');
+    const { defaultAvailability } = await import('../src/lib/schedule/slots.ts');
+
+    const av = { ...defaultAvailability(), energy: 'steady' as const, maxDailyMinutes };
+    // More due Wednesday than the days before it can hold, so the planner always
+    // wants Monday and only the ceiling can stop it.
+    const work = ['MATH 124', 'CHEM 142', 'CSE 121'].map((course, i) => assignment({
+      id: `hw${i}`, course, estimatedMinutes: 300,
+      due: zonedInstant('2026-10-07', 23 * 60, TZ).toISOString(),
+    }));
+
+    const settled = blocks.filter((b) => b.status !== 'planned' || b.pinned);
+    const r = planWeek(work, av, { now, tz: TZ, existingBlocks: settled });
+    return { total: studied([...settled, ...r.blocks]), added: studied(r.blocks) };
+  }
+
+  /** Study on Monday, local time: what was reported for settled blocks, the length of planned ones. */
+  function studied(blocks: StudyBlock[]): number {
+    return blocks
+      .filter((b) => localParts(new Date(b.start), TZ).dateKey === MON)
+      .reduce((t, b) => t + (b.status === 'planned' ? b.minutes : b.actualMinutes ?? 0), 0);
+  }
+
+  test('two hours done by noon leave one hour of a three-hour day', async () => {
+    const { total, added } = await replanAt(zonedInstant(MON, 12 * 60, TZ), [
+      block({ id: 'am', assignmentId: 'hw0', status: 'done', actualMinutes: 120, minutes: 120, start: at(9 * 60), end: at(11 * 60) }),
+      // Left over from the morning's plan. The replan replaces it.
+      block({ id: 'old', assignmentId: 'hw1', start: at(14 * 60), end: at(15 * 60) }),
+    ], 180);
+
+    assert.ok(total <= 180, `Monday holds ${total} minutes against a 180-minute ceiling`);
+    assert.ok(added > 0, 'the hour still left on Monday went unused');
+  });
+
+  test('a pinned block later today counts against the ceiling', async () => {
+    const { total } = await replanAt(zonedInstant(MON, 12 * 60, TZ), [
+      block({ id: 'am', assignmentId: 'hw0', status: 'done', actualMinutes: 60, start: at(9 * 60), end: at(10 * 60) }),
+      block({ id: 'pin', assignmentId: 'hw1', pinned: true, start: at(15 * 60), end: at(16 * 60) }),
+    ], 180);
+
+    assert.ok(total <= 180, `Monday holds ${total} minutes against a 180-minute ceiling`);
+  });
+
+  test('an evening replan after a morning of work still plans the evening', async () => {
+    // The plausible wrong fix. Today's free time is counted from now, so the
+    // morning was never in it. Taking the morning off the buffered free time as
+    // well as off the ceiling charges it twice: 7pm to 10pm buffers to 144
+    // minutes, less 120 is 24, and 24 is too short to place anything.
+    const { total, added } = await replanAt(zonedInstant(MON, 19 * 60, TZ), [
+      block({ id: 'am', assignmentId: 'hw0', status: 'done', actualMinutes: 120, minutes: 120, start: at(9 * 60), end: at(11 * 60) }),
+    ], 240);
+
+    assert.ok(total <= 240, `Monday holds ${total} minutes against a 240-minute ceiling`);
+    assert.ok(added >= 100, `only ${added} of the 120 minutes left on Monday were planned`);
+  });
+
+  test('a partial charges what was spent and a skip charges nothing', async () => {
+    const { total, added } = await replanAt(zonedInstant(MON, 12 * 60, TZ), [
+      // 30 minutes of a 90-minute block.
+      block({ id: 'part', assignmentId: 'hw0', status: 'partial', actualMinutes: 30, minutes: 90, start: at(8 * 60), end: at(9 * 60 + 30) }),
+      block({ id: 'skip', assignmentId: 'hw1', status: 'skipped', actualMinutes: 0, start: at(10 * 60), end: at(11 * 60) }),
+      // Pinned and not reported yet. It is still on the calendar and can still
+      // be ticked off, so it counts at full length until then.
+      block({ id: 'unsaid', assignmentId: 'hw2', pinned: true, minutes: 45, start: at(11 * 60), end: at(11 * 60 + 45) }),
+    ], 180);
+
+    assert.ok(total <= 180, `Monday holds ${total} minutes against a 180-minute ceiling`);
+    // 105 minutes are left. Charging the partial at its planned 90, or the skip
+    // at its 60, leaves at most 45.
+    assert.ok(added >= 100, `only ${added} of the 105 minutes left on Monday were planned`);
   });
 });
 

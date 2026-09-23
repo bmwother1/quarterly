@@ -9,6 +9,49 @@ record of what was tried and abandoned is worth more than a tidy file.
 
 ---
 
+## 2026-09-22 · Work already on a day counts against its ceiling
+
+**Decided:** every block a plan keeps counts against its day's ceiling, on every
+path into the planner, with no option to turn it off. Done and partial blocks
+charge the minutes the student reported, a block still marked planned charges
+its length, and a skipped block charges nothing. A day's allowance is the
+smaller of two limits, worked out separately: the ceiling less everything
+charged, and the buffered free time less the part of those blocks inside it.
+
+**Why:** the ceiling is documented as a hard limit on a day, and it was only a
+limit on one run of the planner. A student with a three-hour ceiling who did two
+hours by noon and pressed Replan was offered three more, five in all, and pinned
+blocks counted for nothing. The replan is the moment a student is behind, and
+the moment they are most likely to believe whatever the plan says they can do.
+
+**Why two limits, not one subtraction.** Today's free time is counted from now,
+so the morning's hours were never in it. Subtracting them from the allowance
+after the buffer is applied charges them twice whenever free time is the tighter
+limit, which is most evenings: a 7pm replan after two hours in the morning
+planned nothing at all. That version passes the obvious tests and was the first
+one written. A test now pins the evening case.
+
+**Why an unreported planned block counts.** It is still on the calendar and can
+still be ticked off. The first version here charged nothing for a block whose
+time had passed unreported, since a replan drops unpinned ones as if they never
+happened. `npm run refresh` caught it: a block ending at 9:50 was not charged at
+a 10am refresh, and once ticked the day held 340 minutes against 300. Marking the
+block skipped gives the time back.
+
+**Rejected:**
+- `chargeExistingToCap`, an option defaulting to off, written the same day for
+  `fitNewWork` on the feed branch. Every caller that passes existing blocks
+  wants them charged, and a hard ceiling that holds only when the caller
+  remembers a flag is this bug waiting for the next caller.
+- Charging planned length for done and partial blocks. Thirty minutes of a
+  ninety-minute block would cost the hour the student is trying to catch up in.
+
+**Revisit when:** a student says a replan offered too little on a day they know
+has room. That points at unreported blocks nobody went back to mark, and the fix
+is asking about them, not uncounting them.
+
+---
+
 ## 2026-08-28 · The name is Heron, and the search had to change shape first
 
 **Executed 2026-09-05.** Code, copy, metadata and manifest renamed in one pass.
