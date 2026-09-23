@@ -658,6 +658,8 @@ export function planWeek(
   }
 
   const blocks: StudyBlock[] = [];
+  // Ids already on the calendar. See where a block's id is made.
+  const takenIds = new Set(opts.existingBlocks.map((b) => b.id));
   const spansByCourse = new Map<string, Span[]>();
   const nowMs = now.getTime();
   const breakMs = opts.breakMinutes * 60_000;
@@ -777,11 +779,20 @@ export function planWeek(
         })
       : null;
 
+    // Keyed by start instant, not session index. Index restarts at 1 on every
+    // replan, so a completed session 1 and a freshly planned session 1 shared
+    // an id — React saw duplicate keys and dropped or duplicated blocks.
+    //
+    // The start instant is not enough on its own either. A block moved by hand
+    // keeps the id of the time it was planned for, and this session may be
+    // landing in exactly that freed time. Sharing an id, ticking one marks both.
+    const baseId = `${p.key}@${new Date(startMs).toISOString()}`;
+    let id = baseId;
+    for (let n = 2; takenIds.has(id); n++) id = `${baseId}~${n}`;
+    takenIds.add(id);
+
     const block: StudyBlock = {
-      // Keyed by start instant, not session index. Index restarts at 1 on every
-      // replan, so a completed session 1 and a freshly planned session 1 shared
-      // an id — React saw duplicate keys and dropped or duplicated blocks.
-      id: `${p.key}@${new Date(startMs).toISOString()}`,
+      id,
       assignmentId: p.assignment?.id ?? null,
       commitmentId: p.commitment?.id ?? null,
       course: p.group,

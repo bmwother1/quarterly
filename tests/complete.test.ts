@@ -334,6 +334,33 @@ describe('block identity', () => {
     const ids = all.map((b) => b.id);
     assert.equal(new Set(ids).size, ids.length, `duplicate block ids: ${ids.join(', ')}`);
   });
+
+  test('a block moved by hand does not share an id with what is planned in its old place', async () => {
+    // Found by `npm run sweep`. An id names the time a block was planned for,
+    // and a moved block keeps it. The replan then fills the freed hour with a
+    // new session of the same thing, under the same id, and ticking either one
+    // marks both done and logs the minutes twice.
+    const { planWeek } = await import('../src/lib/schedule/plan.ts');
+    const { defaultAvailability } = await import('../src/lib/schedule/slots.ts');
+
+    const av = { ...defaultAvailability(), energy: 'steady' as const, maxDailyMinutes: 600 };
+    const monday = zonedInstant('2026-10-05', 8 * 60, TZ);
+    const runs = commitment({ id: 'run', sessionsPerWeek: 5 });
+
+    const first = planWeek([], av, { now: monday, tz: TZ, commitments: [runs] });
+    const b = first.blocks[0];
+    const thursday = zonedInstant('2026-10-08', 7 * 60 + 15, TZ).getTime();
+    const moved = {
+      ...b, pinned: true,
+      start: new Date(thursday).toISOString(),
+      end: new Date(thursday + b.minutes * 60_000).toISOString(),
+    };
+
+    const second = planWeek([], av, { now: monday, tz: TZ, commitments: [runs], existingBlocks: [moved] });
+
+    const ids = [moved, ...second.blocks].map((x) => x.id);
+    assert.equal(new Set(ids).size, ids.length, `duplicate block ids: ${ids.join(', ')}`);
+  });
 });
 
 describe('one-off fixed events', () => {
