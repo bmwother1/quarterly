@@ -302,7 +302,7 @@ export default function ImportPage() {
                 className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--accent)]"
               />
               <span>
-                <span className="font-medium">Remember this link on this device</span>
+                <span className="font-medium">Remember this link</span>
                 <span className="mt-1 block text-[var(--muted)]">
                   {result.kind === 'assignments'
                     ? 'Heron then checks Canvas once a day and fits new assignments into your week, so work posted the week it is due still shows up.'
@@ -329,9 +329,9 @@ export default function ImportPage() {
           to a laptop to find a feed URL again. Heron also does it daily on its own. */}
       {remembered.length > 0 && (
         <section className="mt-10 border-t border-[var(--border)] pt-6">
-          <h2 className="text-base font-semibold">Saved on this device, checked daily</h2>
+          <h2 className="text-base font-semibold">Saved links, checked daily</h2>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            Stored in this browser only. Never synced to your account, never in your backups.
+            Signed in, they are on every device you use, encrypted. Never in your backups.
           </p>
           <ul className="mt-2 divide-y divide-[var(--border)] border-y border-[var(--border)]">
             {remembered.map((f) => (
@@ -405,15 +405,15 @@ export default function ImportPage() {
         <h2 className="text-base font-semibold">Treat these links like passwords</h2>
         <p className="mt-1 text-base text-[var(--muted)]">
           Anyone holding one can read that calendar, indefinitely, without logging in. So
-          Heron never stores yours on its server: it is sent once per fetch, used, and
-          dropped, and it is never written to a log.
+          Heron only keeps yours if you ask it to, and never writes it to a log.
         </p>
         <p className="mt-2 text-base text-[var(--muted)]">
-          If you tick <span className="text-[var(--ink)]">Remember this link</span>, it is
-          kept in this browser and nowhere else, and Heron uses it to check that calendar once a
-          day. It is not part of your account, so it never syncs to our server or to your other
-          devices, and it is not in the backup file you can download. Forgetting it here or in
-          Settings removes it immediately, and so does deleting your data.{' '}
+          If you tick <span className="text-[var(--ink)]">Remember this link</span>, Heron uses it
+          to check that calendar once a day. Signed out, it is kept in this browser and nowhere
+          else. Signed in, it is also saved to your account, encrypted, so your phone and laptop
+          both have it; the key that opens it is not stored in the database. It is never in the
+          backup file you can download. Forgetting it here or in Settings removes it from every
+          device, and so does deleting your data.{' '}
           <Link href="/privacy" className={link}>The privacy page</Link>{' '}
           spells out exactly what that means.
         </p>

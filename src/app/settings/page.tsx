@@ -49,7 +49,7 @@ export default function Settings() {
 
       <Section
         title="Calendar links"
-        hint="Saved on this device so Heron can check them once a day. Remove any of them whenever you like."
+        hint="Heron checks these once a day. Signed in, they are on all your devices, encrypted. Forgetting one removes it everywhere."
       >
         <FeedPanel tz={TZ} />
       </Section>

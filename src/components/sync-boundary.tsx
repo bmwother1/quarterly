@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { ensureProfile, startAutoPush, syncOnSignIn } from '@/supabase/sync';
+import { startFeedSync } from '@/supabase/feed-sync';
 import { logOpen } from '@/supabase/events';
 
 /**
@@ -30,6 +31,11 @@ export function SyncBoundary() {
     doneFor.current = userId;
 
     let stopAutoPush: (() => void) | null = null;
+    // Calendar links sync on their own track. A plan conflict is about the
+    // week, and holding the links back until it is settled would leave the
+    // phone unable to refresh Canvas for exactly as long as the student is
+    // deciding which week to keep.
+    const stopFeedSync = startFeedSync();
 
     void (async () => {
       try {
@@ -46,7 +52,7 @@ export function SyncBoundary() {
       logOpen();
     })();
 
-    return () => { stopAutoPush?.(); };
+    return () => { stopAutoPush?.(); stopFeedSync(); };
   }, [userId, loading]);
 
   return null;

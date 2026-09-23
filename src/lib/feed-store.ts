@@ -1,35 +1,37 @@
 /**
- * Calendar links, remembered on this device and nowhere else.
+ * Calendar links, remembered on this device and, when signed in, on the account.
  *
  * **Why this is a separate store rather than a field on `HeronState`.** That
- * object is the sync payload: `push()` writes it wholesale into `plan_state`,
- * and `toBackup()` writes it into a JSON file in someone's Downloads folder. A
- * feed URL added there would be on the server within two seconds of being
- * typed, and the claim the product leads with (that Heron never holds your
- * calendar credentials) would have become false by accident rather than by
- * decision. Keeping them out of that object is what makes the claim structural
+ * object is the sync payload: `push()` writes it wholesale into `plan_state` as
+ * plain JSON, and `toBackup()` writes it into a JSON file in someone's Downloads
+ * folder. A feed URL is a password to a student's whole schedule, so it never
+ * goes in either. Keeping it out of that object is what makes that structural
  * instead of a promise somebody has to remember.
  *
- * So: its own key, never merged into `HeronState`, never read by `sync.ts`,
- * never written by `backup.ts`. The only way a link leaves this browser is a
- * fetch of that calendar, which is the same round trip the original paste made,
- * and `/api/feed` neither logs nor stores it.
+ * **Synced to the account, encrypted, since 2026-09-23.** It started as
+ * device-only, and that broke the case that matters: a link pasted on a laptop
+ * could never be refreshed from the phone, and getting the link on a phone is
+ * the hard part. Signed in, each change here is sent to `/api/feeds`, which
+ * encrypts the link before it reaches the database (`src/app/api/feeds/seal.ts`).
+ * Signed out, nothing leaves this browser, exactly as before. The account side
+ * lives in `src/supabase/feed-sync.ts`; this file only reports what changed.
+ * See `context/decisions.md`, 2026-09-23.
  *
- * **One entry per calendar, not one slot.** It started as a single Canvas slot.
- * Work schedules change weekly too, and a student with Canvas, a work app and a
- * club calendar has three links that all go stale the same way.
+ * **One entry per calendar, not one slot.** Canvas, a work app and a club
+ * calendar are three links that all go stale the same way.
  *
  * **Opt-in per link, and reversible in one tap.** Nothing is remembered unless
  * the student ticks the box; each link can be forgotten on its own from the
- * import page or Settings, and Delete my data forgets them all. See
- * `context/decisions.md`, 2026-09-22.
+ * import page or Settings, which forgets it on every device, and Delete my data
+ * forgets them all.
  *
- * The residual risk is honest and worth stating: anything that can run script
- * on this origin can read this key. That is already true of the student's whole
- * schedule sitting next door in `quarterly.state.v1`, and Heron loads no
- * third-party script, so remembering links widens the damage an XSS could do
- * rather than creating a new way in.
+ * The residual risk on the device: anything that can run script on this origin
+ * can read this key. That is already true of the student's whole schedule
+ * sitting next door in `quarterly.state.v1`, and Heron loads no third-party
+ * script.
  */
+
+import { sameCalendar } from './feed-sync-rule.ts';
 
 const KEY = 'heron.feeds.v2';
 /** The single-slot Canvas store this replaced. Read once, migrated, removed. */
@@ -50,9 +52,20 @@ export interface RememberedFeed {
   /** Matches `FixedEvent.source` for event feeds. Null for Canvas. */
   sourceKey: string | null;
   rememberedAt: string;
-  /** When this device last fetched it successfully. Drives the daily refresh. */
+  /** When it was last fetched successfully, here or on another device. Drives the daily refresh. */
   fetchedAt: string | null;
+  /**
+   * The account has confirmed holding it. What tells "forgotten on another
+   * device" apart from "saved here before signing in" (`feed-sync-rule.ts`).
+   */
+  synced: boolean;
 }
+
+/** What changed, for whoever mirrors this store to the account. */
+export type FeedChange =
+  | { op: 'upsert'; feed: RememberedFeed }
+  | { op: 'touch'; url: string; fetchedAt: string }
+  | { op: 'delete'; url: string };
 
 export function hostOf(url: string): string {
   try {
@@ -72,6 +85,7 @@ function clean(v: Partial<RememberedFeed>): RememberedFeed | null {
     sourceKey: typeof v.sourceKey === 'string' ? v.sourceKey : null,
     rememberedAt: typeof v.rememberedAt === 'string' ? v.rememberedAt : new Date().toISOString(),
     fetchedAt: typeof v.fetchedAt === 'string' ? v.fetchedAt : null,
+    synced: v.synced === true,
   };
 }
 
@@ -109,6 +123,11 @@ const EMPTY: RememberedFeed[] = Object.freeze([]) as unknown as RememberedFeed[]
 
 let cache: RememberedFeed[] | undefined;
 const listeners = new Set<() => void>();
+let mirror: ((changes: FeedChange[]) => void) | null = null;
+
+function report(changes: FeedChange[]): void {
+  if (mirror && changes.length) mirror(changes);
+}
 
 function save(list: RememberedFeed[]): void {
   cache = list.length ? list : EMPTY;
@@ -174,28 +193,56 @@ export const feedStore = {
     const now = new Date().toISOString();
     const next: RememberedFeed = {
       url: entry.url, host: hostOf(entry.url), label: entry.label, kind: entry.kind,
-      sourceKey: entry.sourceKey, rememberedAt: now, fetchedAt: now,
+      sourceKey: entry.sourceKey, rememberedAt: now, fetchedAt: now, synced: false,
     };
-    const rest = this.getSnapshot().filter((f) =>
-      f.url !== entry.url
-      && !(entry.kind === 'assignments' && f.kind === 'assignments')
-      && !(entry.sourceKey && f.sourceKey === entry.sourceKey));
+    const list = this.getSnapshot();
+    const rest = list.filter((f) => !sameCalendar(f, next));
     save([...rest, next]);
+    // The replaced links go on every device too, or the account would keep a
+    // dead Canvas link and hand it back to the next device that signs in.
+    report([
+      ...list.filter((f) => sameCalendar(f, next) && f.url !== next.url).map((f) => ({ op: 'delete' as const, url: f.url })),
+      { op: 'upsert', feed: next },
+    ]);
   },
 
   markFetched(url: string, at: string): void {
     const list = this.getSnapshot();
     if (!list.some((f) => f.url === url)) return;
     save(list.map((f) => (f.url === url ? { ...f, fetchedAt: at } : f)));
+    report([{ op: 'touch', url, fetchedAt: at }]);
   },
 
-  /** Forget one link, by its URL. */
+  /** Forget one link, by its URL, here and on the account. */
   forget(url: string): void {
     save(this.getSnapshot().filter((f) => f.url !== url));
+    report([{ op: 'delete', url }]);
   },
 
   /** Forget every link. What Delete my data calls. */
   forgetAll(): void {
+    const list = this.getSnapshot();
     save([]);
+    report(list.map((f) => ({ op: 'delete' as const, url: f.url })));
+  },
+
+  /**
+   * Mirror every later change to the account, or stop with null. Only
+   * `feed-sync.ts` calls this; signed out there is no mirror and nothing leaves.
+   */
+  setMirror(fn: ((changes: FeedChange[]) => void) | null): void {
+    mirror = fn;
+  },
+
+  /** Put the reconciled list in place. Not reported: it came from the account. */
+  replaceAll(list: RememberedFeed[]): void {
+    save(list);
+  },
+
+  /** The account confirmed it holds these. */
+  markSynced(urls: string[]): void {
+    const list = this.getSnapshot();
+    if (!list.some((f) => urls.includes(f.url) && !f.synced)) return;
+    save(list.map((f) => (urls.includes(f.url) ? { ...f, synced: true } : f)));
   },
 };

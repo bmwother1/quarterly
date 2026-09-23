@@ -157,6 +157,14 @@ and has not been done.
   `quarterly-alpha.vercel.app` now 307s to `heron.study`. The redirect allow-list
   entry must read `https://heron.study/**` with the slash: without it, `**`
   also matches `heron.study.attacker.com`.
+- **Two dashboard steps for synced calendar links (2026-09-23), both Brydon's.**
+  Until both are done the app behaves exactly as before, links on the device only.
+  1. Supabase SQL editor: run `supabase/migrations/0005_calendar_feed.sql`.
+  2. Vercel env var `FEED_LINK_KEY` (Production and Preview, Sensitive), value from
+     `openssl rand -base64 32`, then redeploy. Losing or changing it makes every
+     saved link unreadable; students would paste them again.
+  Then confirm: save Canvas on the laptop, open the phone, and it should be listed
+  in Settings, Calendar links.
 - **Whether paid testers are tagged separately.** Paying people to open the app
   measures the payment, not the product, so they must not pollute the retention
   cohort.

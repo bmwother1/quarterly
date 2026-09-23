@@ -29,14 +29,18 @@ export const metadata = {
  *   - RLS on every table, owner-only (supabase/migrations/0001_init.sql)
  *   - delete_own_account() removes the auth row and everything cascades
  *     (supabase/migrations/0002_account_deletion.sql)
- *   - calendar links are never stored on the server and never logged
- *     (src/app/api/feed/route.ts), and never enter HeronState, so sync and
- *     backup cannot carry them (src/lib/store.ts)
+ *   - calendar links are never logged (src/app/api/feed/route.ts) and never
+ *     enter HeronState, so plan sync and backup cannot carry them
+ *     (src/lib/store.ts)
+ *   - signed in, remembered links are stored AES-256-GCM encrypted in
+ *     calendar_feed, key in Vercel only (src/app/api/feeds/seal.ts,
+ *     supabase/migrations/0005_calendar_feed.sql); forgetting deletes the row
+ *     (src/supabase/feed-sync.ts)
  *   - any public host is fetched; private addresses are refused on the resolved
  *     address and every redirect (src/app/api/feed/fetch-feed.ts)
  *   - if the student opts in, links are kept in this browser under their own
  *     key (src/lib/feed-store.ts), checked daily on open (use-feed.ts), removed
- *     by Forget and by heronStore.clear()
+ *     by Forget and by heronStore.clear(), on every device
  *   - imported events record host and calendar name only (FixedEvent.source)
  *   - imported .ics files are parsed in the browser and never uploaded
  */
@@ -70,7 +74,7 @@ export default function Privacy() {
       </Section>
 
       <Section title="If you do sign in">
-        <p>Three things are then stored on our server, and nothing else:</p>
+        <p>Four things are then stored on our server, and nothing else:</p>
         <ul className="mt-2 list-disc space-y-1 pl-5">
           <li>
             <strong className="text-[var(--ink)]">Your email address.</strong> Used to send you a
@@ -85,6 +89,10 @@ export default function Privacy() {
           <li>
             <strong className="text-[var(--ink)]">A usage log.</strong> One row when you open the
             app, plan a week, mark a block done or skipped, move a block, or import a calendar.
+          </li>
+          <li>
+            <strong className="text-[var(--ink)]">Calendar links you chose to remember,</strong>{' '}
+            encrypted. See below.
           </li>
         </ul>
       </Section>
@@ -133,8 +141,7 @@ export default function Privacy() {
             fetch calendars from other sites directly.
           </li>
           <li>
-            It is <strong className="text-[var(--ink)]">never stored on our server</strong>,
-            signed in or not, and it is never written to any log.
+            It is never written to any log, and it is only kept if you ask Heron to remember it.
           </li>
           <li>
             The server will fetch a link from any public website, since work scheduling apps
@@ -143,22 +150,28 @@ export default function Privacy() {
           </li>
         </ul>
         <p className="mt-2">
-          You can ask Heron to <strong className="text-[var(--ink)]">remember a link on this
-          device</strong>. That is a checkbox on the import page, shown after the calendar loads
-          and next to what it found. It is ticked by default and untick&shy;ing it takes one tap.
-          When it is on, the link is kept in this browser&rsquo;s local storage and nowhere else,
-          and Heron uses it to check that calendar once a day when you open your week:
+          You can ask Heron to <strong className="text-[var(--ink)]">remember a link</strong>.
+          That is a checkbox on the import page, shown after the calendar loads and next to what
+          it found. It is ticked by default and untick&shy;ing it takes one tap. When it is on,
+          Heron uses the link to check that calendar once a day when you open your week:
         </p>
         <ul className="mt-2 list-disc space-y-1 pl-5">
           <li>
-            It is not part of your account. Signing in syncs your week; it does not sync your
-            links, so they never reach our server or your other devices.
+            <strong className="text-[var(--ink)]">Signed out,</strong> it is kept in this
+            browser&rsquo;s local storage and nowhere else.
+          </li>
+          <li>
+            <strong className="text-[var(--ink)]">Signed in,</strong> it is also saved to your
+            account so every device you sign in on has it. It is encrypted before it reaches the
+            database, and the key that opens it is kept separately, outside the database, so a
+            copy of the database alone does not reveal it. Like the rest of your data, only your
+            account can read it back.
           </li>
           <li>They are not included in the backup file you can download.</li>
           <li>
             Each link has its own <strong className="text-[var(--ink)]">Forget</strong> button,
-            in Settings and on the import page, which removes it immediately. Delete my data
-            removes them all, and so does clearing this site&rsquo;s data.
+            in Settings and on the import page, which removes it from this device and your
+            account at once. Delete my data removes them all.
           </li>
           <li>
             The daily check adds new work into free time and says what it added. It never moves
@@ -169,8 +182,9 @@ export default function Privacy() {
           Why offer it at all: instructors publish all quarter, often the same week something is
           due, and managers post new shifts every week. A plan built on week one&rsquo;s calendars
           is quietly wrong by week four. Without a saved link, fixing that means finding it again,
-          which for Canvas realistically means a laptop. With it saved, it happens by itself. The
-          trade is yours to make, in both directions, at any time.
+          which on a phone is the hardest part of using Heron. With it saved, it happens by
+          itself, on whichever device you open. The trade is yours to make, in both directions,
+          at any time.
         </p>
       </Section>
 

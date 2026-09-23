@@ -133,7 +133,8 @@ export const SOURCE_HELP: Array<{ kind: SourceKind; label: string; where: string
   {
     kind: 'canvas',
     label: 'Canvas',
-    where: 'On a laptop: Calendar, then Calendar Feed in the right-hand sidebar. On an iPhone, no laptop needed: in the Canvas app open the menu, then Settings, then Subscribe to Calendar Feed. That adds it to your iPhone calendar; the link is then in the iPhone Settings app under Calendar, Calendar Accounts, Subscribed Calendars, in the Server field.',
+    where: 'On an iPhone: open Canvas in Safari, not the Canvas app, and go to Calendar. Tap aA in the address bar, then Request Desktop Website. Tap Calendar Feed at the bottom of the right-hand column, then press and hold the link it shows and tap Copy. On a laptop: Calendar, then Calendar Feed in the right-hand column. Signed in, a link you save on one device is on your others too, so pasting it once on a laptop also sets up your phone.',
+    note: 'Already subscribed in your iPhone calendar? The link is in Settings, Apps, Calendar, Calendar Accounts, Subscribed Calendars (on iOS 17 or earlier, Settings, Calendar, Accounts), in the Server field of the Canvas one. If Canvas is not listed there, your iPhone saved it to iCloud or copied the events in once, and there is no link to copy; use Safari as above.',
   },
   {
     kind: 'google',

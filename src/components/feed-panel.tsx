@@ -18,7 +18,7 @@ export function FeedPanel({ tz }: { tz: string }) {
   if (remembered.length === 0) {
     return (
       <p className="text-sm text-[var(--muted)]">
-        No calendar links are saved on this device.{' '}
+        No calendar links are saved.{' '}
         <Link
           href="/import"
           className="text-[var(--ink)] underline decoration-[var(--border-strong)] underline-offset-4 hover:decoration-[var(--ink)]"

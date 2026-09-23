@@ -102,8 +102,11 @@ class-action filings, and one of the largest forced API-key rotation events on
 record.
 
 Every competitor asks a student to *connect* Canvas. Heron asks for a calendar
-feed and never holds a credential. The Canvas API policy says nothing about iCal
-feeds, so the feed approach sits outside the tokens that got rotated.
+feed and never holds a Canvas login or API token. The feed is read-only, and
+since 2026-09-23 a remembered one is kept on the account encrypted, with the key
+outside the database: say "never your Canvas login", not "never a credential".
+The Canvas API policy says nothing about iCal feeds, so the feed approach sits
+outside the tokens that got rotated.
 
 **This belongs on the landing page above the scheduling story.** The corollary is
 that the standing rule "a feed URL is a password" is now something students have

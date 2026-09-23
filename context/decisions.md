@@ -9,6 +9,56 @@ record of what was tried and abandoned is worth more than a tidy file.
 
 ---
 
+## 2026-09-23 · Calendar links sync to the account, encrypted
+
+**Supersedes** the "device and not the server" half of 2026-09-22, "Remember
+the Canvas link on the device, never on the server". Remembering stays opt-in
+and ticked by default; what changes is where a remembered link lives when the
+student is signed in.
+
+**Decided:** signed in, a remembered link is also saved to the account in
+`calendar_feed` (`0005`), AES-256-GCM encrypted by `/api/feeds` with
+`FEED_LINK_KEY`, which lives in Vercel and never in Supabase. Rows are found by
+an HMAC of the URL, and the user id is the associated data, so a row moved to
+another account does not open. The route talks to Supabase with the student's
+own token, so RLS decides access; there is no service-role key in it. Signed
+out, nothing changes: the link stays in the browser. Forget deletes the row on
+every device; Delete my data cascades.
+
+**Why:** Brydon hit it on his own phone on day one. Device-only meant a link
+pasted on a laptop could never refresh the phone, and the phone is both where a
+student uses Heron and where getting the link is hardest. That is the week-4
+stale-deadline problem the 2026-09-22 decision existed to fix, back again for
+anyone with two devices.
+
+**The sync rule, and why it needs a flag.** A link missing from the account is
+either forgotten on another device or saved here before signing in. They look
+the same and need opposite answers, so each entry carries `synced`: missing and
+synced goes, missing and never synced is uploaded (`feed-sync-rule.ts`). A fetch
+is sent as a touch that only updates an existing row, never an upsert, so a
+device that has not heard about a forget cannot revive the link. A forget that
+fails on the network is kept on the device and sent before anything is read at
+the next sign-in. Each of those has a test that fails when the rule is flipped.
+
+**What it costs, stated.** The claim is no longer "never on our server". It is
+"only if you ask, encrypted, with the key outside the database". A database
+dump or backup alone reveals no link. Someone holding both the database and
+Vercel's environment could decrypt them, and that includes Brydon. The privacy
+page, the import page and `growth.md`'s "never holds a credential" line now say
+so; the pitch is "never your Canvas login".
+
+**Rejected:** plaintext behind RLS (a dump is a list of live passwords);
+Supabase Vault or pgsodium (puts the key next to the data it protects);
+syncing the link inside `plan_state` (it would also land in every backup file);
+keeping device-only and just improving the iPhone instructions (the phone still
+could not refresh a link saved on the laptop).
+
+**Revisit when:** a server-side daily refresh is built. The link is now
+reachable server-side, which is what that needs, and the 2026-09-22 reasoning
+about "fetching data vs changing the plan" still governs what it may do.
+
+---
+
 ## 2026-09-23 · Whatever is on the calendar counts, everywhere
 
 **Decided:** a session already on the calendar, reported or pinned, counts
@@ -264,6 +314,9 @@ for a line that is almost always at the same place); drawing deadlines as
 blocks (a deadline is a moment, not time spent, and must never read as time).
 
 ## 2026-09-22 · Remember the Canvas link on the device, never on the server
+
+**Superseded in part** by 2026-09-23, "Calendar links sync to the account,
+encrypted": signed in, a remembered link now also lives on the account.
 
 **Amends** 2026-08-17, "Use the Canvas calendar feed". That decision still
 stands: no credentials, no scraping, a pasted feed. What changes is that the
