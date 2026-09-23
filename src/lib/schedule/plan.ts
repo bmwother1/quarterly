@@ -270,7 +270,13 @@ export function dueInstant(a: Assignment, tz: string): Date {
 
 /** Break an assignment's remaining work into sessions of a sane length. */
 function buildSessions(a: Assignment, opts: Required<PlanOptions>): Pending[] {
-  const remaining = Math.max(0, a.estimatedMinutes - a.actualMinutes);
+  // Time logged is spent, and a session the student pinned is already planned.
+  // Leaving the pinned one out planned it twice, and took the hour from
+  // whatever else needed it.
+  const pinned = opts.existingBlocks
+    .filter((b) => b.assignmentId === a.id && b.status === 'planned')
+    .reduce((t, b) => t + b.minutes, 0);
+  const remaining = Math.max(0, a.estimatedMinutes - a.actualMinutes - pinned);
   if (remaining < MIN_SESSION_MINUTES / 2) return [];
 
   const preferred = SESSION_MINUTES[a.kind];

@@ -226,6 +226,32 @@ describe('replanning around what already happened', () => {
   });
 });
 
+describe('a pinned session is work already planned', () => {
+  test('it counts toward the assignment it belongs to', async () => {
+    // Found by `npm run sweep`. Sessions were built from the estimate less the
+    // time logged, so a session the student had pinned was planned again on
+    // top of itself: a two-hour problem set with an hour pinned for Thursday
+    // got two more hours.
+    const { planWeek } = await import('../src/lib/schedule/plan.ts');
+    const { defaultAvailability } = await import('../src/lib/schedule/slots.ts');
+
+    const av = { ...defaultAvailability(), energy: 'steady' as const, maxDailyMinutes: 600 };
+    const monday = zonedInstant('2026-10-05', 8 * 60, TZ);
+    const pset = assignment({ id: 'pset', estimatedMinutes: 120 });
+    const pinned = block({
+      id: 'pin', assignmentId: 'pset', pinned: true, minutes: 60,
+      start: zonedInstant('2026-10-08', 14 * 60, TZ).toISOString(),
+      end: zonedInstant('2026-10-08', 15 * 60, TZ).toISOString(),
+    });
+
+    const r = planWeek([pset], av, { now: monday, tz: TZ, existingBlocks: [pinned] });
+
+    const planned = [pinned, ...r.blocks.filter((b) => b.assignmentId === 'pset')].reduce((t, b) => t + b.minutes, 0);
+    assert.ok(planned <= 120, `${planned} minutes planned for a 120-minute problem set`);
+    assert.ok(r.blocks.some((b) => b.assignmentId === 'pset'), 'the unpinned hour went unplanned');
+  });
+});
+
 describe('the daily ceiling counts what already happened', () => {
   const MON = '2026-10-05';
   const at = (minutes: number) => zonedInstant(MON, minutes, TZ).toISOString();
