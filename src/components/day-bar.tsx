@@ -10,10 +10,10 @@ const hrs = (m: number) => (m >= 60 ? `${(m / 60).toFixed(m % 60 === 0 ? 0 : 1)}
  *
  * A pie was the obvious reach and the wrong one: comparing segment lengths on a
  * single axis is far easier than comparing wedge angles, long course names have
- * somewhere to sit, and this still reads at 10px tall on a phone.
+ * somewhere to sit, and this still reads at 12px tall on a phone.
  *
- * Segments are separated by a 2px surface gap rather than a border, so adjacent
- * colours never touch — which is what makes the two closest hues in the palette
+ * Segments are separated by a 2px gap rather than a border, so adjacent
+ * colours never touch, which is what makes the two closest hues in the palette
  * distinguishable to a colourblind reader even before the labels.
  */
 export function DayBar({ day }: { day: DayBreakdown }) {
@@ -21,12 +21,12 @@ export function DayBar({ day }: { day: DayBreakdown }) {
   const total = day.segments.reduce((s, x) => s + x.minutes, 0) || 1;
 
   if (day.segments.length === 0) {
-    return <p className="text-sm text-[var(--faint)]">Nothing on this day yet.</p>;
+    return <p className="text-sm text-[var(--muted)]">Nothing on this day yet.</p>;
   }
 
   return (
     <div>
-      <div className="flex h-9 w-full gap-[2px] overflow-hidden rounded-lg" role="img"
+      <div className="flex h-3 w-full gap-0.5 overflow-hidden rounded-full" role="img"
         aria-label={day.segments.map((s) => `${s.label} ${hrs(s.minutes)}`).join(', ')}>
         {day.segments.map((s) => {
           const pct = (s.minutes / total) * 100;
@@ -35,11 +35,12 @@ export function DayBar({ day }: { day: DayBreakdown }) {
               key={s.key}
               onMouseEnter={() => setHovered(s.key)}
               onMouseLeave={() => setHovered(null)}
-              className="relative h-full transition-opacity first:rounded-l-lg last:rounded-r-lg"
+              className="h-full"
               style={{
                 width: `${pct}%`,
                 background: s.color,
                 opacity: hovered && hovered !== s.key ? 0.45 : 1,
+                transition: 'opacity var(--dur-exit) var(--ease)',
               }}
               title={`${s.label} · ${hrs(s.minutes)}`}
             />
@@ -49,17 +50,17 @@ export function DayBar({ day }: { day: DayBreakdown }) {
 
       {/* Colour is never the only encoding: three of the light steps sit below
           3:1 on a light surface, so every segment is named here. */}
-      <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-sm">
+      <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-3">
         {day.segments.map((s) => (
           <li
             key={s.key}
             onMouseEnter={() => setHovered(s.key)}
             onMouseLeave={() => setHovered(null)}
-            className="flex items-center gap-1.5"
+            className="flex min-w-0 items-center gap-2"
           >
-            <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: s.color }} aria-hidden />
-            <span className={s.kind === 'work' ? '' : 'text-[var(--muted)]'}>{s.label}</span>
-            <span className="tabular-nums text-[var(--faint)]">{hrs(s.minutes)}</span>
+            <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: s.color }} aria-hidden />
+            <span className={`min-w-0 truncate ${s.kind === 'work' ? '' : 'text-[var(--muted)]'}`}>{s.label}</span>
+            <span className="ml-auto shrink-0 text-[var(--muted)]">{hrs(s.minutes)}</span>
           </li>
         ))}
       </ul>
@@ -76,11 +77,11 @@ export function DayStats({ day }: { day: DayBreakdown }) {
   ];
 
   return (
-    <dl className="grid grid-cols-3 gap-px overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--border)]">
+    <dl className="grid grid-cols-3 gap-4 border-t border-[var(--border)] pt-4">
       {cells.map((c) => (
-        <div key={c.label} className="bg-[var(--surface)] px-3 py-2.5">
-          <dt className="text-xs text-[var(--faint)]">{c.label}</dt>
-          <dd className="mt-0.5 font-medium tabular-nums">{c.value}</dd>
+        <div key={c.label}>
+          <dt className="text-sm text-[var(--muted)]">{c.label}</dt>
+          <dd className="text-title font-semibold">{c.value}</dd>
         </div>
       ))}
     </dl>

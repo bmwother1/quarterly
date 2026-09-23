@@ -15,6 +15,7 @@ import { UndoBar } from '@/components/undo-bar';
 import { Toast } from '@/components/toast';
 import { CountUp } from '@/components/count-up';
 import { keepCodes } from '@/components/course-name';
+import { dayName, focusLabel, shortDate } from '@/components/when';
 import { AddItem } from '@/components/add-item';
 import { SetupPrompt } from '@/components/setup-prompt';
 import { RescueNotice } from '@/components/rescue-notice';
@@ -27,43 +28,6 @@ import { categoryForCommitment, colorVar, type Category } from '@/lib/categories
 const TZ = DEFAULT_TZ;
 
 const hours = (min: number) => `${(min / 60).toFixed(1)}h`;
-
-/** "in 20 min", "in 1h 20m". */
-function until(ms: number): string {
-  const m = Math.round(ms / 60_000);
-  if (m < 60) return `in ${Math.max(1, m)} min`;
-  const h = Math.floor(m / 60);
-  const r = m % 60;
-  return r ? `in ${h}h ${r}m` : `in ${h}h`;
-}
-
-/** "Today", "Tomorrow", or the weekday. */
-function dayName(dateKey: string, todayKey: string): string {
-  if (dateKey === todayKey) return 'Today';
-  if (dateKey === addDays(todayKey, 1)) return 'Tomorrow';
-  return new Date(dateKey + 'T12:00:00Z').toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'long' });
-}
-
-function shortDate(dateKey: string): string {
-  return new Date(dateKey + 'T12:00:00Z').toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' });
-}
-
-/**
- * What the top of the week says about the block that matters most.
- *
- * Three cases, because "next" means three things: a block today whose time
- * passed without an answer is the first thing to deal with, one under way is
- * happening now, and anything else is coming up.
- */
-function focusLabel(block: StudyBlock, openPast: boolean, now: Date, todayKey: string) {
-  const start = new Date(block.start);
-  const end = new Date(block.end);
-  if (openPast) return { lead: 'Still open', rest: `${fmtTime(start, TZ)} to ${fmtTime(end, TZ)}` };
-  if (start <= now && now < end) return { lead: 'Now', rest: `until ${fmtTime(end, TZ)}` };
-  const key = localParts(start, TZ).dateKey;
-  if (key === todayKey) return { lead: 'Next', rest: `${fmtTime(start, TZ)}, ${until(start.getTime() - now.getTime())}` };
-  return { lead: 'Next', rest: `${dayName(key, todayKey).toLowerCase() === 'tomorrow' ? 'tomorrow' : dayName(key, todayKey)} at ${fmtTime(start, TZ)}` };
-}
 
 export default function WeekPage() {
   const {
@@ -210,7 +174,7 @@ export default function WeekPage() {
   const focusIsPrimary = !away;
 
   const focusPast = focus ? new Date(focus.end) < now : false;
-  const label = focus ? focusLabel(focus, focusPast, liveNow, todayKey) : null;
+  const label = focus ? focusLabel(focus, focusPast, liveNow, todayKey, TZ) : null;
 
   if (focus && firstFocusId === null) setFirstFocusId(focus.id);
   const heroEnters = firstVisit || (firstFocusId !== null && focus?.id !== firstFocusId);
