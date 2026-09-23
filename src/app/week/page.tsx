@@ -480,7 +480,14 @@ export default function WeekPage() {
                         <span className="text-[var(--muted)]"> · {shortDate(dateKey)}</span>
                       </h2>
                       <span className="text-sm text-[var(--muted)]">
-                        {total > 0 ? hours(total) : blocks.length === 0 ? 'Nothing planned' : ''}
+                        {/* A day whose only block is the one at the top of the
+                            page says so, rather than showing hours over an
+                            empty list. */}
+                        {blocks.length === 0
+                          ? all.length > 0
+                            ? dateKey === todayKey ? 'Nothing else today' : 'Nothing else planned'
+                            : 'Nothing planned'
+                          : total > 0 ? hours(total) : ''}
                       </span>
                     </div>
 
