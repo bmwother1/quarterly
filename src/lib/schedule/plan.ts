@@ -281,11 +281,9 @@ function buildSessions(a: Assignment, opts: Required<PlanOptions>): Pending[] {
 
   const preferred = SESSION_MINUTES[a.kind];
   const count = clamp(Math.ceil(remaining / preferred), 1, opts.maxSessionsPerAssignment);
-  const per = clamp(
-    Math.round(remaining / count / 5) * 5,
-    Math.min(MIN_SESSION_MINUTES, remaining),
-    opts.maxSessionMinutes,
-  );
+  // The floor holds even for the last few minutes: finishing early is fine, a
+  // 15-minute block is an interruption.
+  const per = clamp(Math.round(remaining / count / 5) * 5, MIN_SESSION_MINUTES, opts.maxSessionMinutes);
 
   const dueAt = dueInstant(a, opts.tz);
   // Overdue work still deserves a slot — it just no longer has a real deadline

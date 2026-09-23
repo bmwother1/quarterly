@@ -400,6 +400,19 @@ describe('the planner', () => {
     assert.doesNotMatch(why, /1 hours/);
   });
 
+  test('the last few minutes of an assignment round up to a full session', () => {
+    // Found by `npm run sweep`: 13 to 24 minutes left became its own block,
+    // under the 25-minute floor every other session keeps. The common case is
+    // work nearly finished, so it is logged time that leaves the sliver.
+    const due = zonedInstant('2026-10-08', 23 * 60, TZ).toISOString();
+    for (const left of [13, 18, 24]) {
+      const a = makeAssignment({ id: 'nearly', kind: 'problem set', due, estimatedMinutes: 120, actualMinutes: 120 - left });
+      const blocks = planWeek([a], openWeek(), { now: MONDAY_8AM, tz: TZ }).blocks.filter((b) => b.assignmentId === 'nearly');
+      assert.equal(blocks.length, 1, `${left} minutes left`);
+      assert.equal(blocks[0].minutes, 25, `${left} minutes left became a ${blocks[0].minutes}-minute block`);
+    }
+  });
+
   test('past deadlines can be opted back in', () => {
     const assignments = [
       makeAssignment({ id: 'old', kind: 'problem set', title: 'Homework 1', due: zonedInstant('2026-10-01', 23 * 60, TZ).toISOString() }),
