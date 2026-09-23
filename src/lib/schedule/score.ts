@@ -185,6 +185,14 @@ export function scoreSlot(input: ScoreInput): ScoreBreakdown {
     confidence: terms.confidence / 1.67,
     fit: terms.fit / 1.0 - 0.4,   // fit is a modifier, rarely the headline
   };
+
+  // Spacing can only be the reason if the work has actually sat. At its floor,
+  // for work touched an hour ago, it still out-shares low urgency and a small
+  // weight, and the block said "you haven't touched this in 0 days".
+  const idleDays = input.lastTouched
+    ? (input.now.getTime() - new Date(input.lastTouched).getTime()) / 86_400_000
+    : Infinity;
+  if (idleDays < 2) spread.spacing = -Infinity;
   const dominant = (Object.keys(spread) as Array<keyof typeof spread>)
     .reduce((best, k) => (spread[k] > spread[best] ? k : best), 'urgency');
 

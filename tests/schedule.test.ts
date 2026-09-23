@@ -6,7 +6,7 @@ import type { Assignment, Availability, WorkKind } from '../src/lib/types.ts';
 import { assignmentsFromICS } from '../src/lib/canvas/interpret.ts';
 import { defaultAvailability, freeSlots, mergeIntervals, subtract } from '../src/lib/schedule/slots.ts';
 import { planWeek, dueInstant } from '../src/lib/schedule/plan.ts';
-import { urgency, fitAt, energyAt, spacingFactor, confidenceFactor, methodFor } from '../src/lib/schedule/score.ts';
+import { urgency, fitAt, energyAt, spacingFactor, confidenceFactor, methodFor, scoreSlot } from '../src/lib/schedule/score.ts';
 import { localParts, zonedInstant, addDays } from '../src/lib/time.ts';
 
 const TZ = 'America/Los_Angeles';
@@ -158,6 +158,32 @@ describe('scoring', () => {
     assert.ok(confidenceFactor(0.1) > confidenceFactor(0.9));
     // Bounded — a single shaky item must not swamp everything else.
     assert.ok(confidenceFactor(0) <= 2);
+  });
+
+  test('work touched this morning is never explained as neglected', () => {
+    // Found by `npm run sweep`: "you haven't touched MATH 124 in 0 days,
+    // spacing it out is what makes it stick". The headline term was picked by
+    // its share of its own maximum, and spacing at its floor, for work touched
+    // an hour ago, still out-shared low urgency and a small grade weight.
+    const now = new Date('2026-10-05T19:00:00Z');
+    const b = scoreSlot({
+      kind: 'problem set', weight: 0.01, confidence: 0.9,
+      lastTouched: new Date(now.getTime() - 3 * 3_600_000).toISOString(),
+      dueAt: new Date(now.getTime() + 12 * 86_400_000),
+      slotStart: new Date(now.getTime() + 86_400_000),
+      energy: 'morning', localHour: 21, now,
+    });
+    assert.notEqual(b.dominant, 'spacing');
+
+    // A week of neglect still headlines.
+    const neglected = scoreSlot({
+      kind: 'problem set', weight: 0.01, confidence: 0.9,
+      lastTouched: new Date(now.getTime() - 9 * 86_400_000).toISOString(),
+      dueAt: new Date(now.getTime() + 12 * 86_400_000),
+      slotStart: new Date(now.getTime() + 86_400_000),
+      energy: 'morning', localHour: 21, now,
+    });
+    assert.equal(neglected.dominant, 'spacing');
   });
 
   test('writing shifts from drafting to revising', () => {
