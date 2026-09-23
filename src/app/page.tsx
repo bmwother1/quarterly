@@ -19,48 +19,34 @@ export const metadata = {
 export default function Landing() {
   return (
     <EntryRouter>
-    <main className="mx-auto max-w-2xl px-5 py-14 sm:py-20">
-      <h1 className="rise text-[2rem] font-semibold leading-[1.1] sm:text-[2.75rem]">
+    <main className="mx-auto max-w-2xl px-5 pb-16 pt-12 sm:pt-20">
+      <h1 className="enter text-display font-semibold">
         A plan that survives you{' '}
         <span className="text-[var(--accent)]">falling behind</span>.
       </h1>
-      <p className="rise mt-5 text-lg leading-relaxed text-[var(--muted)]">
+      <p className="enter mt-4 text-title font-normal text-[var(--muted)]" style={{ '--i': 1 } as React.CSSProperties}>
         Every planner works until the week goes wrong. Heron is built for the Wednesday when
         it does: mark what you actually did, and it rebuilds the rest around what&rsquo;s left.
         Free for students.
       </p>
 
-      <div className="rise mt-8 flex flex-col gap-3 sm:flex-row">
-        <Link
-          href="/start"
-          className="rounded-xl bg-[var(--accent)] px-5 py-3.5 text-center font-medium text-[var(--accent-ink)] shadow-[var(--shadow-md)] transition-transform active:scale-[0.98]"
-        >
+      <div className="enter mt-8 flex flex-col gap-3 sm:flex-row" style={{ '--i': 2 } as React.CSSProperties}>
+        <Link href="/start" className="btn-primary btn-lg">
           Plan my week
         </Link>
-        <Link
-          href="/import"
-          className="rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-5 py-3.5 text-center font-medium transition-colors hover:bg-[var(--raised)] active:scale-[0.98]"
-        >
+        <Link href="/import" className="btn-secondary btn-lg">
           Import my calendar
         </Link>
       </div>
 
-      <p className="rise mt-3 text-sm">
-        <Link href="/welcome" className="text-[var(--muted)] underline underline-offset-4 hover:text-[var(--ink)]">
-          Or see how it works first
+      <p className="enter mt-4 text-sm text-[var(--muted)]" style={{ '--i': 3 } as React.CSSProperties}>
+        No account needed. Nothing to install. Takes about 30 seconds.{' '}
+        <Link href="/welcome" className="whitespace-nowrap text-[var(--ink)] underline decoration-[var(--border-strong)] underline-offset-4 hover:decoration-[var(--ink)]">
+          See how it works first
         </Link>
       </p>
 
-      <p className="rise mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-        <span className="rounded-full bg-[var(--accent-soft)] px-2.5 py-1 font-medium text-[var(--accent)]">
-          No account needed
-        </span>
-        <span className="text-[var(--faint)]">
-          Nothing to install. Takes about 30 seconds.
-        </span>
-      </p>
-
-      <section className="mt-16 grid gap-px overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--border)] sm:grid-cols-2">
+      <section className="mt-16 grid gap-x-10 gap-y-8 border-t border-[var(--border)] pt-8 sm:grid-cols-2">
         <Item title="Fall behind and it rebuilds around you">
           Mark what you did, skipped or half-did, then replan from right now. Most planners make
           you redo the whole week by hand, which is the moment people quietly stop using them.
@@ -84,24 +70,24 @@ export default function Landing() {
         </Item>
       </section>
 
-      <section className="mt-14 rounded-xl border border-[var(--accent)]/25 bg-[var(--accent-soft)] p-5">
-        <h2 className="font-medium">If it&rsquo;s summer, start with your week</h2>
-        <p className="mt-2 text-sm text-[var(--muted)]">
+      <section className="mt-12 border-t border-[var(--border)] pt-8">
+        <h2 className="text-base font-semibold">If it&rsquo;s summer, start with your week</h2>
+        <p className="mt-2 text-base text-[var(--muted)]">
           Canvas feeds only carry 30 days back and a year forward, and instructors publish
-          assignments when they publish the course — often in the last week before term. So
+          assignments when they publish the course, often in the last week before term. So
           between quarters your feed is genuinely empty, and that&rsquo;s expected rather than
           broken.
         </p>
-        <p className="mt-2 text-sm text-[var(--muted)]">
+        <p className="mt-2 text-base text-[var(--muted)]">
           Your shifts, your sleep, your training and whatever you&rsquo;re building don&rsquo;t
           wait for a quarter to start. Set those up now and your coursework drops into a week
           that&rsquo;s already shaped around you.
         </p>
       </section>
 
-      <section className="mt-10">
-        <h2 className="font-medium">What it won&rsquo;t claim</h2>
-        <p className="mt-2 text-sm text-[var(--muted)]">
+      <section className="mt-12 border-t border-[var(--border)] pt-8">
+        <h2 className="text-base font-semibold">What it won&rsquo;t claim</h2>
+        <p className="mt-2 text-base text-[var(--muted)]">
           It won&rsquo;t promise better grades. The evidence for study techniques like spaced
           retrieval is strong in a lab and modest in a real classroom, so treating them as
           sensible defaults is honest and promising results is not. And it won&rsquo;t pretend
@@ -109,8 +95,11 @@ export default function Landing() {
         </p>
       </section>
 
-      <p className="mt-10 text-sm text-[var(--faint)]">
-        Read the <Link href="/privacy" className="underline underline-offset-4">privacy page</Link>{' '}
+      <p className="mt-12 text-sm text-[var(--muted)]">
+        Read the{' '}
+        <Link href="/privacy" className="text-[var(--ink)] underline decoration-[var(--border-strong)] underline-offset-4 hover:decoration-[var(--ink)]">
+          privacy page
+        </Link>{' '}
         to see exactly what is and isn&rsquo;t stored.
       </p>
     </main>
@@ -118,13 +107,13 @@ export default function Landing() {
   );
 }
 
-/** A card in the feature grid. The 1px gaps come from the parent's background
- *  showing through, which gives clean hairlines without border-collapse games. */
+/** One point in the feature list. No card: the rule above the section and the
+ *  space between items do the separating. */
 function Item({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-[var(--surface)] p-5 transition-colors hover:bg-[var(--raised)]">
-      <h2 className="font-medium">{title}</h2>
-      <p className="mt-1.5 text-sm leading-relaxed text-[var(--muted)]">{children}</p>
+    <div>
+      <h2 className="text-base font-semibold">{title}</h2>
+      <p className="mt-1 text-base text-[var(--muted)]">{children}</p>
     </div>
   );
 }
