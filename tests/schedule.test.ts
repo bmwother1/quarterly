@@ -362,6 +362,18 @@ describe('the planner', () => {
     assert.deepEqual(result.overdue.map((a) => a.id), ['now']);
   });
 
+  test('work due within the hour or so says "1 hour", not "1 hours"', () => {
+    // Found reading `npm run sweep` output. Anything due in half an hour to an
+    // hour and a half explained itself as "due in 1 hours".
+    const due = new Date(MONDAY_8AM.getTime() + 70 * 60_000);
+    const assignments = [makeAssignment({ id: 'soon', kind: 'discussion', title: 'Post', due: due.toISOString(), estimatedMinutes: 25 })];
+    const result = planWeek(assignments, openWeek(), { now: MONDAY_8AM, tz: TZ });
+
+    const why = result.blocks.find((b) => b.assignmentId === 'soon')?.why ?? '';
+    assert.match(why, /due in 1 hour\b/, `expected the deadline in the reason, got "${why}"`);
+    assert.doesNotMatch(why, /1 hours/);
+  });
+
   test('past deadlines can be opted back in', () => {
     const assignments = [
       makeAssignment({ id: 'old', kind: 'problem set', title: 'Homework 1', due: zonedInstant('2026-10-01', 23 * 60, TZ).toISOString() }),

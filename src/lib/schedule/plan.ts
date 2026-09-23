@@ -952,7 +952,10 @@ function splitOpening(
 function relativeDue(dueAt: Date, now: Date, tz: string): string {
   const hours = (dueAt.getTime() - now.getTime()) / 3_600_000;
   if (hours < 0) return 'past due';
-  if (hours < 24) return `due in ${Math.max(1, Math.round(hours))} hours`;
+  if (hours < 24) {
+    const n = Math.max(1, Math.round(hours));
+    return `due in ${n} hour${n === 1 ? '' : 's'}`;
+  }
 
   const days = Math.round(hours / 24);
   if (days === 1) return 'due tomorrow';
