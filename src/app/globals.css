@@ -416,6 +416,15 @@ button, a, label { -webkit-tap-highlight-color: transparent; }
 @keyframes pop-out { to { opacity: 0; transform: scale(0.97); } }
 
 .rise { animation: fade-in var(--dur-enter) var(--ease) backwards; }
+
+/* The sheet rises from the bottom edge on a phone, where it is attached to
+   it, and settles in place on a laptop, where it floats. */
+.sheet-panel { animation: sheet-up var(--dur-move) var(--ease) backwards; }
+.sheet-panel[data-leaving] { animation: sheet-down 160ms var(--ease-exit) forwards; }
+@media (min-width: 640px) {
+  .sheet-panel { animation: pop-in var(--dur-enter) var(--ease) backwards; }
+  .sheet-panel[data-leaving] { animation: pop-out var(--dur-exit) var(--ease-exit) forwards; }
+}
 .enter {
   animation: enter var(--dur-enter) var(--ease) backwards;
   animation-delay: calc(min(var(--i, 0), 12) * 24ms);
