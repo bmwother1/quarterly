@@ -146,17 +146,17 @@ and has not been done.
 - **The name is Heron and the rename is done**, as of 2026-09-05. Code, copy,
   metadata and manifest all say Heron. Four storage identifiers still say
   `quarterly` on purpose and are commented as such.
-- **Register `heron.study`, then verify it in Resend.** The
-  shared `onboarding@resend.dev` only delivers to Brydon's own address, so no
-  student can sign in until a real domain is verified. The name is no longer
-  what blocks this.
 - **Confirm the sync loop** on two devices. The drag is confirmed.
 - **A decision on the three doors** into configuration.
 - **What the phone shows instead of a seven-day grid.** See Next, item 5.
-- **DNS for `heron.study`.** Two records still to add, both Brydon's: Resend's
-  verification records so sign-in codes come from the domain rather than a
-  shared sender, and `https://heron.study/**` in Supabase's redirect allow-list.
-  Sign-in breaks the moment students use the new URL without the second one.
+- **Sign-in from `heron.study` works for anyone, as of 2026-09-23.** Resend
+  verified the domain (records live in Vercel DNS, which holds the nameservers;
+  Name.com's DNS page is locked because of that). Supabase SMTP sends as
+  `signin@heron.study`, Site URL is `https://heron.study`, and a code reached
+  `bmwother1@icloud.com`, the first delivery to an address other than the Gmail.
+  `quarterly-alpha.vercel.app` now 307s to `heron.study`. The redirect allow-list
+  entry must read `https://heron.study/**` with the slash: without it, `**`
+  also matches `heron.study.attacker.com`.
 - **Whether paid testers are tagged separately.** Paying people to open the app
   measures the payment, not the product, so they must not pollute the retention
   cohort.
