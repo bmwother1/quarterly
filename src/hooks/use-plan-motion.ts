@@ -45,20 +45,25 @@ import { useLayoutEffect, useRef, type RefObject } from 'react';
  * it did last time, the surplus is simply unmatched and does not animate.
  */
 
-/** Long enough to follow, shorter than the carousel's 720ms. See below. */
-const DURATION = 560;
-
 /**
- * The carousel is a demo nobody asked for, so it can afford 720ms to make one
- * block's journey unmissable. Here the student pressed replan and is waiting to
- * use the result, and there may be twenty blocks rather than one. Slightly
- * quicker, with a stagger so the eye gets a sequence instead of a stampede.
+ * 240ms, which is long enough to follow and short enough that nobody waits
+ * for it.
+ *
+ * It was 560ms with an overshoot, modelled on the welcome carousel. The
+ * carousel is a demo that has to be watched and can afford that. Here the
+ * student pressed replan and wants the result, and there may be twenty blocks
+ * moving at once: at 560ms the week spent over half a second unusable after
+ * every replan. The eye still follows a block from Tuesday to Thursday at
+ * 240ms because the stagger turns twenty moves into a sequence.
  */
-const STAGGER = 24;
-const MAX_STAGGER = 160;
+const DURATION = 240;
 
-/** The carousel's easing. The settle at the end reads as being placed. */
-const EASE = 'cubic-bezier(0.34, 1.32, 0.5, 1)';
+/** Per block, and capped, so the last block lands within 340ms of the press. */
+const STAGGER = 20;
+const MAX_STAGGER = 100;
+
+/** The app's decelerating curve. No overshoot: a plan should land, not bounce. */
+const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
 
 /** Below this, a "move" is a rounding artifact rather than a replan. */
 const MIN_DELTA_PX = 1;

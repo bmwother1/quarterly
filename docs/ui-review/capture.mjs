@@ -319,7 +319,9 @@ const SCENARIOS = [
   { name: 'week-calendar', seed: 'full', path: '/week', act: async (p) => { await p.click('Calendar'); } },
   { name: 'week-block-open', seed: 'full', path: '/week', act: async (p) => {
       await p.click('Calendar');
-      await p.eval(`(() => { const b = [...document.querySelectorAll('[data-block-id]')].find((e) => !e.className.includes('opacity')); b.click(); return true; })()`);
+      await p.eval(`(() => { const all = [...document.querySelectorAll('[data-block-id]')];
+      const b = all.find((e) => e.dataset.status === 'planned') ?? all.find((e) => !e.className.includes('opacity'));
+      b.click(); return true; })()`);
     } },
   { name: 'month', seed: 'full', path: '/week', act: async (p) => { await p.click('Month'); } },
   { name: 'week-add-sheet', seed: 'full', path: '/week', act: async (p) => { await p.click('Add an event or task'); } },
