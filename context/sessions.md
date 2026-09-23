@@ -9,6 +9,99 @@ delete them.
 
 ---
 
+## 2026-09-23 · Claude Code · The sweep, and nine promises no test was checking
+
+An unattended overnight run on `claude/practical-cori-81ddb0`. Built
+`npm run sweep`, which drives seeded simulated students through the app's own
+replan path and checks every plan against the planner's promises, then fixed
+what it found. Nothing pushed.
+
+**Read this before merging the feed branch.** A plain `git merge` with
+`elastic-hertz-fef8da` produces no conflict and a planner that charges
+`fitNewWork`'s blocks against the ceiling twice: tonight's charging is
+unconditional and theirs still runs behind `chargeExistingToCap`. Their 349
+tests, tonight's, and every `npm run refresh` check all pass with the double
+charge, because it only makes the plan emptier. On merge, delete the option, its
+default and the `if (opts.chargeExistingToCap)` loop in `plan.ts`, and the
+`chargeExistingToCap: true` line in `fit-new.ts`. Done that way in a scratch
+copy: 364 tests pass, typecheck is clean, and `refresh` prints byte-identically
+to their version.
+
+**What ran.** Seed 1, 5,000 scenarios, 29,647 plans in 293s; seeds 2 to 5 at
+1,500 to 3,000 while fixing. Promises: (a) no day over its ceiling, (b) nothing
+on a kept block, event, busy block or outside the day, (c) nothing past its
+deadline or over the work left, (d) no session under 25 minutes, (e) commitment
+quota, daily limit and window, (f) deterministic with input untouched, (h) under
+100ms, (i) unique ids, (j) reasons that read as English. Every fix below had a
+failing test first, then `npm run check`, and the three week scripts came out
+identical to the commit before it every time.
+
+| Found | How often | Reduced to | Fix |
+|---|---|---|---|
+| A moved block and the new session in its old hour share an id, so ticking one marks both | 2,792 in 1,893 plans | 1 commitment, 1 pinned block | `157e49f` |
+| Weekly quota ignores pinned sessions, and the tally is wiped by the week's first replan | 775 in 1,893 | 1 commitment, 1 pinned block | `2eb0d85` |
+| A daily limit above one was never enforced | 245 in 1,893 | 1 commitment | `a0d475a` |
+| A pinned coursework session is planned again on top of itself | 614 in 1,885 | 1 assignment, 1 pinned block | `46cc632` |
+| Work due exactly now is planned after its deadline | 25 in 32,643 | 1 assignment | `81e3143` |
+| "due in 1 hours"; the Sunday push said "About 1 hours" and "About 0 hours" | reading output | | `05a0ab6`, `a70d90c` |
+| "you haven't touched MATH 124 in 0 days" | 715 in 400 scenarios | 1 assignment | `b7008af` |
+| A window starting off the hour (4:15) can never be used | ~80% of warnings | 1 commitment | `6c9ec14` |
+| The Sunday quota push trusted the wiped tally | follows from the quota fix | | `fe4dba7` |
+
+Also: the planner is 8.5 times faster (`9445afd`). Every `localParts` call built
+a new `Intl.DateTimeFormat`, which was 84% of planner time: p50 went from 32ms
+to 3.3ms and `npm run week` from 45ms to 11ms, with byte-identical output. And
+two tests picked a day by UTC date prefix, so one never saw Monday after 5pm
+Pacific (`1967b92`).
+
+**Left for Brydon.**
+
+1. **Sessions under 25 minutes**, the one promise still broken (5,607 in 29,647
+   plans, all 15 to 22 minutes). `buildSessions` deliberately lets the last 13 to
+   24 minutes of an assignment be its own block, while `MIN_SESSION_MINUTES`
+   says never schedule a fragment below 25. Two rules disagree. Recommend
+   rounding the last bit up to 25: finishing early is pleasant, a 15-minute
+   block is an interruption. One line, and then `npm run sweep` exits 0.
+2. **A commitment whose window cannot hold one session** (2,290 reports). The
+   planner trims a session only to the day's allowance, never to fit a window or
+   a gap, so a 40-minute run with a 7 to 8am window and a day that starts at
+   7:30 is never placed, and every replan says "the week ran out before you hit
+   the target". The student has a settings conflict and is told their week is
+   full. Recommend trimming down to `minSessionMinutes` to fit, and a truthful
+   reason when even that fails.
+3. **Sessions run in order** (345 warnings left). Each session must follow the
+   one before, so when one takes a later, better-fitting hour the rest can run
+   out of days: a 7-a-week habit whose first session takes Tuesday loses Monday.
+   Paired on identical inputs, unchaining commitments cut their shortfalls 11%
+   (2,358 plans better, 102 worse) and left 3% more coursework unplanned (1,688
+   plans worse) as commitments won the room back. A trade-off, and "3 of 5 this
+   week" would need renumbering by date. Not changed.
+4. **Phantom shortfalls at the horizon's edge.** The last, partial week gets a
+   proportional share, such as one run in a Monday that ends at 5pm. If that
+   sliver cannot hold it, "Didn't fit" says "1 session short, the week ran out"
+   about a week that has barely started. Not measured. Recommend not reporting
+   shortfalls for a week the horizon cuts off.
+5. **`pushAside` uses the machine's time zone** (`getHours`, `toDateString`), not
+   the student's. Harmless while the browser's zone is the student's.
+6. **How a block's reason is chosen.** Only the false "0 days" case was fixed.
+   The general measure is in today's decisions entry.
+
+**To review:**
+
+```
+git log --reverse main..claude/practical-cori-81ddb0
+npm run check
+npm run sweep
+npm run sweep -- --only 1 --plan 0
+npm run sweep -- --scenarios 500 --dump e
+```
+
+The fourth prints a 15-minute block with its whole input. A fresh worktree
+needs `npx next typegen` once before `npm run check`, or typecheck fails on
+`LayoutProps`.
+
+---
+
 ## 2026-08-29 · Claude Code · Every blocker cleared, and three checks that lied
 
 A long session that started with three dashboard actions and ended in a design
