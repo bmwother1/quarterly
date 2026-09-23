@@ -220,7 +220,7 @@ describe('replanning around what already happened', () => {
     const r = planWeek([], av, { now: monday, tz: TZ, commitments: [runs], existingBlocks: [ranAlready] });
 
     const mondayRuns = r.blocks.filter(
-      (b) => b.commitmentId === 'run' && b.start.startsWith('2026-10-05'),
+      (b) => b.commitmentId === 'run' && localParts(new Date(b.start), TZ).dateKey === '2026-10-05',
     );
     assert.equal(mondayRuns.length, 0, 'replanning scheduled a second run on a day already run');
   });
@@ -381,7 +381,7 @@ describe('one-off fixed events', () => {
     const filler = commitment({ id: 'f', title: 'Filler', sessionsPerWeek: 5, minutesPerSession: 60, maxPerDay: 1 });
     const r = planWeek([], av, { now: monday, tz: TZ, commitments: [filler], events: [wedding] });
 
-    const onWeddingDay = r.blocks.filter((b) => b.start.startsWith('2026-10-06'));
+    const onWeddingDay = r.blocks.filter((b) => localParts(new Date(b.start), TZ).dateKey === '2026-10-06');
     assert.equal(onWeddingDay.length, 0, 'the whole day was taken');
     assert.ok(r.blocks.length > 0, 'other days should still be planned');
   });
