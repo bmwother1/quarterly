@@ -15,6 +15,7 @@
     "handoff": "node scripts/handoff.ts",
     "my-week": "node scripts/my-week.ts",
     "first-run": "node scripts/first-run.ts",
+    "refresh": "node scripts/refresh-week.ts",
     "palette": "node scripts/check-palette.ts"
   },
   "dependencies": {

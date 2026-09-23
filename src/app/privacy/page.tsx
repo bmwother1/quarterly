@@ -29,14 +29,22 @@ export const metadata = {
  *   - RLS on every table, owner-only (supabase/migrations/0001_init.sql)
  *   - delete_own_account() removes the auth row and everything cascades
  *     (supabase/migrations/0002_account_deletion.sql)
- *   - the Canvas feed URL is still deliberately never stored
+ *   - calendar links are never stored on the server and never logged
+ *     (src/app/api/feed/route.ts), and never enter HeronState, so sync and
+ *     backup cannot carry them (src/lib/store.ts)
+ *   - any public host is fetched; private addresses are refused on the resolved
+ *     address and every redirect (src/app/api/feed/fetch-feed.ts)
+ *   - if the student opts in, links are kept in this browser under their own
+ *     key (src/lib/feed-store.ts), checked daily on open (use-feed.ts), removed
+ *     by Forget and by heronStore.clear()
+ *   - imported events record host and calendar name only (FixedEvent.source)
  *   - imported .ics files are parsed in the browser and never uploaded
  */
 export default function Privacy() {
   return (
     <main className="mx-auto max-w-2xl px-5 py-14">
       <h1 className="text-2xl font-semibold tracking-tight">Privacy</h1>
-      <p className="mt-2 text-sm text-[var(--faint)]">Last updated 24 August 2026</p>
+      <p className="mt-2 text-sm text-[var(--faint)]">Last updated 21 September 2026</p>
 
       <p className="mt-6 text-[var(--muted)]">
         Short version: Heron works with no account at all, and in that mode your schedule
@@ -113,30 +121,56 @@ export default function Privacy() {
         </p>
       </Section>
 
-      <Section title="Your Canvas feed URL">
+      <Section title="Your calendar links">
         <p>
-          That link is a credential. Anyone holding it can read your whole schedule, indefinitely,
-          without logging in. So it gets handled carefully:
+          A Canvas feed, a work schedule link, a Google or Outlook calendar address: each is a
+          credential. Anyone holding one can read that calendar, indefinitely, without logging
+          in. So they get handled carefully:
         </p>
         <ul className="mt-2 list-disc space-y-1 pl-5">
           <li>
-            It is sent to our server once, only when you press the button, so that we can fetch
-            the calendar. Browsers cannot fetch it directly.
+            A link is sent to our server only to fetch that calendar, because browsers cannot
+            fetch calendars from other sites directly.
           </li>
           <li>
-            It is <strong className="text-[var(--ink)]">not stored</strong>, in the browser or on
-            the server, signed in or not.
+            It is <strong className="text-[var(--ink)]">never stored on our server</strong>,
+            signed in or not, and it is never written to any log.
           </li>
-          <li>It is not written to any log.</li>
           <li>
-            The server only accepts links on known calendar hosts, and refuses private and
-            internal network addresses.
+            The server will fetch a link from any public website, since work scheduling apps
+            are too many to list, but never from a private or internal network address. That is
+            checked on the actual address it connects to, and again on every redirect.
           </li>
         </ul>
         <p className="mt-2">
-          Because it isn&rsquo;t stored, refreshing your Canvas data means pasting it again. That
-          is a deliberate trade: a paste costs you seconds, and a leaked feed URL costs your
-          privacy permanently.
+          You can ask Heron to <strong className="text-[var(--ink)]">remember a link on this
+          device</strong>. That is a checkbox on the import page, shown after the calendar loads
+          and next to what it found. It is ticked by default and untick&shy;ing it takes one tap.
+          When it is on, the link is kept in this browser&rsquo;s local storage and nowhere else,
+          and Heron uses it to check that calendar once a day when you open your week:
+        </p>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          <li>
+            It is not part of your account. Signing in syncs your week; it does not sync your
+            links, so they never reach our server or your other devices.
+          </li>
+          <li>They are not included in the backup file you can download.</li>
+          <li>
+            Each link has its own <strong className="text-[var(--ink)]">Forget</strong> button,
+            in Settings and on the import page, which removes it immediately. Delete my data
+            removes them all, and so does clearing this site&rsquo;s data.
+          </li>
+          <li>
+            The daily check adds new work into free time and says what it added. It never moves
+            anything already in your week without you asking.
+          </li>
+        </ul>
+        <p className="mt-2">
+          Why offer it at all: instructors publish all quarter, often the same week something is
+          due, and managers post new shifts every week. A plan built on week one&rsquo;s calendars
+          is quietly wrong by week four. Without a saved link, fixing that means finding it again,
+          which for Canvas realistically means a laptop. With it saved, it happens by itself. The
+          trade is yours to make, in both directions, at any time.
         </p>
       </Section>
 

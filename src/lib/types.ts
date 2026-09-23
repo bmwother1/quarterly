@@ -247,16 +247,14 @@ export interface FixedEvent {
   /** Guessed on import from the title, chosen by hand when added in the app. */
   category: Category;
   shade: number;
-}
-
-/** Everything we persist for one student. */
-export interface PlanState {
-  feedUrl: string | null;
-  lastSyncedAt: string | null;
-  courses: Course[];
-  assignments: Assignment[];
-  availability: Availability;
-  commitments: Commitment[];
-  events: FixedEvent[];
-  blocks: StudyBlock[];
+  /**
+   * Which imported calendar this came from, e.g. `app.wheniwork.com#My Shifts`.
+   * Absent on anything added by hand.
+   *
+   * Host and calendar name only: the path of a feed URL is its credential, and
+   * this syncs. It exists so re-importing one calendar replaces that calendar's
+   * events and no other. Before it, importing a work schedule deleted the class
+   * timetable imported the day before.
+   */
+  source?: string | null;
 }

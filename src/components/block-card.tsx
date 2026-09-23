@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { StudyBlock } from '@/lib/types';
-import { fmtTime } from '@/lib/time';
+import { fmtDay, fmtTime } from '@/lib/time';
 import type { Completion } from '@/lib/schedule/complete';
 
 /**
@@ -13,11 +13,19 @@ import type { Completion } from '@/lib/schedule/complete';
  * block is there won't do it.
  */
 export function BlockCard({
-  block, tz, colour, onComplete, onDrop, isPast,
+  block, tz, colour, onComplete, onDrop, isPast, due, onShowDeadline,
 }: {
   block: StudyBlock;
   tz: string;
   colour: string;
+  /**
+   * When the work this block is for is due. A session means something different
+   * the day before its deadline than a fortnight ahead of it, and the block was
+   * the one place on screen that did not say.
+   */
+  due?: { at: string; allDay: boolean } | null;
+  /** Jump from the session to its deadline, the way the deadline lists its sessions. */
+  onShowDeadline?: () => void;
   onComplete: (outcome: Completion, minutes: number | null) => void;
   /** "I'm not doing this at all" — stop planning it. */
   onDrop: () => void;
@@ -61,6 +69,20 @@ export function BlockCard({
               <span className="text-xs text-[var(--faint)]">
                 {block.sessionIndex} of {block.sessionCount}
               </span>
+            )}
+            {due && (
+              onShowDeadline ? (
+                <button
+                  onClick={onShowDeadline}
+                  className="text-xs text-[var(--muted)] underline decoration-dashed underline-offset-4 hover:text-[var(--ink)]"
+                >
+                  due {fmtDay(due.at, tz)}{!due.allDay && ` ${fmtTime(due.at, tz)}`}
+                </button>
+              ) : (
+                <span className="text-xs text-[var(--muted)]">
+                  due {fmtDay(due.at, tz)}{!due.allDay && ` ${fmtTime(due.at, tz)}`}
+                </span>
+              )
             )}
           </div>
 

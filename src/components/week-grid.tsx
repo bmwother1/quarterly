@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import type { Availability, BusyBlock, FixedEvent, StudyBlock } from '@/lib/types';
+import type { Deadline } from '@/lib/schedule/deadlines';
+import { statusLabel } from '@/lib/schedule/deadlines';
 import { localParts, fmtTime, zonedInstant } from '@/lib/time';
 import { colorVar } from '@/lib/categories';
 import { usePlanMotion } from '@/hooks/use-plan-motion';
@@ -58,9 +60,12 @@ function busyFor(busy: BusyBlock[], weekday: number): Array<{ startMin: number; 
   return out;
 }
 
+/** Pixels per stacked deadline flag. The column is 640px tall. */
+const FLAG_PX = 15;
+
 export function WeekGrid({
   days, blocks, events, availability, tz, colourFor, selectedId, onSelect, onMove,
-  onSelectEvent, selectedEventId, todayKey,
+  onSelectEvent, selectedEventId, todayKey, deadlines, focusAssignmentId, onSelectDeadline,
 }: {
   days: string[];
   blocks: StudyBlock[];
@@ -77,6 +82,14 @@ export function WeekGrid({
   onSelectEvent: (id: string) => void;
   selectedEventId: string | null;
   todayKey: string;
+  /** Deadlines by local date. Drawn in the column they fall on, at their time. */
+  deadlines?: Map<string, Deadline[]>;
+  /**
+   * The assignment whose deadline and sessions should read as one thing. Set by
+   * tapping either: a block lights up its deadline, a deadline its blocks.
+   */
+  focusAssignmentId?: string | null;
+  onSelectDeadline?: (assignmentId: string) => void;
 }) {
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -182,6 +195,28 @@ export function WeekGrid({
 
   const pct = (min: number) => ((min - rangeStart) / span) * 100;
 
+  /**
+   * Deadlines split by where they can be drawn.
+   *
+   * Inside the drawn hours, at their time. Outside them (most of Canvas says
+   * 11:59pm) in a strip under the grid, the same height in every column so each
+   * day's time axis still lines up with the hour gutter. Pinning them to the
+   * bottom edge of the grid instead was tried first and covered the evening's
+   * last study blocks.
+   */
+  const deadlineSplit = new Map<string, { inside: Deadline[]; after: Deadline[] }>();
+  for (const dateKey of days) {
+    const list = deadlines?.get(dateKey) ?? [];
+    const inside: Deadline[] = [];
+    const after: Deadline[] = [];
+    for (const d of list) {
+      const m = minuteOfDay(d.dueAt, tz);
+      (m >= rangeStart && m <= rangeEnd - 20 && !d.allDay ? inside : after).push(d);
+    }
+    deadlineSplit.set(dateKey, { inside, after });
+  }
+  const footerRows = Math.max(0, ...[...deadlineSplit.values()].map((v) => v.after.length));
+
   // Distinguishes a tap (open the block) from a drag (move it). Without it,
   // every drop also fires a click and the detail panel opens on top.
   const moved = useRef(false);
@@ -225,6 +260,16 @@ export function WeekGrid({
           />
           fixed commitments
         </span>
+        {deadlines && deadlines.size > 0 && (
+          <span className="inline-flex items-center gap-1.5">
+            <span
+              className="inline-block h-3 w-5 rounded-sm"
+              style={{ border: '1px dashed var(--muted)', borderLeft: '3px solid var(--muted)' }}
+              aria-hidden
+            />
+            deadline
+          </span>
+        )}
         {!isEmpty && <span>tap a block for the reason, or drag it to move it</span>}
         <span className="ml-auto">scroll sideways for next week</span>
       </div>
@@ -450,7 +495,11 @@ export function WeekGrid({
                       data-block-id={block.id}
                       data-block-start={block.start}
                       className={`absolute inset-x-0.5 touch-none select-none overflow-hidden rounded px-1 py-0.5 text-left text-[10px] leading-tight ${
-                        selected ? 'ring-2 ring-[var(--ink)]' : ''
+                        selected
+                          ? 'ring-2 ring-[var(--ink)]'
+                          : focusAssignmentId && block.assignmentId === focusAssignmentId
+                            ? 'ring-1 ring-[var(--ink)]/60'
+                            : ''
                       } ${settled ? 'opacity-45' : 'cursor-grab active:cursor-grabbing'} ${
                         dragging ? 'z-10 shadow-[var(--shadow-md)] ring-2 ring-[var(--accent)]' : 'transition-shadow'
                       }`}
@@ -474,7 +523,38 @@ export function WeekGrid({
                     </button>
                   );
                 })}
+
+                {/* Deadlines inside the drawn hours, at their time. Dashed and outlined,
+                    because a deadline is a moment, not time spent, and must never read
+                    as a block. */}
+                {(deadlineSplit.get(dateKey)?.inside ?? []).map((d) => (
+                  <DeadlineFlag
+                    key={`due-${d.id}`}
+                    d={d}
+                    tz={tz}
+                    colour={colourFor(d.course)}
+                    focused={d.id === focusAssignmentId}
+                    onSelect={onSelectDeadline}
+                    style={{ top: `${pct(minuteOfDay(d.dueAt, tz))}%`, transform: 'translateY(-100%)' }}
+                  />
+                ))}
               </div>
+
+              {footerRows > 0 && (
+                <div className="relative mt-1" style={{ height: footerRows * FLAG_PX + 2 }}>
+                  {(deadlineSplit.get(dateKey)?.after ?? []).map((d, i) => (
+                    <DeadlineFlag
+                      key={`due-${d.id}`}
+                      d={d}
+                      tz={tz}
+                      colour={colourFor(d.course)}
+                      focused={d.id === focusAssignmentId}
+                      onSelect={onSelectDeadline}
+                      style={{ top: i * FLAG_PX }}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           );
         })}
@@ -506,5 +586,41 @@ export function WeekGrid({
         />
       </div>
     </div>
+  );
+}
+
+/** One deadline: a dashed marker in the course colour, with its status at a glance. */
+function DeadlineFlag({
+  d, tz, colour, focused, onSelect, style,
+}: {
+  d: Deadline;
+  tz: string;
+  colour: string;
+  focused: boolean;
+  onSelect?: (assignmentId: string) => void;
+  style: React.CSSProperties;
+}) {
+  const alarm = d.status === 'unplanned' || d.status === 'short';
+  return (
+    <button
+      onClick={() => onSelect?.(d.id)}
+      data-deadline-id={d.id}
+      className={`absolute inset-x-0.5 z-[5] flex h-[14px] items-center gap-1 overflow-hidden rounded-sm px-1 text-left text-[9px] font-medium leading-none ${
+        focused ? 'ring-2 ring-[var(--ink)]' : ''
+      } ${d.status === 'done' ? 'opacity-50' : ''}`}
+      style={{
+        ...style,
+        background: 'var(--surface)',
+        border: `1px dashed ${colour}`,
+        borderLeft: `3px solid ${colour}`,
+      }}
+      title={`Due ${fmtTime(d.dueAt, tz)} · ${d.course} · ${d.title} · ${statusLabel(d)}`}
+      aria-label={`${d.title}, ${d.course}, due ${fmtTime(d.dueAt, tz)}, ${statusLabel(d)}`}
+    >
+      <span className={`shrink-0 ${alarm ? 'text-[var(--warn)]' : 'text-[var(--faint)]'}`}>
+        {d.status === 'done' ? '✓' : alarm ? '!' : 'Due'}
+      </span>
+      <span className={`truncate ${d.status === 'done' ? 'line-through' : ''}`}>{d.course}</span>
+    </button>
   );
 }

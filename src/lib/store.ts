@@ -16,6 +16,7 @@ import {
   categoryForAssignment, categoryForCommitment, categoryForImportedEvent, nextShade,
 } from './categories.ts';
 import { defaultAvailability } from './schedule/slots.ts';
+import { feedStore } from './feed-store.ts';
 
 export interface HeronState {
   version: number;
@@ -66,6 +67,20 @@ export interface HeronState {
   lastModifiedAt?: string | null;
   lastSyncedAt: string | null;
   /**
+   * When Canvas was last actually fetched.
+   *
+   * Separate from `lastSyncedAt`, which is when this device last talked to the
+   * *account*. Conflating them is not cosmetic: a signed-in student pushes on
+   * every edit, so `lastSyncedAt` is always seconds old, and "your deadlines
+   * are eleven days stale" could never be said. Importing also used to write
+   * `lastSyncedAt` while pushing nothing, which told the account panel a lie
+   * and left a fresh import looking already-synced to `decideDirection`.
+   *
+   * A timestamp, not a credential, so it syncs happily and answers the
+   * staleness question on a second device too.
+   */
+  canvasSyncedAt?: string | null;
+  /**
    * When a push notification was last sent to this student.
    *
    * On their state rather than on the subscription, because "one a day" is a
@@ -74,12 +89,17 @@ export interface HeronState {
    */
   lastNotifiedAt?: string | null;
   /**
-   * Deliberately absent: the Canvas feed URL.
+   * Deliberately absent, and it must stay absent: the Canvas feed URL.
    *
-   * It's a bearer credential for a student's entire schedule. Keeping it in
-   * localStorage means every script on the page can read it, so it is used once
-   * to fetch and then dropped. Re-syncing costs a paste; a leaked feed URL costs
-   * a real person's privacy, permanently.
+   * It is a bearer credential for a student's entire schedule, and *this object
+   * is the sync payload*: `push()` writes it into `plan_state`, `toBackup()`
+   * writes it into a file in someone's Downloads folder. A `feedUrl` here would
+   * be on the server within two seconds of being typed.
+   *
+   * A student who asks Heron to remember their link gets it kept in
+   * `src/lib/feed-store.ts`, under its own key, which nothing syncs and nothing
+   * exports. That separation is the whole mechanism behind the claim that Heron
+   * never holds the credential.
    */
 }
 
@@ -124,6 +144,7 @@ export function emptyState(): HeronState {
     liveNoticeSeen: false,
     lastModifiedAt: null,
     lastSyncedAt: null,
+    canvasSyncedAt: null,
     lastNotifiedAt: null,
   };
 }
@@ -318,6 +339,11 @@ export const heronStore = {
 
   clear(): void {
     cache = emptyState();
+    // The remembered feed link goes with it. "Delete my data" that leaves a
+    // live credential to a student's whole Canvas schedule behind on the device
+    // would be the single worst thing on this page to get wrong, and leaving it
+    // to each caller is how one of them forgets.
+    feedStore.forgetAll();
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem(KEY);
       window.localStorage.removeItem(RESCUE);

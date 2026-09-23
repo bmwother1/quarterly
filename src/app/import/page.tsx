@@ -3,8 +3,10 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useHeron } from '@/hooks/use-heron';
+import { useFeed, describeRefresh } from '@/hooks/use-feed';
+import { applyCanvas, describeMerge } from '@/lib/canvas/merge';
 import { logEvent } from '@/supabase/events';
-import { eventsFromICS } from '@/lib/calendar/import';
+import { eventsFromICS, replaceSourceEvents } from '@/lib/calendar/import';
 import { looksLikeCalendar } from '@/lib/canvas/ics';
 import { WorkloadChart, CourseList } from '@/components/workload-chart';
 import { SOURCE_HELP } from '@/lib/calendar/sources';
@@ -15,22 +17,45 @@ const TZ = DEFAULT_TZ;
 
 type Result =
   | { kind: 'assignments'; source: string; assignments: Assignment[]; courses: Course[]; workload: Array<{ weekStart: string; count: number; minutes: number; hasExam: boolean }>; demo?: boolean }
-  | { kind: 'events'; source: string; events: FixedEvent[]; skippedRecurring: number };
+  | {
+      kind: 'events';
+      source: string;
+      /** Host and calendar name, or `file:<name>`. Which events a re-import replaces. */
+      sourceKey: string;
+      sourceKind?: string;
+      events: FixedEvent[];
+      skippedRecurring: number;
+      /** A file was chosen rather than a link pasted, so there is nothing to remember. */
+      fromFile?: boolean;
+    };
 
 /**
  * One box for every calendar a student has.
  *
- * The same paste works for Canvas, Google, Apple and Outlook — the server
- * decides what the contents mean from where they came from, so there's nothing
- * to choose here. Fewer decisions is the entire point of a one-stop import.
+ * The same paste works for Canvas, a work schedule, Google, Apple, Outlook or
+ * any other calendar link: the server decides what the contents mean from
+ * where they came from, so there's nothing to choose here. Fewer decisions is
+ * the entire point of a one-stop import.
  */
 export default function ImportPage() {
   const { state, mutate, replan } = useHeron(TZ);
+  const { remembered, busy: refreshing, refresh, remember, forget } = useFeed(TZ);
   const [url, setUrl] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<{ error: string; hint?: string } | null>(null);
   const [result, setResult] = useState<Result | null>(null);
   const [imported, setImported] = useState<string | null>(null);
+  /**
+   * Ticked by default, and only ever shown once a fetch has worked.
+   *
+   * Offering it before anything has happened asks a student to make a privacy
+   * decision about a link that might not even be valid. Offering it on the
+   * result, next to their own courses, is the moment they can see what it is
+   * for. Default-on because the cost of forgetting is one tap in two places and
+   * the cost of *not* remembering is a desktop browser in week four.
+   */
+  const [rememberIt, setRememberIt] = useState(true);
+  const [refreshed, setRefreshed] = useState<string | null>(null);
 
   /**
    * Import a .ics file the student exported themselves.
@@ -74,7 +99,8 @@ export default function ImportPage() {
         days: 60,
       });
 
-      setResult({ kind: 'events', source: file.name.replace(/\.ics$/i, ''), events, skippedRecurring });
+      const name = file.name.replace(/\.ics$/i, '');
+      setResult({ kind: 'events', source: name, sourceKey: `file:${name}`, events, skippedRecurring, fromFile: true });
     } catch {
       setError({ error: 'Could not read that file.', hint: 'Try exporting it again.' });
     } finally {
@@ -108,13 +134,32 @@ export default function ImportPage() {
     if (!result) return;
 
     if (result.kind === 'assignments') {
-      mutate((prev) => ({
-        ...prev,
-        courses: result.courses,
-        assignments: result.assignments,
-        lastSyncedAt: new Date().toISOString(),
-      }));
-      setImported(`${result.courses.length} courses and ${result.assignments.length} assignments`);
+      /**
+       * Merged, never replaced.
+       *
+       * The straight replace this used to do was invisible when importing was a
+       * once-a-quarter event and is destructive now that it is weekly: it threw
+       * away every completed assignment, every minute recorded against one, and
+       * every task the student had typed by hand at /start. It also repainted
+       * the course colours, because the server builds its `courses` without
+       * knowing which shades were already spoken for.
+       */
+      let said: string | null = null;
+      mutate((prev) => {
+        const { next, merge } = applyCanvas(prev, result.assignments, new Date().toISOString());
+        said = describeMerge(merge);
+        return next;
+      });
+      setImported(
+        said
+          ? `${result.courses.length} courses · ${said}`
+          : `${result.courses.length} courses and ${result.assignments.length} assignments`,
+      );
+
+      // Remembering happens here rather than at fetch time, so a link is only
+      // kept once the student has seen what it produced and said keep it.
+      if (rememberIt && !result.demo) remember({ url, label: 'Canvas', kind: 'assignments', sourceKey: null });
+
       // Counts, never course codes. Whether an import produced anything is the
       // question worth answering, and an empty Canvas feed in week 0 is the
       // single most likely first experience of this product.
@@ -122,20 +167,22 @@ export default function ImportPage() {
         courses: result.courses.length,
         assignments: result.assignments.length,
         empty: result.assignments.length === 0,
+        remembered: rememberIt,
       });
     } else {
-      mutate((prev) => {
-        // Re-importing the same calendar shouldn't double everything, so
-        // anything previously imported from a feed is replaced rather than
-        // added to. Hand-added events are left alone.
-        const handAdded = prev.events.filter((e) => !e.id.startsWith('imp-'));
-        return { ...prev, events: [...handAdded, ...result.events].sort((a, b) => a.start.localeCompare(b.start)) };
-      });
+      // Re-importing a calendar replaces that calendar and nothing else. It used
+      // to replace every imported event, so a work schedule wiped the timetable.
+      mutate((prev) => ({ ...prev, events: replaceSourceEvents(prev.events, result.sourceKey, result.events) }));
       setImported(`${result.events.length} events from ${result.source}`);
+      if (rememberIt && !result.fromFile) {
+        remember({ url, label: result.source, kind: 'events', sourceKey: result.sourceKey });
+      }
       logEvent('feed_synced', {
         events: result.events.length,
         skippedRecurring: result.skippedRecurring,
         empty: result.events.length === 0,
+        remembered: rememberIt && !result.fromFile,
+        work: result.sourceKind === 'work',
       });
     }
 
@@ -148,7 +195,8 @@ export default function ImportPage() {
     <main className="rise mx-auto max-w-2xl px-5 py-10 sm:py-14">
       <h1 className="text-2xl font-semibold">Import a calendar</h1>
       <p className="mt-1.5 text-[var(--muted)]">
-        Canvas, Google, Apple or Outlook. Paste a link, or import a file you exported.
+        Canvas, your work schedule, Google, Apple, Outlook, or any other calendar link. Paste
+        it here, or import a file you exported.
       </p>
 
       <form onSubmit={fetchFeed} className="mt-6 space-y-3">
@@ -171,6 +219,46 @@ export default function ImportPage() {
           {busy ? 'Reading…' : 'Import'}
         </button>
       </form>
+
+      {/* The whole point: updating a calendar is a button on a phone, not a trip
+          to a laptop to find a feed URL again. Heron also does it daily on its own. */}
+      {remembered.length > 0 && (
+        <div className="mt-5 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+          <p className="text-sm font-medium">Saved on this device, checked daily</p>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            Stored in this browser only. Never synced to your account, never in your backups.
+          </p>
+          <ul className="mt-2 divide-y divide-[var(--border)]">
+            {remembered.map((f) => (
+              <li key={f.url} className="flex items-center gap-3 py-2 text-sm">
+                <span className="min-w-0 flex-1 truncate">
+                  <span className="font-medium">{f.label}</span>
+                  <span className="text-[var(--faint)]"> · {f.host}</span>
+                </span>
+                <button
+                  onClick={() => { forget(f.url); setRefreshed(`Forgot ${f.label}. It is gone from this browser.`); }}
+                  className="shrink-0 text-sm text-[var(--muted)] underline underline-offset-4 hover:text-[var(--ink)]"
+                >
+                  Forget
+                </button>
+              </li>
+            ))}
+          </ul>
+          <button
+            disabled={refreshing}
+            onClick={() => {
+              setRefreshed(null);
+              void refresh('tap').then((r) => setRefreshed(describeRefresh(r)));
+            }}
+            className="mt-3 rounded-lg bg-[var(--accent)] px-3.5 py-2 text-sm font-medium text-[var(--accent-ink)] disabled:opacity-60"
+          >
+            {refreshing ? 'Checking…' : 'Check them all now'}
+          </button>
+        </div>
+      )}
+      {/* Outside the panel, because forgetting removes the panel. A revocation
+          with no confirmation reads as a button that did nothing. */}
+      {refreshed && <p role="status" className="mt-2 text-sm">{refreshed}</p>}
 
       <div className="mt-5 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
         <p className="text-sm font-medium">Using Apple Calendar?</p>
@@ -258,6 +346,27 @@ export default function ImportPage() {
             </>
           )}
 
+          {((result.kind === 'assignments' && !result.demo) || (result.kind === 'events' && !result.fromFile)) && (
+            <label className="mt-4 flex cursor-pointer items-start gap-2.5 rounded-lg border border-[var(--border)] p-3 text-sm">
+              <input
+                type="checkbox"
+                checked={rememberIt}
+                onChange={(e) => setRememberIt(e.target.checked)}
+                className="mt-0.5 accent-[var(--accent)]"
+              />
+              <span>
+                <span className="font-medium">Remember this link on this device</span>
+                <span className="mt-0.5 block text-[var(--muted)]">
+                  {result.kind === 'assignments'
+                    ? 'Heron then checks Canvas once a day and fits new assignments into your week, so work posted the week it is due still shows up.'
+                    : `Heron then checks ${result.source} once a day, so a changed ${result.sourceKind === 'work' ? 'shift' : 'event'} shows up without you pasting again.`}{' '}
+                  It stays in this browser: never on our server, never in your account, never
+                  in a backup. Forget it any time, here or in Settings.
+                </span>
+              </span>
+            </label>
+          )}
+
           <div className="mt-4 flex flex-wrap gap-2">
             <button
               onClick={keep}
@@ -279,6 +388,7 @@ export default function ImportPage() {
             <div key={s.kind} className="py-2.5">
               <dt className="text-sm font-medium">{s.label}</dt>
               <dd className="text-sm text-[var(--muted)]">{s.where}</dd>
+              {s.note && <dd className="mt-1 text-xs text-[var(--faint)]">{s.note}</dd>}
             </div>
           ))}
         </dl>
@@ -287,8 +397,16 @@ export default function ImportPage() {
       <section className="mt-8 rounded-xl border border-[var(--border)] p-4 text-sm text-[var(--muted)]">
         <p className="font-medium text-[var(--ink)]">Treat these links like passwords</p>
         <p className="mt-1">
-          Anyone holding one can read that calendar. Heron uses it once to fetch, then forgets
-          it — nothing is stored, so refreshing later means pasting again.{' '}
+          Anyone holding one can read that calendar, indefinitely, without logging in. So
+          Heron never stores yours on its server: it is sent once per fetch, used, and
+          dropped, and it is never written to a log.
+        </p>
+        <p className="mt-2">
+          If you tick <strong className="text-[var(--ink)]">Remember this link</strong>, it is
+          kept in this browser and nowhere else, and Heron uses it to check that calendar once a
+          day. It is not part of your account, so it never syncs to our server or to your other
+          devices, and it is not in the backup file you can download. Forgetting it here or in
+          Settings removes it immediately, and so does deleting your data.{' '}
           <Link href="/privacy" className="underline underline-offset-4">The privacy page</Link>{' '}
           spells out exactly what that means.
         </p>

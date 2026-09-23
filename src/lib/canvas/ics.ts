@@ -8,6 +8,7 @@
  */
 
 import { wallClockIn, DEFAULT_TZ } from '../time.ts';
+import { resolveZone } from '../calendar/timezones.ts';
 
 export { DEFAULT_TZ };
 
@@ -95,7 +96,9 @@ export function toDate(value: string, params: Record<string, string>, tz = DEFAU
   const [, Y, Mo, D, H, Mi, S, z] = m;
   if (z) return { date: new Date(Date.UTC(+Y, +Mo - 1, +D, +H, +Mi, +S)), allDay: false };
 
-  const zone = params.TZID || tz;
+  // Resolved, never passed through raw: Outlook writes Windows zone names, and
+  // handing one to `Intl` threw and failed the whole import.
+  const zone = resolveZone(params.TZID, tz);
   const target = Date.UTC(+Y, +Mo - 1, +D, +H, +Mi, +S);
   let guess = target;
   for (let i = 0; i < 2; i++) {
@@ -141,4 +144,14 @@ export function parseICS(raw: string, tz = DEFAULT_TZ): IcsEvent[] {
 
 export function looksLikeCalendar(raw: string): boolean {
   return /BEGIN:VCALENDAR/i.test(raw);
+}
+
+/**
+ * The calendar's own name, when it gives one. Not secret: it is what the
+ * calendar app shows in its sidebar ("My Shifts", "Holidays in United States").
+ */
+export function calendarName(raw: string): string | null {
+  const m = /^X-WR-CALNAME:(.*)$/im.exec(raw.slice(0, 4000));
+  const name = m?.[1]?.trim();
+  return name ? name.replace(/\\,/g, ',').slice(0, 80) : null;
 }

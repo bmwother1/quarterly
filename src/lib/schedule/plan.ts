@@ -107,6 +107,16 @@ export interface PlanOptions {
    * spent: the scheduler works around them and never books over them.
    */
   events?: FixedEvent[];
+  /**
+   * Count `existingBlocks` against each day's ceiling, not just against its hours.
+   *
+   * Off by default, because a normal replan passes only settled blocks and has
+   * always planned the full ceiling on top of them. On for `fitNewWork`, which
+   * passes the *whole* current plan: without it a day already holding its three
+   * hours would happily take three more, since blocks remove openings but the
+   * per-day allowance is computed from availability alone.
+   */
+  chargeExistingToCap?: boolean;
 }
 
 export interface UnscheduledItem {
@@ -247,6 +257,7 @@ const DEFAULTS: Required<PlanOptions> = {
   commitments: [],
   existingBlocks: [],
   events: [],
+  chargeExistingToCap: false,
 };
 
 /**
@@ -498,6 +509,15 @@ export function planWeek(
     const usable = Math.min(dailyCap(dateKey), Math.floor(minutes * (1 - opts.bufferFraction)));
     capacity.set(dateKey, usable);
     capacityTotal.set(dateKey, usable);
+  }
+  if (opts.chargeExistingToCap) {
+    for (const b of opts.existingBlocks) {
+      // A skipped block used no time and promises none, so it spends nothing.
+      if (b.status === 'skipped') continue;
+      const key = localParts(new Date(b.start), tz).dateKey;
+      const left = capacity.get(key);
+      if (left !== undefined) capacity.set(key, Math.max(0, left - b.minutes));
+    }
   }
 
   const horizonEnd = now.getTime() + (opts.days + 30) * 86_400_000;

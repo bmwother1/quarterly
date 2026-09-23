@@ -307,7 +307,7 @@ export default function Onboarding() {
       <OnboardingShell
         stepNumber={4} stepCount={STEPS}
         title="Import a calendar?"
-        blurb="Canvas, Google, Apple or Outlook, so you don't type it all in. Optional, and you can do it later."
+        blurb="Canvas, your work schedule, Google, Apple or Outlook, so you don't type it all in. Optional, and you can do it later."
         onSkip={() => { skipStep('calendars'); setStep(5); }}
         skipLabel="Not now"
         footer={

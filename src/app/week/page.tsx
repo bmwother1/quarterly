@@ -11,6 +11,10 @@ import { UndoBar } from '@/components/undo-bar';
 import { AddItem } from '@/components/add-item';
 import { SetupPrompt } from '@/components/setup-prompt';
 import { RescueNotice } from '@/components/rescue-notice';
+import { FeedFreshness } from '@/components/feed-freshness';
+import { DeadlineCard } from '@/components/deadline-card';
+import { deadlinesByDay, statusLabel } from '@/lib/schedule/deadlines';
+import { dueInstant } from '@/lib/schedule/plan';
 import { DEFAULT_TZ, addDays, fmtDay, fmtTime, localParts } from '@/lib/time';
 import { missedBlocks } from '@/lib/schedule/complete';
 import { absence } from '@/lib/schedule/absence';
@@ -41,6 +45,7 @@ export default function WeekPage() {
     setTimeout(() => setMovedNotice((cur) => (cur === moved ? null : cur)), 6000);
   }
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [selectedDeadlineId, setSelectedDeadlineId] = useState<string | null>(null);
 
   const colourFor = useMemo(() => {
     // Resolves to a CSS variable, not a hex, so the same block follows the
@@ -87,6 +92,33 @@ export default function WeekPage() {
     return map;
   }, [state.blocks]);
 
+  /**
+   * Deadlines over the same fourteen days, each with its sessions counted.
+   *
+   * Computed here once and handed to every view, so the grid, the list and the
+   * month can never disagree about whether something has time planned for it.
+   */
+  const deadlines = useMemo(
+    () => deadlinesByDay(state.assignments, state.blocks, state.unscheduled, days, now, TZ),
+    [state.assignments, state.blocks, state.unscheduled, days, now],
+  );
+  const dueById = useMemo(() => {
+    const map = new Map<string, { at: string; allDay: boolean }>();
+    for (const a of state.assignments) map.set(a.id, { at: dueInstant(a, TZ).toISOString(), allDay: a.allDay });
+    return map;
+  }, [state.assignments]);
+  // Every assignment, not just the fourteen days above: the month view pages
+  // past them, and a crunch week three weeks out is what it exists to show.
+  const dueCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const a of state.assignments) {
+      if (a.status !== 'todo') continue;
+      const k = localParts(dueInstant(a, TZ), TZ).dateKey;
+      map.set(k, (map.get(k) ?? 0) + 1);
+    }
+    return map;
+  }, [state.assignments]);
+
   const missed = useMemo(() => missedBlocks(state.blocks, now), [state.blocks, now]);
   const gap = useMemo(() => absence(state.blocks, now, TZ), [state.blocks, now]);
 
@@ -99,6 +131,14 @@ export default function WeekPage() {
     () => state.events.find((e) => e.id === selectedEventId) ?? null,
     [state.events, selectedEventId],
   );
+  const selectedDeadline = useMemo(() => {
+    if (!selectedDeadlineId) return null;
+    for (const list of deadlines.values()) {
+      const hit = list.find((d) => d.id === selectedDeadlineId);
+      if (hit) return hit;
+    }
+    return null;
+  }, [deadlines, selectedDeadlineId]);
   const editingEvent = useMemo(
     () => state.events.find((e) => e.id === editingEventId) ?? null,
     [state.events, editingEventId],
@@ -229,6 +269,14 @@ export default function WeekPage() {
           </div>
           )}
 
+          {/*
+            Above the setup prompt, and it is the one banner allowed to compete
+            with it, because `feedPrompt` stays silent until Canvas data exists
+            and `SetupPrompt` goes quiet once it does. Stale deadlines are the
+            failure that looks like success, so it gets said before the week.
+          */}
+          <FeedFreshness tz={TZ} onReplan={() => replan(new Date())} />
+
           {hasInputs && (
             <SetupPrompt
               state={state}
@@ -307,18 +355,36 @@ export default function WeekPage() {
                 onSelect={(id) => {
                   setSelectedId((cur) => (cur === id ? null : id));
                   setSelectedEventId(null);
+                  setSelectedDeadlineId(null);
                 }}
                 // Says what it shifted. Silent reshuffling is how a plan becomes fiction.
                 onMove={(id, startMs) => announce(moveBlock(id, startMs))}
                 onSelectEvent={(id) => {
                   setSelectedEventId((cur) => (cur === id ? null : id));
                   setSelectedId(null);
+                  setSelectedDeadlineId(null);
                 }}
                 selectedEventId={selectedEventId}
                 todayKey={localParts(now, TZ).dateKey}
+                deadlines={deadlines}
+                focusAssignmentId={selectedDeadlineId ?? selected?.assignmentId ?? null}
+                onSelectDeadline={(id) => {
+                  setSelectedDeadlineId((cur) => (cur === id ? null : id));
+                  setSelectedId(null);
+                  setSelectedEventId(null);
+                }}
               />
 
-              {selectedEvent ? (
+              {selectedDeadline ? (
+                <DeadlineCard
+                  deadline={selectedDeadline}
+                  sessions={state.blocks.filter((b) => b.assignmentId === selectedDeadline.id)}
+                  tz={TZ}
+                  colour={colourFor(selectedDeadline.course)}
+                  onSelectBlock={(id) => { setSelectedId(id); setSelectedDeadlineId(null); }}
+                  onReplan={() => replan(new Date())}
+                />
+              ) : selectedEvent ? (
                 <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3.5 shadow-[var(--shadow-sm)]">
                   <div className="flex items-start gap-3">
                     <span
@@ -356,6 +422,11 @@ export default function WeekPage() {
                   block={selected}
                   tz={TZ}
                   colour={colourFor(selected.course)}
+                  due={selected.assignmentId ? dueById.get(selected.assignmentId) : null}
+                  onShowDeadline={selected.assignmentId ? () => {
+                    setSelectedDeadlineId(selected.assignmentId);
+                    setSelectedId(null);
+                  } : undefined}
                   isPast={new Date(selected.end) < now}
                   onComplete={(outcome, minutes) => complete(selected.id, outcome, minutes)}
                   onDrop={() => { drop(selected.id); setSelectedId(null); }}
@@ -382,6 +453,7 @@ export default function WeekPage() {
                 tz={TZ}
                 colorFor={colourFor}
                 categoryFor={categoryFor}
+                dueCounts={dueCounts}
               />
             </div>
           )}
@@ -407,6 +479,31 @@ export default function WeekPage() {
                     )}
                   </div>
 
+                  {(deadlines.get(dateKey) ?? []).length > 0 && (
+                    <ul className="mb-2 space-y-1">
+                      {(deadlines.get(dateKey) ?? []).map((d) => (
+                        <li
+                          key={d.id}
+                          className="flex flex-wrap items-baseline gap-x-2 rounded-lg px-3 py-1.5 text-sm"
+                          style={{ border: `1px dashed ${colourFor(d.course)}`, borderLeft: `3px solid ${colourFor(d.course)}` }}
+                        >
+                          <span className="tabular-nums text-[var(--muted)]">
+                            Due{!d.allDay && ` ${fmtTime(d.dueAt, TZ)}`}
+                          </span>
+                          <span className={`font-medium ${d.status === 'done' ? 'line-through' : ''}`}>{d.course}</span>
+                          <span className="min-w-0 flex-1 truncate text-[var(--muted)]">{d.title}</span>
+                          <span
+                            className={`text-xs ${
+                              d.status === 'unplanned' || d.status === 'short' ? 'text-[var(--warn)]' : 'text-[var(--faint)]'
+                            }`}
+                          >
+                            {statusLabel(d)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
                   {blocks.length === 0 ? (
                     <p className="text-sm text-[var(--faint)]">Nothing scheduled.</p>
                   ) : (
@@ -417,6 +514,7 @@ export default function WeekPage() {
                           block={b}
                           tz={TZ}
                           colour={colourFor(b.course)}
+                          due={b.assignmentId ? dueById.get(b.assignmentId) : null}
                           isPast={new Date(b.end) < now}
                           onComplete={(outcome, minutes) => complete(b.id, outcome, minutes)}
                           onDrop={() => drop(b.id)}

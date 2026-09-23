@@ -1,6 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { validateFeedUrl, isCanvasHost, isForbiddenHost, redactFeedUrl } from '../src/lib/canvas/feed-url.ts';
+import { validateFeedUrl, isCanvasHost, isForbiddenHost, isPrivateAddress, redactFeedUrl } from '../src/lib/canvas/feed-url.ts';
+import { identifySource, describeSource, isCanvasFeed } from '../src/lib/calendar/sources.ts';
 
 const ok = (raw: string) => {
   const r = validateFeedUrl(raw);
@@ -30,11 +31,34 @@ describe('feed URL validation', () => {
     assert.equal(ok('http://canvas.uw.edu/feeds/calendars/u.ics').protocol, 'https:');
   });
 
-  test('refuses anything that is not a Canvas host', () => {
-    // Without this the route is an open proxy anyone can point anywhere.
-    rejected('https://example.com/evil.ics');
-    rejected('https://canvas.uw.edu.attacker.com/u.ics');
-    rejected('https://notcanvas.io/feeds/calendars/u.ics');
+  test('accepts any public calendar host, because work schedules live everywhere', () => {
+    // The policy change of 2026-09-22. Refusing unknown hosts was standing in
+    // for refusing private addresses, and it turned away every student whose
+    // employer picked a scheduling app nobody listed.
+    ok('https://app.wheniwork.com/ical/abc.ics');
+    ok('webcal://acme.na.deputy.com/exec/ical/xyz');
+    ok('https://calendar.some-club.org/feed.ics');
+  });
+
+  test('a lookalike host is fetched as nothing special, never as Canvas', () => {
+    // What the old allowlist really protected: a stranger's calendar being
+    // read as coursework. That now rests on identification alone.
+    for (const host of ['canvas.uw.edu.attacker.com', 'notinstructure.com', 'instructure.com.evil.io']) {
+      assert.equal(isCanvasHost(host), false, host);
+      assert.equal(describeSource(host).produces, 'events', host);
+    }
+  });
+
+  test('refuses links that carry a login or an odd port', () => {
+    rejected('https://user:pass@calendar.google.com/x.ics');
+    rejected('https://calendar.google.com:8443/x.ics');
+    ok('https://calendar.google.com:443/x.ics');
+  });
+
+  test('refuses bare and local names', () => {
+    for (const h of ['intranet', 'localhost.', 'printer.home.arpa', 'db.internal']) {
+      rejected(`https://${h}/x.ics`);
+    }
   });
 
   test('refuses loopback, private, and link-local space', () => {
@@ -69,7 +93,7 @@ describe('feed URL validation', () => {
   });
 
   test('every rejection explains itself', () => {
-    for (const bad of ['https://example.com/x.ics', 'ftp://canvas.uw.edu/u.ics', '']) {
+    for (const bad of ['https://10.0.0.1/x.ics', 'ftp://canvas.uw.edu/u.ics', '', 'https://a:b@x.com/c']) {
       const r = rejected(bad);
       assert.ok(!r.ok && r.error.length > 10, `weak error for ${bad}`);
     }
@@ -92,5 +116,65 @@ describe('feed URL validation', () => {
     const shown = redactFeedUrl(url);
     assert.ok(!shown.includes('SECRETTOKEN'), 'the token must never survive redaction');
     assert.ok(shown.includes('canvas.uw.edu'));
+  });
+});
+
+describe('private addresses, judged on the address', () => {
+  test('the IPv4 ranges that matter', () => {
+    for (const ip of ['127.0.0.1', '10.1.2.3', '192.168.0.1', '172.16.0.1', '169.254.169.254',
+      '100.64.0.1', '0.0.0.0', '224.0.0.1', '255.255.255.255']) {
+      assert.ok(isPrivateAddress(ip), ip);
+    }
+    for (const ip of ['8.8.8.8', '140.142.12.1', '172.32.0.1', '100.128.0.1']) {
+      assert.ok(!isPrivateAddress(ip), ip);
+    }
+  });
+
+  test('IPv6, including every form that smuggles an IPv4 address', () => {
+    // ::ffff:169.254.169.254 is the cloud metadata endpoint in disguise, and
+    // it is exactly what a rebinding attack answers with.
+    for (const ip of ['::1', '::', 'fe80::1', 'fc00::1', 'fd12:3456::1', 'ff02::1',
+      '::ffff:127.0.0.1', '::ffff:a9fe:a9fe', '[::ffff:169.254.169.254]', '64:ff9b::a9fe:a9fe',
+      '2002:a9fe:a9fe::1', '2001:db8::1', 'fe80::1%en0']) {
+      assert.ok(isPrivateAddress(ip), ip);
+    }
+    for (const ip of ['2607:f8b0:4005:80a::200e', '2001:4860:4860::8888', '::ffff:8.8.8.8']) {
+      assert.ok(!isPrivateAddress(ip), ip);
+    }
+  });
+
+  test('anything unparseable is treated as private', () => {
+    for (const junk of ['', 'not-an-ip', '1.2.3', '999.1.1.1', ':::1', '1::2::3']) {
+      assert.ok(isPrivateAddress(junk), junk);
+    }
+  });
+
+  test('numeric host tricks are normalised by the URL parser and still refused', () => {
+    for (const trick of ['https://2130706433/x.ics', 'https://0x7f000001/x.ics', 'https://[::ffff:7f00:1]/x.ics']) {
+      rejected(trick);
+    }
+  });
+});
+
+describe('what a source means', () => {
+  test('work scheduling apps are labelled and their events are work', () => {
+    for (const [host, label] of [['app.wheniwork.com', 'When I Work'], ['acme.na.deputy.com', 'Deputy'],
+      ['app.7shifts.com', '7shifts'], ['app.joinhomebase.com', 'Homebase']]) {
+      const s = identifySource(host)!;
+      assert.equal(s.label, label);
+      assert.equal(s.category, 'work');
+      assert.equal(s.produces, 'events');
+    }
+  });
+
+  test('an unknown site is named after itself', () => {
+    assert.equal(describeSource('www.someclub.org').label, 'Calendar from someclub.org');
+  });
+
+  test('Canvas on a domain no rule knows is recognised by its own signature', () => {
+    const feed = 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Instructure//Canvas//EN\r\nEND:VCALENDAR';
+    assert.ok(isCanvasFeed(feed));
+    assert.equal(describeSource('bcourses.berkeley.edu', feed).produces, 'assignments');
+    assert.equal(describeSource('bcourses.berkeley.edu', 'BEGIN:VCALENDAR\r\nPRODID:-//Google Inc//EN').produces, 'events');
   });
 });

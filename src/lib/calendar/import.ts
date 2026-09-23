@@ -11,7 +11,7 @@
  * scheduler must stop putting things at 10am on Tuesdays.
  */
 
-import { categoryForImportedEvent, nextShade } from '../categories.ts';
+import { categoryForImportedEvent, nextShade, type Category } from '../categories.ts';
 import type { FixedEvent } from '../types.ts';
 import { parseICS } from '../canvas/ics.ts';
 import { parseRRule, expand } from './recurrence.ts';
@@ -32,7 +32,18 @@ export interface ImportedEvents {
  */
 export function eventsFromICS(
   raw: string,
-  opts: { tz: string; from: Date; days: number; produces?: 'assignments' | 'events' },
+  opts: {
+    tz: string;
+    from: Date;
+    days: number;
+    produces?: 'assignments' | 'events';
+    /**
+     * Every event is this, whatever its title says. A work scheduling app's
+     * shifts are called "Front Desk" or "Barista", which no title rule could
+     * know is a job.
+     */
+    category?: Category;
+  },
 ): ImportedEvents {
   const parsed = parseICS(raw, opts.tz);
   const windowStart = opts.from;
@@ -61,7 +72,7 @@ export function eventsFromICS(
     // Guessed from the title, because a feed gives nothing better. Wrong
     // guesses are cheap here: the student can change it, and the default is
     // the broad one rather than a confident mistake.
-    const category = categoryForImportedEvent(opts.produces ?? 'events', title);
+    const category = opts.category ?? categoryForImportedEvent(opts.produces ?? 'events', title);
     const seriesKey = `${category}:${ev.uid ?? title}`;
     if (!shadeBySeries.has(seriesKey)) {
       const taken = [...shadeBySeries.entries()]
@@ -115,4 +126,32 @@ export function eventsFromICS(
   });
 
   return { events: unique, skippedRecurring };
+}
+
+/**
+ * Put one calendar's fresh events in place of its old ones, and touch nothing
+ * else.
+ *
+ * Events added by hand are never touched. Events from other imported calendars
+ * are never touched: that is the bug this replaced, where importing a work
+ * schedule deleted the class timetable imported the day before, because "was
+ * imported" was the only thing an event recorded about where it came from.
+ *
+ * Events imported before sources were recorded carry no `source`. There is no
+ * way to tell which calendar they came from, so the first import after the
+ * change replaces them, which is what every import did before it. After that,
+ * everything is tagged and nothing is ever replaced by the wrong calendar.
+ */
+export function replaceSourceEvents(
+  current: FixedEvent[],
+  source: string,
+  incoming: FixedEvent[],
+): FixedEvent[] {
+  const kept = current.filter((e) => {
+    if (!e.id.startsWith('imp-')) return true;
+    if (!e.source) return false;
+    return e.source !== source;
+  });
+  const tagged = incoming.map((e) => ({ ...e, source }));
+  return [...kept, ...tagged].sort((a, b) => a.start.localeCompare(b.start));
 }

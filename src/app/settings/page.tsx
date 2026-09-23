@@ -8,6 +8,7 @@ import { Insights } from '@/components/insights';
 import { BackupControls } from '@/components/backup-controls';
 import { AccountPanel } from '@/components/account-panel';
 import { NotificationToggle } from '@/components/notification-toggle';
+import { FeedPanel } from '@/components/feed-panel';
 import { deleteServerAccount } from '@/supabase/account';
 import { DEFAULT_TZ } from '@/lib/time';
 
@@ -50,6 +51,13 @@ export default function Settings() {
 
       <Section title="Notifications">
         <NotificationToggle />
+      </Section>
+
+      <Section
+        title="Calendar links"
+        hint="Saved on this device so Heron can check them once a day. Remove any of them whenever you like."
+      >
+        <FeedPanel tz={TZ} />
       </Section>
 
       <Section title="Colours">
