@@ -369,6 +369,15 @@ button, a, label { -webkit-tap-highlight-color: transparent; }
     .chip:hover:not([aria-pressed="true"]) { color: var(--ink); border-color: var(--border-strong); }
   }
 
+  /* A notice: something the app is telling you, set apart by a faint well
+     rather than a border and a shadow, so it reads as a different kind of
+     thing from the content around it without shouting. */
+  .well {
+    border-radius: var(--radius-md);
+    background: color-mix(in oklab, var(--ink) 4%, var(--bg));
+    padding: 1rem;
+  }
+
   /* Two or three lenses on the same thing. The selected one is lifted out
      of the track by colour, not by a shadow. */
   .segmented {
@@ -416,6 +425,13 @@ button, a, label { -webkit-tap-highlight-color: transparent; }
 @keyframes pop-out { to { opacity: 0; transform: scale(0.97); } }
 
 .rise { animation: fade-in var(--dur-enter) var(--ease) backwards; }
+
+/* A block the student has just answered: its text eases from ink to its
+   quieter done state, and the tick lands on the spring. */
+@keyframes settle-dim { from { color: var(--ink); } }
+@keyframes check-pop { from { opacity: 0; transform: scale(0.4); } }
+.settle, .settle * { animation: settle-dim var(--dur-move) var(--ease) backwards; }
+.settle svg { animation: check-pop var(--dur-move) var(--ease-spring) backwards; }
 
 /* The sheet rises from the bottom edge on a phone, where it is attached to
    it, and settles in place on a laptop, where it floats. */
