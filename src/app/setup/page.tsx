@@ -8,6 +8,7 @@ import { DEFAULT_TZ } from '@/lib/time';
 import type { BusyBlock, Commitment, CommitmentCategory, EnergyPattern } from '@/lib/types';
 import { CATEGORY_DEMAND } from '@/lib/schedule/score';
 import { UndoBar } from '@/components/undo-bar';
+import { Toast } from '@/components/toast';
 import Link from 'next/link';
 
 const TZ = DEFAULT_TZ;
@@ -38,7 +39,7 @@ export default function SetupPage() {
   }
 
   if (!hydrated) {
-    return <main className="mx-auto max-w-2xl px-5 py-12"><p className="text-[var(--muted)]">Loading…</p></main>;
+    return <main className="mx-auto min-h-[60vh] max-w-2xl px-5 pt-8 sm:pt-12" aria-busy="true" />;
   }
 
   const sleepStart = av.busy.find((b) => b.kind === 'sleep')?.endMin ?? 7 * 60;
@@ -62,15 +63,13 @@ export default function SetupPage() {
   }
 
   return (
-    <main className="rise mx-auto max-w-2xl px-5 py-10 sm:py-14">
-      <header className="mb-8 flex flex-wrap items-baseline justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Your week</h1>
-
+    <main className="rise mx-auto max-w-2xl px-5 pb-12 pt-8 sm:pt-12">
+      <header>
+        <h1 className="text-heading font-semibold">Your week</h1>
+        <p className="mt-2 text-base text-[var(--muted)]">
+          Set once. None of it needs Canvas.
+        </p>
       </header>
-
-      <p className="mb-8 text-sm text-[var(--muted)]">
-        Set once. None of it needs Canvas.
-      </p>
 
       <Section
         title="Your other calendars"
@@ -79,52 +78,47 @@ export default function SetupPage() {
         {state.courses.length > 0 ? (
           <div className="space-y-3">
             <p className="text-sm">
-              <span className="font-medium">{state.courses.length} courses</span>{' '}
+              <span className="font-medium">{state.courses.length} courses</span>
               <span className="text-[var(--muted)]">
-                · {state.assignments.filter((a) => a.status === 'todo').length} assignments still ahead
+                {' · '}{state.assignments.filter((a) => a.status === 'todo').length} assignments still ahead
               </span>
             </p>
             <div className="flex flex-wrap gap-2">
               {state.courses.map((c) => (
                 <span
                   key={c.code}
-                  className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-sm"
+                  className="whitespace-nowrap rounded-full border border-[var(--border)] px-3 py-1 text-sm"
                 >
                   {c.code}
                 </span>
               ))}
             </div>
-            <Link
-              href="/import"
-              className="inline-block rounded-lg border border-[var(--border-strong)] px-3.5 py-2 text-sm"
-            >
+            <Link href="/import" className="btn-secondary">
               Import another calendar
             </Link>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             <p className="text-sm text-[var(--muted)]">
               Not connected. Between quarters your feed is usually empty, so this is worth doing
               once your courses go live.
             </p>
-            <Link
-              href="/import"
-              className="inline-block rounded-lg bg-[var(--accent)] px-3.5 py-2 text-sm font-medium text-[var(--accent-ink)]"
-            >
+            {/* Secondary: this page's one primary is Plan my week, at the end. */}
+            <Link href="/import" className="btn-secondary">
               Import a calendar
             </Link>
           </div>
         )}
       </Section>
 
-      <Section title="Sleep" hint="">
-        <div className="flex flex-wrap gap-4">
+      <Section title="Sleep">
+        <div className="grid max-w-sm grid-cols-2 gap-3">
           <Field label="Wake">
             <input
               type="time"
               value={toHHMM(sleepStart)}
               onChange={(e) => setSleep(toMin(e.target.value), bedMin)}
-              className="rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm"
+              className="field w-full"
             />
           </Field>
           <Field label="Sleep">
@@ -132,7 +126,7 @@ export default function SetupPage() {
               type="time"
               value={toHHMM(bedMin)}
               onChange={(e) => setSleep(sleepStart, toMin(e.target.value))}
-              className="rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm"
+              className="field w-full"
             />
           </Field>
         </div>
@@ -144,7 +138,7 @@ export default function SetupPage() {
         onSave={setWorkShift}
       />
 
-      <Section title="When you focus best" hint="">
+      <Section title="When you focus best">
         <div className="flex flex-wrap gap-2">
           {(['morning', 'evening', 'steady', 'bimodal'] as EnergyPattern[]).map((p) => (
             <button
@@ -152,13 +146,10 @@ export default function SetupPage() {
               // Picking one here is a considered answer, so it locks: from
               // now on, observation reports but does not overrule.
               onClick={() => updateAvailability((prev) => ({ ...prev, energy: p, energyLocked: true }))}
-              className={`rounded-full border px-3 py-1.5 text-sm ${
-                av.energy === p
-                  ? 'border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]'
-                  : 'border-[var(--border)]'
-              }`}
+              aria-pressed={av.energy === p}
+              className="chip"
             >
-              {p === 'bimodal' ? 'early and late' : p}
+              {p === 'bimodal' ? 'Early and late' : p.charAt(0).toUpperCase() + p.slice(1)}
             </button>
           ))}
         </div>
@@ -166,13 +157,13 @@ export default function SetupPage() {
 
       <Section
         title="How much you'll actually do"
-        hint="Hours per day. Be realistic — five after a full shift is a plan you abandon."
+        hint="Hours per day. Be realistic: five after a full shift is a plan you abandon."
       >
         <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
           {DAYS.map((label, day) => {
             const value = av.maxDailyMinutesByDay?.[day] ?? av.maxDailyMinutes;
             return (
-              <label key={label} className="text-center text-xs text-[var(--muted)]">
+              <label key={label} className="flex flex-col gap-1 text-center text-sm text-[var(--muted)]">
                 {label}
                 <input
                   type="number"
@@ -188,7 +179,7 @@ export default function SetupPage() {
                       return { ...prev, maxDailyMinutesByDay: next };
                     });
                   }}
-                  className="mt-1 w-full rounded border border-[var(--border)] bg-[var(--surface)] px-1 py-1.5 text-center text-sm text-[var(--ink)]"
+                  className="field w-full px-1 text-center"
                 />
               </label>
             );
@@ -203,50 +194,36 @@ export default function SetupPage() {
       />
 
       <UndoBar label={undoLabel} onUndo={undo} onDismiss={dismissUndo} />
+      <Toast message={saved} />
 
-      
-
-      
-
-      
-
-      {saved && (
-        <div
-          role="status"
-          className="fixed inset-x-0 bottom-4 z-10 mx-auto w-fit rounded-full bg-[var(--ink)] px-4 py-2 text-sm text-[var(--bg)] shadow-lg"
-        >
-          {saved}
-        </div>
-      )}
-
-      <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-[var(--border)] pt-6">
+      <div className="mt-10 border-t border-[var(--border)] pt-6">
         <button
           onClick={() => { replan(new Date()); router.push('/week'); }}
-          className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white"
+          className="btn-primary btn-lg w-full sm:w-auto"
         >
           Plan my week
         </button>
-        <span className="text-sm text-[var(--muted)]">takes you to the result</span>
       </div>
-
-   </main>
+    </main>
   );
 }
 
+/** A setting, set apart from the one above it by a rule and space, not a box. */
 function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
-    <section className="mb-8">
-      <h2 className="font-medium">{title}</h2>
-      {hint && <p className="mb-3 mt-0.5 text-sm text-[var(--muted)]">{hint}</p>}
-      {children}
+    <section className="mt-8 border-t border-[var(--border)] pt-6">
+      <h2 className="text-base font-semibold">{title}</h2>
+      {hint && <p className="mt-1 text-sm text-[var(--muted)]">{hint}</p>}
+      <div className="mt-3">{children}</div>
     </section>
   );
 }
 
+/** A label above its field, so the two stay together however the row wraps. */
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="text-sm text-[var(--muted)]">
-      <span className="mr-2">{label}</span>
+    <label className="flex flex-col gap-1 text-sm text-[var(--muted)]">
+      {label}
       {children}
     </label>
   );
@@ -267,42 +244,37 @@ function WorkSection({
   return (
     <Section title="Work, class or anything fixed" hint="Include your commute.">
       {current && days.length > 0 && (
-        <p className="mb-3 rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm">
+        <p className="mb-4 text-sm">
           <span className="font-medium">{current.label}</span>
           <span className="text-[var(--muted)]">
-            {' · '}{toHHMM(current.startMin)}–{toHHMM(current.endMin)}
+            {' · '}{toHHMM(current.startMin)} to {toHHMM(current.endMin)}
             {' · '}{[...new Set(days)].sort().map((d) => DAYS[d]).join(' ')}
           </span>
         </p>
       )}
-      <div className="space-y-3">
+      <div className="space-y-4">
         <input
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           aria-label="What this commitment is called"
           placeholder="Masons Supply Co"
-          className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-sm"
+          className="field w-full"
         />
-        <div className="flex flex-wrap gap-4">
+        <div className="grid max-w-sm grid-cols-2 gap-3">
           <Field label="From">
-            <input type="time" value={start} onChange={(e) => setStart(e.target.value)}
-              className="rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm" />
+            <input type="time" value={start} onChange={(e) => setStart(e.target.value)} className="field w-full" />
           </Field>
           <Field label="To">
-            <input type="time" value={end} onChange={(e) => setEnd(e.target.value)}
-              className="rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm" />
+            <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} className="field w-full" />
           </Field>
         </div>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Days">
           {DAYS.map((d, i) => (
             <button
               key={d}
               onClick={() => setSelected((s) => (s.includes(i) ? s.filter((x) => x !== i) : [...s, i]))}
-              className={`rounded px-2.5 py-1 text-sm ${
-                selected.includes(i)
-                  ? 'bg-[var(--accent)] text-white'
-                  : 'border border-[var(--border)] text-[var(--muted)]'
-              }`}
+              aria-pressed={selected.includes(i)}
+              className="chip"
             >
               {d}
             </button>
@@ -310,7 +282,7 @@ function WorkSection({
         </div>
         <button
           onClick={() => onSave(selected, toMin(start), toMin(end), label || 'Work')}
-          className="rounded border border-[var(--border)] px-3 py-1.5 text-sm"
+          className="btn-secondary"
         >
           Save these hours
         </button>
@@ -371,60 +343,53 @@ function CommitmentsSection({
       hint="Runs, project hours, a course. A weekly target, no deadline."
     >
       {commitments.length > 0 && (
-        <ul className="mb-4 space-y-2">
+        <ul className="mb-4 divide-y divide-[var(--border)] border-y border-[var(--border)]">
           {commitments.map((c) => (
-            <li key={c.id} className="flex items-center gap-3 rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm">
-              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colorVar(categoryForCommitment(c.category), c.shade) }} aria-hidden />
-              <span className="min-w-0 flex-1 truncate">{c.title}</span>
+            <li key={c.id} className="flex items-center gap-3 py-2 text-sm">
+              <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: colorVar(categoryForCommitment(c.category), c.shade) }} aria-hidden />
+              <span className="min-w-0 flex-1 truncate text-base">{c.title}</span>
               <span className="shrink-0 text-[var(--muted)]">
-                {c.sessionsPerWeek}× {c.minutesPerSession}m
+                {c.sessionsPerWeek}× {c.minutesPerSession} min
               </span>
-              <button
-                onClick={() => onRemove(c.id)}
-                className="shrink-0 text-[var(--faint)] underline underline-offset-4"
-              >
-                remove
+              <button onClick={() => onRemove(c.id)} className="btn-quiet shrink-0 px-2">
+                Remove
               </button>
             </li>
           ))}
         </ul>
       )}
 
-      <div className="space-y-3 rounded-lg border border-[var(--border)] p-3">
+      <div className="space-y-4 rounded-md border border-[var(--border)] p-4">
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           aria-label="What you do every week"
           placeholder="Run 3 miles"
-          className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-sm"
+          className="field w-full"
         />
-        <div className="flex flex-wrap items-end gap-3">
-          <Field label="times a week">
+        <div className="grid max-w-sm grid-cols-2 gap-3">
+          <Field label="Times a week">
             <input type="number" min={1} max={14} value={perWeek} onChange={(e) => setPerWeek(e.target.value)}
-              className="w-16 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm" />
+              className="field w-full" />
           </Field>
-          <Field label="minutes each">
+          <Field label="Minutes each">
             <input type="number" min={15} max={240} step={15} value={minutes} onChange={(e) => setMinutes(e.target.value)}
-              className="w-20 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm" />
+              className="field w-full" />
           </Field>
         </div>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Kind">
           {(['fitness', 'project', 'learning', 'personal'] as CommitmentCategory[]).map((c) => (
             <button
               key={c}
               onClick={() => setCategory(c)}
-              className={`rounded-full border px-3 py-1 text-sm ${
-                category === c
-                  ? 'border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]'
-                  : 'border-[var(--border)] text-[var(--muted)]'
-              }`}
+              aria-pressed={category === c}
+              className="chip"
             >
               {c}
             </button>
           ))}
         </div>
-        <button onClick={add} disabled={!title.trim()}
-          className="rounded bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40">
+        <button onClick={add} disabled={!title.trim()} className="btn-secondary">
           Add
         </button>
       </div>
