@@ -157,6 +157,25 @@ describe('notification tone', () => {
     }
   });
 
+  test('the Sunday look-ahead counts hours in English', () => {
+    // Found checking the rest of the copy after the planner's "due in 1 hours".
+    // An hour of study next week read "About 1 hours planned", and one short
+    // block read "About 0 hours planned".
+    const now = zonedInstant('2026-10-11', 18 * 60, TZ);   // a Sunday evening
+    const week = (minutes: number) => [block({
+      id: 'x', minutes,
+      start: zonedInstant('2026-10-12', 10 * 60, TZ).toISOString(),
+      end: zonedInstant('2026-10-12', 10 * 60 + minutes, TZ).toISOString(),
+    })];
+
+    const hour = nextNotice({ ...base, now, blocks: week(60) });
+    assert.equal(hour?.kind, 'look-ahead');
+    assert.doesNotMatch(hour!.body, /\b1 hours\b/);
+
+    const short = nextNotice({ ...base, now, blocks: week(25) });
+    assert.doesNotMatch(short!.body, /\b0 hours\b/);
+  });
+
   test('the banned list actually catches a mean-boss message', () => {
     assert.ok(violatesTone("Don't forget! You're behind schedule."));
     assert.ok(violatesTone('You always skip your evening blocks'));

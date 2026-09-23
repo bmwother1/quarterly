@@ -135,6 +135,7 @@ function lookAhead({ blocks, assignments, now, tz }: NotifyInput): Notice | null
   if (weekAhead.length === 0) return null;
 
   const hours = Math.round(weekAhead.reduce((s, b) => s + b.minutes, 0) / 60);
+  const amount = hours === 0 ? 'Under an hour' : hours === 1 ? 'About an hour' : `About ${hours} hours`;
   const exam = assignments.find((a) => {
     const due = new Date(a.due).getTime();
     return a.kind === 'exam' && a.status === 'todo' &&
@@ -156,8 +157,8 @@ function lookAhead({ blocks, assignments, now, tz }: NotifyInput): Notice | null
     kind: 'look-ahead',
     title: exam ? `Next week has your ${exam.course} ${exam.title} in it.` : 'Next week, roughly.',
     body: heaviestDay
-      ? `About ${hours} hours planned. ${heaviestDay} is the tight day.`
-      : `About ${hours} hours planned.`,
+      ? `${amount} planned. ${heaviestDay} is the tight day.`
+      : `${amount} planned.`,
     priority: 60,
     href: '/week',
   };
