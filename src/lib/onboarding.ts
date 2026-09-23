@@ -97,7 +97,7 @@ export function steps(state: HeronState): Step[] {
     ),
     build(
       'calendars', 'Import a calendar',
-      'Canvas, Google, Apple or Outlook, so you don\'t type it all in.',
+      'Canvas, your work schedule, Google, Apple or Outlook, so you don\'t type it all in.',
       'Not now',
       hasCalendars(state), false,
     ),

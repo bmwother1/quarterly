@@ -74,7 +74,7 @@ export default function SetupPage() {
 
       <Section
         title="Your other calendars"
-        hint="Canvas, Google, Apple or Outlook. Import once and the scheduler plans around it."
+        hint="Canvas, your work schedule, Google, Apple, Outlook or any calendar link. Import once and Heron keeps it current."
       >
         {state.courses.length > 0 ? (
           <div className="space-y-3">

@@ -30,7 +30,14 @@ export type EventKind =
   | 'block_done'
   | 'block_skipped'
   | 'block_moved'
-  | 'feed_synced';
+  | 'feed_synced'
+  /**
+   * A remembered link fetched again. Separate from `feed_synced` on purpose:
+   * whether students actually refresh is the number that says whether the
+   * week-4 staleness problem is fixed, and it is unanswerable if the two share
+   * a name.
+   */
+  | 'feed_refreshed';
 
 /** Small numeric facts only. Anything that could name a person's work is out. */
 type Detail = Record<string, number | boolean>;

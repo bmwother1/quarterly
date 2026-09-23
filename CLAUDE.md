@@ -38,16 +38,17 @@ export PATH="$HOME/.local/node/bin:$PATH"
 
 ```
 npm run dev        the web app
-npm test           181 tests, no framework
+npm test           349 tests, no framework
 npm run check      typecheck + lint + tests
 npm run week       print a planned week from a Canvas feed
 npm run my-week    print Brydon's real week — the off-season case
 npm run first-run  print what a brand-new student gets from /start
+npm run refresh    week-1 Canvas import, three weeks of use, week-4 refresh
 npm run handoff    regenerate the Cowork brief
 ```
 
-**Those three print-a-real-week scripts have each found a bug no test caught.**
-Run them after any scheduler change and read the output. Tests confirm what you
+**Those four print-a-real-week scripts have each found a bug no test caught.**
+Run them after any scheduler or import change and read the output. Tests confirm what you
 already thought to check; the expensive bugs live in what you didn't.
 
 ## Standing rules

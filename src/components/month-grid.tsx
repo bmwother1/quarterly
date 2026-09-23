@@ -58,7 +58,7 @@ const MONTH_NAMES = [
 ];
 
 export function MonthGrid({
-  blocks, events, availability, tz, colorFor, categoryFor,
+  blocks, events, availability, tz, colorFor, categoryFor, dueCounts,
 }: {
   blocks: StudyBlock[];
   events: FixedEvent[];
@@ -66,6 +66,8 @@ export function MonthGrid({
   tz: string;
   colorFor: (group: string) => string;
   categoryFor: (group: string) => Category;
+  /** Unfinished deadlines per local date. The month is where a crunch week shows up first. */
+  dueCounts?: Map<string, number>;
 }) {
   const router = useRouter();
   const today = useMemo(() => localParts(new Date(), tz).dateKey, [tz]);
@@ -176,6 +178,7 @@ export function MonthGrid({
           const inMonth = shown.has(dateKey);
           const isToday = dateKey === today;
           const hours = d.minutes / 60;
+          const due = dueCounts?.get(dateKey) ?? 0;
 
           return (
             <button
@@ -190,12 +193,19 @@ export function MonthGrid({
               } ${inMonth ? '' : 'opacity-35'}`}
               aria-label={
                 d.minutes > 0
-                  ? `${dateKey}, ${hours.toFixed(1)} hours, mostly ${d.category ? CATEGORY_META[d.category].label : 'unplanned'}`
-                  : `${dateKey}, nothing planned`
+                  ? `${dateKey}, ${hours.toFixed(1)} hours, mostly ${d.category ? CATEGORY_META[d.category].label : 'unplanned'}${due ? `, ${due} due` : ''}`
+                  : `${dateKey}, nothing planned${due ? `, ${due} due` : ''}`
               }
             >
-              <span className={`text-[11px] ${isToday ? 'font-semibold text-[var(--accent)]' : 'text-[var(--muted)]'}`}>
-                {Number(dateKey.slice(8, 10))}
+              <span className="flex items-baseline justify-between gap-1">
+                <span className={`text-[11px] ${isToday ? 'font-semibold text-[var(--accent)]' : 'text-[var(--muted)]'}`}>
+                  {Number(dateKey.slice(8, 10))}
+                </span>
+                {due > 0 && (
+                  <span className="rounded-sm border border-dashed border-[var(--border-strong)] px-0.5 text-[9px] leading-tight text-[var(--muted)]">
+                    {due} due
+                  </span>
+                )}
               </span>
 
               {/* The bar. Always present as a track so the grid keeps its

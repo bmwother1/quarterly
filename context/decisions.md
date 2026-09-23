@@ -133,6 +133,248 @@ is asking about them, not uncounting them.
 
 ---
 
+## 2026-09-22 · Check saved calendars daily, and never move the week to do it
+
+**Supersedes** the "No background refresh" paragraph of the entry below, written
+the same morning.
+
+**Decided:** every saved calendar link is fetched once a day, the first time the
+week opens after 20 hours. Canvas changes are merged and only the new work, or
+work whose deadline moved in front of its sessions, is placed, into time that is
+still free (`fitNewWork`). A changed work schedule replaces that calendar's
+events and reports any study block a new shift now lands on, with a one-tap
+replan. Nothing already in the week moves without the student asking. When
+something changed, a card on `/week` names each item; when nothing did, it says
+nothing.
+
+**Why the earlier call was wrong.** It refused to fetch on its own on the
+grounds that a plan should never change unasked. That conflated two things.
+Deadlines arriving is information, and it goes stale in days: instructors often
+post work the same week it is due, and managers publish next week's shifts on
+Friday. What must not happen unasked is the plan the student already looked at
+rearranging itself. Those can be separated, so they are.
+
+**Why 20 hours, not 24:** a student who opens the app at 8am every day would
+otherwise land a few minutes short of a full day on most mornings and refresh
+every other day.
+
+**What it needed underneath.**
+
+- **A planner that can add without reshuffling.** `fitNewWork` plans only the
+  new assignments, with the entire current plan passed in as occupied time.
+- **A daily cap that counts existing blocks.** The per-day ceiling was computed
+  from availability alone, so blocks used up hours but not allowance. With the
+  whole plan passed in, a day already holding its three hours would have taken
+  three more. `chargeExistingToCap` fixes that for this path. It is off for a
+  normal replan, which passes only settled blocks; whether a normal replan
+  should charge a day's finished blocks against the cap too is still open.
+- **Events that know their calendar.** Re-importing any calendar used to
+  replace every imported event, so importing a work schedule deleted the
+  timetable. `FixedEvent.source` (host and calendar name, never the path) scopes
+  a re-import to its own calendar.
+- **Links as a list, not a slot.** `heron.feeds.v2`, one entry per calendar,
+  each with its own Forget. The Canvas-only slot migrates once.
+
+**Prompts become the fallback.** With a saved link the student is only asked
+when the daily fetch has failed for two days (usually a reset link). Without
+one, the "paste again" prompt now comes at three days, not seven, because
+work posted the week it is due makes a week-old import wrong.
+
+**Verified by** `npm run refresh`, which now takes the daily path and checks
+that every block from Monday's plan is still where it was (8 of 8), that no day
+exceeds its cap, and that each new deadline is planned or reported. Replacing
+`fitNewWork` with a full replan fails the first check (4 of 8 moved).
+
+**Revisit when:** `feed_refreshed` telemetry shows the daily card being
+dismissed unread, or a student reports a new assignment appearing somewhere
+they did not expect. The second means the placement rules, not the cadence.
+
+## 2026-09-22 · Any public calendar link, made safe by the address rather than an allowlist
+
+**Supersedes** the security note of 2026-08-21, "Import from any calendar".
+
+**Decided:** `/api/feed` fetches a link from any public host. Safety moves from
+a list of four provider names to the address itself: https only, the default
+port, no credentials in the URL, then at connect time every address the name
+resolves to is checked against the private ranges (IPv4 and IPv6, including the
+forms that embed an IPv4 address), and the socket connects only to an address
+that was checked, so DNS cannot answer differently a moment later. Redirects are
+followed by hand, at most three, each hop checked the same way. Providers are
+still identified, but for meaning (Canvas produces assignments, work apps
+produce shifts), not permission.
+
+**Why.** The allowlist was standing in for the real rule, "never connect to a
+private or internal address", and it cost every student whose calendar lives
+elsewhere. Work schedules are the big case. When I Work, 7shifts, Homebase,
+Sling, Deputy and UKG all publish a personal iCal link, and Deputy and UKG serve
+it from per-employer domains no list could track. The address check is also the
+stronger defence: the allowlist never covered DNS rebinding, a name on the
+list resolving to an internal address.
+
+**Also fixed on the way, found by fetching real feeds:**
+
+- **Every published Outlook calendar failed.** Exchange writes Windows time
+  zone names (`Central Standard Time`); `Intl` throws on them, and the route did
+  not catch it, so the student saw a server error. Outlook is the calendar UW
+  turns on for every student. `resolveZone` maps the CLDR Windows names, reads
+  Outlook's display form, and falls back to the student's zone rather than
+  throwing. A real Marquette event now reads back at the same 5pm Central.
+- **Redirects were refused outright**, which fails any provider that redirects
+  (iCloud moves accounts between servers). Now followed, safely.
+- **Canvas on an unlisted domain** (`bcourses.berkeley.edu`) imported as
+  events. Canvas is now also recognised by its own `PRODID`.
+
+**What cannot be connected, stated plainly.** TimeTree: its API closed on 22
+December 2023 and it documents no outbound feed; the one export tool scrapes
+with the user's password, which Heron will never ask for. Apps that only offer
+"add shifts to my phone calendar" (Homebase's mobile sync, UKG's device sync):
+do that, then import the phone calendar via Google or iCloud. Anything with no
+calendar option at all: the weekly work hours in Setup. Between the link, the
+phone-calendar route and Setup, there is no work schedule a student cannot get
+in.
+
+**Rejected:** growing the allowlist app by app (always behind, and weaker);
+proxying through a third-party fetch service (sends credentials to someone
+else); asking for scheduling-app logins (the thing the product exists not to do).
+
+**Revisit when:** abuse shows up in logs as the route being used to probe
+public hosts. Rate limiting per client is the next step, not a return to the
+list.
+
+## 2026-09-22 · Deadlines on the calendar, beside the time set aside for them
+
+**Decided:** every view that shows study blocks now shows deadlines too. On the
+week grid a deadline is a dashed flag in its day's column, at its time when that
+falls inside the drawn hours, stacked at the bottom edge when it doesn't (most of
+Canvas says 11:59pm). Tapping a deadline highlights its sessions and opens a card
+listing them; tapping a session shows its due date and links back. The list and
+day views show a "Due" row, and the month view a count per day. Each deadline
+carries a status: done, planned, didn't fully fit, no time planned, past due.
+
+**Why.** The calendar drew study blocks and nothing else, so the two facts a
+student reasons with were never on screen together. A Tuesday session for PS5
+means one thing when PS5 is due Wednesday and another when it is due in a
+fortnight, and a deadline with nothing planned before it is the most important
+thing a week can show.
+
+**Rejected:** a header strip of due chips above each column (different heights
+per day would misalign every column's time axis with the hour gutter);
+stretching the grid to midnight so 11:59pm fits (shrinks every block above it
+for a line that is almost always at the same place); drawing deadlines as
+blocks (a deadline is a moment, not time spent, and must never read as time).
+
+## 2026-09-22 · Remember the Canvas link on the device, never on the server
+
+**Amends** 2026-08-17, "Use the Canvas calendar feed". That decision still
+stands: no credentials, no scraping, a pasted feed. What changes is that the
+link no longer has to be pasted again every time.
+
+**Decided:** after a Canvas fetch works, the import page offers **Remember this
+link on this device**, ticked by default. When ticked, the URL is kept in
+`localStorage` under its own key (`heron.feed.v1`, `src/lib/feed-store.ts`) and
+nowhere else. Updating is then one tap, from `/import` or from a notice on
+`/week` once the deadlines are four days old. **Forget this link** is on
+`/import` and in Settings, and Delete my data removes it too.
+
+**The problem it fixes.** Import happened once and was then forgotten. A student
+imports in week 1, instructors publish through weeks 2 and 3, and by week 4 the
+plan is built on a stale deadline set. Nothing looks wrong: the week renders,
+the blocks are sensible, and Wednesday's problem set isn't in it. Recovering
+meant finding the feed URL in Canvas again, which realistically means a laptop.
+`growth.md` calls this the week-4 killer, and it decides the 28 October
+retention number.
+
+**Why the device and not the server.** `HeronState` is the sync payload.
+`push()` writes it whole into `plan_state` and `toBackup()` writes it whole into
+a downloaded file. So the link lives in a separate store that sync and backup
+never read, which makes "Heron never holds your Canvas link on its server" true
+by construction rather than by care. A test checks that neither `emptyState()`
+nor a backup can contain it. The link still goes to `/api/feed` at the moment
+of a fetch, because Canvas sends no CORS headers and the browser cannot fetch it
+itself. That is the same round trip the original paste made, and the route
+still neither logs nor stores it.
+
+**The residual risk, stated.** Any script running on this origin can read that
+key. That is already true of the student's whole schedule in the key next door,
+and Heron loads no third-party script. So remembering the link widens the damage
+an XSS could do; it doesn't create a new way in. It is the same trust boundary
+the week already sits behind.
+
+**Ticked by default, deliberately.** An unticked box would be the easier choice
+to defend and would leave most students exactly where they started: re-pasting
+from a laptop in week 4, which most won't do. The box only appears on the result
+card, after the fetch has worked and next to the student's own courses. It says
+in plain words where the link goes, and forgetting it takes one tap in two
+places. The privacy page says it is ticked by default rather than implying it's
+opt-in. If students read a pre-ticked box as a dark pattern (it turns up in
+feedback, or a Reddit thread), flip it. Nothing else in this design depends on
+the default.
+
+**No background refresh.** **Superseded the same day** by "Check saved calendars
+daily, and never move the week to do it" above. The app never fetches Canvas on its own. It shows
+`FeedFreshness` and waits for a tap. A plan that changes because the app went
+looking is the reshuffle-on-refresh the deterministic-scheduler rule exists to
+prevent, and a one-tap prompt once a week is a reminder, not a chore. Without a
+remembered link the prompt still appears, at seven days, and sends the student
+to `/import`, because asking for a laptop trip is a bigger ask and should wait
+until the data is genuinely suspect.
+
+**What it needed that wasn't the link: a merge.** Import used to replace
+`assignments` wholesale. Once a year that is survivable; weekly it is
+destructive. It reset every finished assignment to `todo`, discarded every
+logged minute, deleted tasks typed at `/start`, and repainted course colours
+because the server builds `courses` without knowing which shades were taken.
+Making refresh one tap without fixing that would have turned a stale plan into a
+wrong one. `mergeCanvasImport` now applies one rule: **Canvas owns what the feed
+says, the student owns what using the app produced.** Work that leaves Canvas is
+removed if nobody touched it, and retired to `dropped` with its minutes kept if
+somebody did.
+
+**What it also fixed: `lastSyncedAt` meant two things.** Import wrote it, and so
+did account sync. A signed-in student pushes on every edit, so "your deadlines
+are eleven days old" could never be computed from it. Import writing it also
+made the account panel say the week had been saved when nothing was pushed. The
+Canvas timestamp is now `canvasSyncedAt`, and import no longer touches
+`lastSyncedAt`.
+
+**`npm run refresh` is the fourth print-a-real-thing script.** Week-1 import,
+three weeks of completions and skips through the real planner, then a week-4
+feed with new work, a deletion and a moved deadline. It found a bug on its
+first run that the unit tests missed: the first merge kept started work that
+Canvas had deleted but left it `todo`, so the planner kept booking sessions for
+homework that no longer existed. Every check passed until it printed the week.
+It also showed that a student following the plan has minutes logged against
+work due a month out. That may be correct, but it's worth a look on its own.
+
+**Rejected:**
+
+- **Server-side, encrypted, opt-in.** This is the only version that refreshes
+  on a second device or from a cron job. But encryption at rest with a key the
+  server holds means the server can decrypt it, so "we never hold your Canvas
+  link" becomes "we hold it encrypted". After the 2026 Canvas breach, that is the
+  sentence competitors say, and `growth.md` makes not saying it the lead message.
+  It also needs a key-management story and a new table for a solo builder three
+  weeks before launch. The benefit, refreshing from a second device, is real but
+  isn't the week-4 failure, which happens to one student on one phone.
+- **Keep it unstored and add a scheduled "paste again" prompt.** This ships as
+  the fallback for students who untick the box. On its own it isn't enough: it
+  tells a student on a phone to go and find a laptop, and the audit's point is
+  that they won't.
+- **A `feedUrl` field on `HeronState`.** It is the obvious place and it is the
+  bug. It would reach `plan_state` within two seconds of sign-in and would be
+  inside every backup file.
+- **Background refresh on open.** See above. It could be offered later as an
+  explicit second setting, but not as the default behaviour of the first.
+  (**Superseded**: shipped the same day, as the default. See above.)
+
+**Revisit when:** a student asks for refresh on a second device often enough to
+matter (that's the case for the encrypted server option), or telemetry shows
+`feed_refreshed` is rare among students with a remembered link (the prompt isn't
+landing, and a quiet daily background fetch should be weighed again against the
+reshuffle rule).
+
+---
+
 ## 2026-08-28 · The name is Heron, and the search had to change shape first
 
 **Executed 2026-09-05.** Code, copy, metadata and manifest renamed in one pass.
@@ -386,7 +628,8 @@ four times as much in a student's calendar as exists. All-day entries are
 dropped too — blacking out every hour of spring break is the opposite of the
 truth.
 
-**The security note:** widening the allowlist from one provider to four is
+**The security note:** **Superseded 2026-09-22** by "Any public calendar link,
+made safe by the address". Widening the allowlist from one provider to four is
 exactly how the lookalike-domain bug gets reintroduced four more times.
 Suffix matching now lives in one place, and there's a test that tries
 `calendar.google.com.attacker.com` and its equivalent for every provider.

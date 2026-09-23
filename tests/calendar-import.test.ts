@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { parseRRule, expand } from '../src/lib/calendar/recurrence.ts';
 import { eventsFromICS } from '../src/lib/calendar/import.ts';
-import { identifySource } from '../src/lib/calendar/sources.ts';
+import { identifySource, describeSource } from '../src/lib/calendar/sources.ts';
 import { validateFeedUrl } from '../src/lib/canvas/feed-url.ts';
 import { zonedInstant, localParts } from '../src/lib/time.ts';
 
@@ -142,9 +142,11 @@ describe('which calendars are accepted', () => {
     assert.equal(identifySource('outlook.office365.com')?.produces, 'events');
   });
 
-  test('the lookalike-domain hole stays shut for every provider', () => {
-    // The original bug was Canvas-specific. Widening the allowlist would have
-    // reintroduced it four more times without suffix matching.
+  test('a lookalike domain is never taken for the provider it imitates', () => {
+    // The original bug was Canvas-specific. Since 2026-09-22 any public host can
+    // be fetched (addresses, not names, are what keep this safe), so what a
+    // lookalike must never get is the provider's *identity*: a stranger's feed
+    // read as Canvas would land in someone's week as coursework.
     for (const bad of [
       'canvas.uw.edu.attacker.com',
       'calendar.google.com.attacker.com',
@@ -152,8 +154,10 @@ describe('which calendars are accepted', () => {
       'outlook.office365.com.phish.io',
       'notgoogle.com',
     ]) {
-      assert.equal(identifySource(bad), null, `${bad} should be refused`);
-      assert.equal(validateFeedUrl(`https://${bad}/x.ics`).ok, false);
+      assert.equal(identifySource(bad), null, `${bad} must not be recognised`);
+      const shown = describeSource(bad);
+      assert.equal(shown.produces, 'events');
+      assert.ok(shown.label.startsWith('Calendar from'), `${bad} is named after itself, not as a provider`);
     }
   });
 

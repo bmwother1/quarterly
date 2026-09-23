@@ -8,6 +8,8 @@ import { DayBar, DayStats } from '@/components/day-bar';
 import { breakdownForDay } from '@/lib/schedule/day';
 import { seriesVar } from '@/lib/series';
 import { DEFAULT_TZ, addDays, fmtTime, localParts } from '@/lib/time';
+import { deadlinesByDay, statusLabel } from '@/lib/schedule/deadlines';
+import { dueInstant } from '@/lib/schedule/plan';
 
 const TZ = DEFAULT_TZ;
 
@@ -40,6 +42,16 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
     () => breakdownForDay(date, state.blocks, state.events, state.availability, TZ, colorFor),
     [date, state.blocks, state.events, state.availability, colorFor],
   );
+
+  const dueToday = useMemo(
+    () => deadlinesByDay(state.assignments, state.blocks, state.unscheduled, [date], now, TZ).get(date) ?? [],
+    [state.assignments, state.blocks, state.unscheduled, date, now],
+  );
+  const dueById = useMemo(() => {
+    const map = new Map<string, { at: string; allDay: boolean }>();
+    for (const a of state.assignments) map.set(a.id, { at: dueInstant(a, TZ).toISOString(), allDay: a.allDay });
+    return map;
+  }, [state.assignments]);
 
   if (!hydrated) {
     return <main className="mx-auto max-w-2xl px-5 py-12"><p className="text-[var(--muted)]">Loading…</p></main>;
@@ -79,6 +91,31 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
         </div>
       </section>
 
+      {dueToday.length > 0 && (
+        <section className="mb-8">
+          <h2 className="mb-2 text-sm font-medium">Due</h2>
+          <ul className="divide-y divide-[var(--border)]">
+            {dueToday.map((d) => (
+              <li key={d.id} className="flex flex-wrap items-baseline gap-x-3 py-2 text-sm">
+                <span className="w-24 shrink-0 tabular-nums text-[var(--faint)]">
+                  {d.allDay ? 'end of day' : fmtTime(d.dueAt, TZ)}
+                </span>
+                <span className={`min-w-0 flex-1 truncate ${d.status === 'done' ? 'line-through' : ''}`}>
+                  {d.course} · {d.title}
+                </span>
+                <span
+                  className={`text-xs ${
+                    d.status === 'unplanned' || d.status === 'short' ? 'text-[var(--warn)]' : 'text-[var(--faint)]'
+                  }`}
+                >
+                  {statusLabel(d)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {day.events.length > 0 && (
         <section className="mb-8">
           <h2 className="mb-2 text-sm font-medium">Fixed</h2>
@@ -111,6 +148,7 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
                 block={b}
                 tz={TZ}
                 colour={colorFor(b.course)}
+                due={b.assignmentId ? dueById.get(b.assignmentId) : null}
                 isPast={new Date(b.end) < now}
                 onComplete={(outcome, minutes) => complete(b.id, outcome, minutes)}
                 onDrop={() => drop(b.id)}

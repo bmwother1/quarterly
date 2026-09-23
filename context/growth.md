@@ -68,7 +68,7 @@ is worth more than any week in November.
 
 ## Who we are actually against
 
-Not Shovel, not Motion, not Reclaim. Three real opponents:
+Not Shovel, not Motion, not Reclaim. Four real opponents:
 
 **1. Wick got to UW first.** Maximal Learning, Bellevue, founded 2023. Free with
 in-app purchases. Canvas, Moodle, Blackboard and D2L sync, syllabus date
@@ -109,6 +109,38 @@ feeds, so the feed approach sits outside the tokens that got rotated.
 that the standing rule "a feed URL is a password" is now something students have
 been primed to care about, so onboarding must show exactly what Heron stores and
 offer a one-click feed rotation path.
+
+**4. Outlook is already on every UW student's account.** *Added 2026-09-22.*
+UW turns on Exchange Online for every student automatically, so each one arrives
+with an Outlook calendar, the mobile app, and Microsoft 365, and never has to
+make an account for any of it. That is the real competitive fact: not that
+Outlook plans better, but that it is the calendar they already check, and Heron
+is a second place to look.
+
+What Outlook actually does for a student today:
+
+| | Outlook | Heron |
+|---|---|---|
+| Canvas deadlines on a calendar | Yes, by subscribing to the feed. Refresh is on Microsoft's schedule and "can take more than 24 hours"; 2025 Q&A threads report ICS subscriptions showing no events in the new Outlook. | Yes, checked daily, merged without losing what you did. |
+| Time to *do* the work | Manual: drag a To Do task onto the calendar, one at a time. No estimate, no splitting, no deadline awareness; drag-and-drop is missing in some new-Outlook builds. | Estimated, split into sessions, placed before the deadline, learned from what you actually spent. |
+| Automatic blocking | Viva Insights "focus plan" books 1 to 4 hours of generic Focus a day, two weeks ahead. Not tied to any assignment. Unverified whether UW's student tenant includes it. | Every block is for a named piece of work, with the reason on it. |
+| AI scheduling | Copilot in Outlook went agentic on 27 April 2026, via the Frontier early-access program: RSVPs, rescheduling 1:1s, rebooking rooms, blocking focus time, agendas. Meeting-shaped. UW students get Copilot Chat; as far as I can tell the agentic calendar needs a licensed Microsoft 365 Copilot seat they don't have. | Deterministic. Does not change its mind on refresh, and says what it dropped. |
+| Work shifts | Only if the student subscribes their scheduling app's feed themselves. | Same links, plus shifts counted as time you don't have. |
+| What didn't fit | Nothing tells you. | The "didn't fit" list. |
+
+**Where Outlook wins, honestly:** zero setup, native apps with reliable
+notifications, email in the same place, institutional trust, and two-way
+editing. Heron beats none of that head-on.
+
+**The line:** *Outlook shows you when things are due. Heron gives you the hours
+to get them done.* Demo it by subscribing Canvas in Outlook next to Heron: same
+deadlines, and only one of them has a plan.
+
+**What it means for the product:** the threat is Heron being forgotten because
+it isn't where the student looks, not being out-planned. That makes item C
+(install prompt, push) more urgent, not a write-back to Outlook: a subscribed
+Outlook calendar refreshes on Microsoft's schedule, which is exactly the stale
+copy the 2026-08-21 decision refused to ship.
 
 **Platform risk is answered:** Instructure ships no first-party student planner
 and announced none in 2026. Everything AI-shaped in their roadmap is
@@ -212,7 +244,14 @@ From the UX audit, ranked by users lost. Items 1, 2, 4 and 5 shipped on
 `heron.study` is verified in Resend, every literal signup is lost at the terminal
 step. Nothing else on this list matters as much.
 
-**B. The Canvas feed is imported once and then forgotten. This is the week-4
+**B. Shipped 2026-09-22.** Links can be remembered on the device (never the
+server), every saved calendar is checked once a day and new work is fitted in
+without moving the week, and a re-import merges instead of replacing. Work
+schedules from any scheduling app import the same way. See the four 2026-09-22
+entries in `decisions.md`. What follows is the original finding, kept for the
+reasoning.
+
+**The Canvas feed is imported once and then forgotten. This is the week-4
 killer.** `import/page.tsx` tells the student "Heron uses it once to fetch, then
 forgets it", and no `feedUrl` exists in `store.ts`. The security reasoning is
 sound, but the consequence is that the product's headline input decays: a
