@@ -76,7 +76,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <ServiceWorker />
         <SyncBoundary />
         <SiteHeader />
-        <div className="flex-1">{children}</div>
+        {/* At least a screen tall, so the footer always starts below the fold.
+            Every client page hydrates from a placeholder into its real
+            height, and with the footer on screen that growth pushed it down
+            on every cold load: a layout shift of 0.08 on /week alone. */}
+        <div className="min-h-svh flex-1">{children}</div>
         <SiteFooter />
         <TabBar />
       </body>
