@@ -71,8 +71,8 @@ export function Insights({
    */
   if (effective.source === 'observed') {
     items.push(
-      <div key="energy-live" className="rounded-xl border border-[var(--accent)]/30 bg-[var(--accent-soft)] p-4">
-        <p className="font-medium">
+      <div key="energy-live" className="well">
+        <p className="text-base font-semibold">
           Your week is being planned around {LABEL[effective.pattern]}.
         </p>
         <p className="mt-1 text-sm text-[var(--muted)]">
@@ -80,18 +80,15 @@ export function Insights({
           {effective.observations} blocks you finished or skipped, {LABEL[effective.pattern]} is
           where your work actually lands. Demanding work is being put there.
         </p>
-        <button
-          onClick={() => onAdoptPattern(availability.energy)}
-          className="mt-3 rounded-lg border border-[var(--border-strong)] px-3.5 py-2 text-sm"
-        >
+        <button onClick={() => onAdoptPattern(availability.energy)} className="btn-secondary mt-3">
           No, keep &ldquo;{LABEL[availability.energy]}&rdquo;
         </button>
       </div>,
     );
   } else if (inferred && inferred.pattern !== availability.energy) {
     items.push(
-      <div key="energy" className="rounded-xl border border-[var(--accent)]/30 bg-[var(--accent-soft)] p-4">
-        <p className="font-medium">
+      <div key="energy" className="well">
+        <p className="text-base font-semibold">
           Your blocks say you&rsquo;re {LABEL[inferred.pattern]}.
         </p>
         <p className="mt-1 text-sm text-[var(--muted)]">
@@ -99,10 +96,7 @@ export function Insights({
           {inferred.observations} blocks you&rsquo;ve actually finished or skipped, the other one
           fits better.
         </p>
-        <button
-          onClick={() => onAdoptPattern(inferred.pattern)}
-          className="mt-3 rounded-lg bg-[var(--accent)] px-3.5 py-2 text-sm font-medium text-[var(--accent-ink)]"
-        >
+        <button onClick={() => onAdoptPattern(inferred.pattern)} className="btn-secondary mt-3">
           Use what I actually do
         </button>
       </div>,
@@ -147,7 +141,7 @@ export function Insights({
   if (items.length === 0) {
     return (
       <p className="text-sm text-[var(--muted)]">
-        {settled} blocks recorded. Not enough of a pattern yet to say anything useful, and a guess
+        {settled} block{settled === 1 ? '' : 's'} recorded. Not enough of a pattern yet to say anything useful, and a guess
         from thin data is worse than nothing.
       </p>
     );

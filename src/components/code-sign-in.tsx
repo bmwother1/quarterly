@@ -79,7 +79,7 @@ export function CodeSignIn({
 
   if (stage === 'email') {
     return (
-      <div className="space-y-2.5">
+      <div className="space-y-3">
         {intro}
         <div className="flex flex-wrap gap-2">
           <input
@@ -87,18 +87,18 @@ export function CodeSignIn({
             onChange={(e) => { setEmail(e.target.value); setError(null); }}
             onKeyDown={(e) => { if (e.key === 'Enter' && email.includes('@') && !busy) void requestCode(); }}
             aria-label="Email address" placeholder="you@uw.edu"
-            className="min-w-0 flex-1 rounded-lg border border-[var(--border-strong)] bg-[var(--surface)] px-3.5 py-2.5 outline-none placeholder:text-[var(--faint)] focus:border-[var(--accent)]"
+            className="field min-w-0 flex-1 basis-56"
           />
           <button
             onClick={() => { void requestCode(); }}
             disabled={!email.includes('@') || busy}
-            className="rounded-lg bg-[var(--accent)] px-3.5 py-2.5 text-sm font-medium text-[var(--accent-ink)] disabled:bg-transparent disabled:text-[var(--faint)] disabled:ring-1 disabled:ring-[var(--border)]"
+            className="btn-primary"
           >
             {busy ? 'Sending…' : 'Send me a code'}
           </button>
         </div>
         {error && <p className="text-sm text-[var(--warn)]">{error}</p>}
-        <p className="text-sm text-[var(--faint)]">
+        <p className="text-sm text-[var(--muted)]">
           Six digits, no password. One less thing to invent at 9pm.
         </p>
       </div>
@@ -108,8 +108,8 @@ export function CodeSignIn({
   return (
     <div className="space-y-3">
       <div>
-        <p className="font-medium">Check your email.</p>
-        <p className="mt-0.5 text-sm text-[var(--muted)]">
+        <p className="text-base font-semibold">Check your email.</p>
+        <p className="mt-1 text-sm text-[var(--muted)]">
           A {CODE_LENGTH}-digit code is on its way to {email}. Type it here, in this tab.
         </p>
       </div>
@@ -126,16 +126,16 @@ export function CodeSignIn({
         aria-label={`${CODE_LENGTH}-digit code`}
         placeholder="000000"
         disabled={verify.exhausted}
-        className="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3 text-center text-2xl tracking-[0.4em] outline-none placeholder:text-[var(--faint)] focus:border-[var(--accent)] disabled:opacity-50"
+        className="field min-h-14 w-full text-center text-heading tracking-[0.4em]"
       />
 
       {error && <p className="text-sm text-[var(--warn)]">{error}</p>}
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         <button
           onClick={() => { void submitCode(); }}
           disabled={!isComplete(code) || busy || verify.exhausted}
-          className="rounded-lg bg-[var(--accent)] px-3.5 py-2.5 text-sm font-medium text-[var(--accent-ink)] disabled:bg-transparent disabled:text-[var(--faint)] disabled:ring-1 disabled:ring-[var(--border)]"
+          className="btn-primary"
         >
           {busy ? 'Checking…' : 'Sign in'}
         </button>
@@ -143,20 +143,20 @@ export function CodeSignIn({
         <button
           onClick={() => { void requestCode(); }}
           disabled={busy || waiting > 0}
-          className="text-sm text-[var(--muted)] underline underline-offset-4 disabled:no-underline disabled:text-[var(--faint)]"
+          className="btn-quiet"
         >
           {waiting > 0 ? `Send another in ${waiting}s` : 'Send another code'}
         </button>
 
         <button
           onClick={() => { setStage('email'); setCode(''); setError(null); }}
-          className="text-sm text-[var(--muted)] underline underline-offset-4"
+          className="btn-quiet"
         >
           Wrong address?
         </button>
       </div>
 
-      <p className="text-xs text-[var(--faint)]">
+      <p className="text-sm text-[var(--muted)]">
         Codes expire after an hour. A new one replaces the old.
       </p>
     </div>

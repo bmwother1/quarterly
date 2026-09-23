@@ -29,7 +29,9 @@ export function AccountPanel({ lastSyncedAt, tz }: { lastSyncedAt: string | null
     );
   }
 
-  if (loading) return <p className="text-sm text-[var(--faint)]">Checking…</p>;
+  // Holds the height of the signed-out form, so the page below does not jump
+  // when the answer arrives.
+  if (loading) return <div className="min-h-24" aria-busy="true" />;
 
   if (signedIn) {
     return (
@@ -42,13 +44,10 @@ export function AccountPanel({ lastSyncedAt, tz }: { lastSyncedAt: string | null
             ? `Your week was last saved to your account on ${fmtDay(lastSyncedAt, tz)}.`
             : 'Your week has not reached your account yet. It saves a couple of seconds after a change.'}
         </p>
-        <button
-          onClick={() => { void signOut(); }}
-          className="rounded-lg border border-[var(--border-strong)] px-3.5 py-2 text-sm"
-        >
+        <button onClick={() => { void signOut(); }} className="btn-secondary">
           Sign out
         </button>
-        <p className="text-xs text-[var(--faint)]">
+        <p className="text-sm text-[var(--muted)]">
           Signing out leaves this week on this device. It doesn&rsquo;t delete anything.
         </p>
       </div>

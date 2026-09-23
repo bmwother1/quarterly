@@ -40,18 +40,18 @@ export function NotificationToggle() {
     setBusy(false);
   }
 
-  if (state === null) return <p className="text-sm text-[var(--faint)]">Checking…</p>;
+  if (state === null) return <div className="min-h-10" aria-busy="true" />;
 
   if (state === 'needs-install') {
     return (
-      <div className="space-y-1.5 text-sm text-[var(--muted)]">
-        <p className="font-medium text-[var(--ink)]">Add Heron to your home screen first.</p>
+      <div className="space-y-2 text-sm text-[var(--muted)]">
+        <p className="text-base font-semibold text-[var(--ink)]">Add Heron to your home screen first.</p>
         <p>
           On iPhone, notifications only work from the installed app, not from a Safari tab.
           Tap Share, then <strong className="text-[var(--ink)]">Add to Home Screen</strong>, and
           open it from there.
         </p>
-        <p className="text-[var(--faint)]">
+        <p>
           This is an Apple rule rather than something we can work around.
         </p>
       </div>
@@ -67,14 +67,14 @@ export function NotificationToggle() {
   }
 
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-3">
       <p className="text-sm text-[var(--muted)]">
         One a day at most, always carrying the reason the block is there. Never a streak, never a
         nag about a day you missed.
       </p>
 
       {!signedIn && state !== 'on' && (
-        <p className="text-sm text-[var(--faint)]">
+        <p className="text-sm text-[var(--muted)]">
           Sign in above first. A notification has to know whose week it is about.
         </p>
       )}
@@ -82,17 +82,14 @@ export function NotificationToggle() {
       <button
         onClick={() => { void toggle(); }}
         disabled={busy || (!signedIn && state !== 'on')}
-        className={`rounded-lg px-3.5 py-2 text-sm font-medium ${
-          state === 'on'
-            ? 'border border-[var(--border-strong)]'
-            : 'bg-[var(--accent)] text-[var(--accent-ink)] disabled:bg-transparent disabled:text-[var(--faint)] disabled:ring-1 disabled:ring-[var(--border)]'
-        }`}
+        // Secondary either way: signing in, above, is this page's one primary.
+        className="btn-secondary"
       >
         {busy ? 'Just a moment…' : state === 'on' ? 'Turn notifications off' : 'Turn notifications on'}
       </button>
 
       {state === 'on' && (
-        <p className="text-xs text-[var(--faint)]">
+        <p className="text-sm text-[var(--muted)]">
           On for this device. Each device is separate, so a phone and a laptop are asked
           independently.
         </p>

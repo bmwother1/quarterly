@@ -59,16 +59,10 @@ export function BackupControls({
       <p className="text-sm text-[var(--muted)]">Currently holding {counts}.</p>
 
       <div className="flex flex-wrap gap-2">
-        <button
-          onClick={download}
-          className="rounded-lg bg-[var(--accent)] px-3.5 py-2 text-sm font-medium text-[var(--accent-ink)]"
-        >
+        <button onClick={download} className="btn-secondary">
           Download a backup
         </button>
-        <button
-          onClick={() => fileRef.current?.click()}
-          className="rounded-lg border border-[var(--border-strong)] px-3.5 py-2 text-sm"
-        >
+        <button onClick={() => fileRef.current?.click()} className="btn-secondary">
           Restore from a file
         </button>
         <input
@@ -81,29 +75,27 @@ export function BackupControls({
       </div>
 
       {error && (
-        <p role="alert" className="rounded-lg border border-[var(--warn)]/40 bg-[var(--accent-soft)] p-3 text-sm text-[var(--warn)]">
+        <p role="alert" className="border-l-3 border-[var(--warn)] pl-3 text-sm text-[var(--warn)]">
           {error}
         </p>
       )}
 
       {pending && (
-        <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 text-sm">
+        <div className="enter rounded-md border border-[var(--border)] p-4 text-sm">
           <p>{pending.summary}</p>
           <p className="mt-1 text-[var(--muted)]">
             Restoring replaces everything currently in this browser.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
+            {/* Danger, not primary: this overwrites everything on the device. */}
             <button
               onClick={() => { onImport(pending.state); setPending(null); onMessage('Backup restored'); }}
-              className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-[var(--accent-ink)]"
+              className="btn-danger"
             >
               Replace my data
             </button>
-            <button
-              onClick={() => setPending(null)}
-              className="px-2 text-sm text-[var(--faint)] underline underline-offset-4"
-            >
-              cancel
+            <button onClick={() => setPending(null)} className="btn-quiet">
+              Cancel
             </button>
           </div>
         </div>
