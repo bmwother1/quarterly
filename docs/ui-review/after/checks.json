@@ -1,0 +1,842 @@
+{
+ "scannerSelfTest": {
+  "planted": 2,
+  "caught": [
+   "probe-faint 2.96:1",
+   "probe-opacity 2.9:1"
+  ],
+  "ok": true
+ },
+ "overflow375": [
+  {
+   "name": "landing",
+   "scroll": 375,
+   "view": 375,
+   "overflows": false
+  },
+  {
+   "name": "start",
+   "scroll": 375,
+   "view": 375,
+   "overflows": false
+  },
+  {
+   "name": "start-picked",
+   "scroll": 375,
+   "view": 375,
+   "overflows": false
+  },
+  {
+   "name": "import",
+   "scroll": 375,
+   "view": 375,
+   "overflows": false
+  },
+  {
+   "name": "import-error",
+   "scroll": 375,
+   "view": 375,
+   "overflows": false
+  },
+  {
+   "name": "setup",
+   "scroll": 375,
+   "view": 375,
+   "overflows": false
+  },
+  {
+   "name": "setup-empty",
+   "scroll": 375,
+   "view": 375,
+   "overflows": false
+  },
+  {
+   "name": "week-empty",
+   "scroll": 375,
+   "view": 375,
+   "overflows": false
+  },
+  {
+   "name": "week-first-run",
+   "scroll": 375,
+   "view": 375,
+   "overflows": false
+  },
+  {
+   "name": "week",
+   "scroll": 375,
+   "view": 375,
+   "overflows": false
+  },
+  {
+   "name": "week-list",
+   "scroll": 375,
+   "view": 375,
+   "overflows": false
+  },
+  {
+   "name": "week-calendar",
+   "scroll": 375,
+   "view": 375,
+   "overflows": false
+  },
+  {
+   "name": "week-block-open",
+   "scroll": 375,
+   "view": 375,
+   "overflows": false
+  },
+  {
+   "name": "month",
+   "scroll": 375,
+   "view": 375,
+   "overflows": false
+  },
+  {
+   "name": "week-add-sheet",
+   "scroll": 375,
+   "view": 375,
+   "overflows": false
+  },
+  {
+   "name": "bad-week-lapse",
+   "scroll": 375,
+   "view": 375,
+   "overflows": false
+  },
+  {
+   "name": "bad-week-away",
+   "scroll": 375,
+   "view": 375,
+   "overflows": false
+  },
+  {
+   "name": "day",
+   "scroll": 375,
+   "view": 375,
+   "overflows": false
+  },
+  {
+   "name": "day-empty",
+   "scroll": 375,
+   "view": 375,
+   "overflows": false
+  },
+  {
+   "name": "settings",
+   "scroll": 375,
+   "view": 375,
+   "overflows": false
+  },
+  {
+   "name": "privacy",
+   "scroll": 375,
+   "view": 375,
+   "overflows": false
+  },
+  {
+   "name": "welcome",
+   "scroll": 375,
+   "view": 375,
+   "overflows": false
+  },
+  {
+   "name": "onboarding",
+   "scroll": 375,
+   "view": 375,
+   "overflows": false
+  },
+  {
+   "name": "week-loading",
+   "scroll": 375,
+   "view": 375,
+   "overflows": false
+  }
+ ],
+ "contrast": [
+  {
+   "name": "landing",
+   "width": 390,
+   "theme": "light",
+   "checked": 26,
+   "fails": []
+  },
+  {
+   "name": "landing",
+   "width": 390,
+   "theme": "dark",
+   "checked": 26,
+   "fails": []
+  },
+  {
+   "name": "landing",
+   "width": 1280,
+   "theme": "light",
+   "checked": 26,
+   "fails": []
+  },
+  {
+   "name": "landing",
+   "width": 1280,
+   "theme": "dark",
+   "checked": 26,
+   "fails": []
+  },
+  {
+   "name": "start",
+   "width": 390,
+   "theme": "light",
+   "checked": 28,
+   "fails": []
+  },
+  {
+   "name": "start",
+   "width": 390,
+   "theme": "dark",
+   "checked": 28,
+   "fails": []
+  },
+  {
+   "name": "start",
+   "width": 1280,
+   "theme": "light",
+   "checked": 28,
+   "fails": []
+  },
+  {
+   "name": "start",
+   "width": 1280,
+   "theme": "dark",
+   "checked": 28,
+   "fails": []
+  },
+  {
+   "name": "start-picked",
+   "width": 390,
+   "theme": "light",
+   "checked": 29,
+   "fails": []
+  },
+  {
+   "name": "start-picked",
+   "width": 390,
+   "theme": "dark",
+   "checked": 29,
+   "fails": []
+  },
+  {
+   "name": "start-picked",
+   "width": 1280,
+   "theme": "light",
+   "checked": 29,
+   "fails": []
+  },
+  {
+   "name": "start-picked",
+   "width": 1280,
+   "theme": "dark",
+   "checked": 29,
+   "fails": []
+  },
+  {
+   "name": "import",
+   "width": 390,
+   "theme": "light",
+   "checked": 25,
+   "fails": []
+  },
+  {
+   "name": "import",
+   "width": 390,
+   "theme": "dark",
+   "checked": 25,
+   "fails": []
+  },
+  {
+   "name": "import",
+   "width": 1280,
+   "theme": "light",
+   "checked": 26,
+   "fails": []
+  },
+  {
+   "name": "import",
+   "width": 1280,
+   "theme": "dark",
+   "checked": 26,
+   "fails": []
+  },
+  {
+   "name": "import-error",
+   "width": 390,
+   "theme": "light",
+   "checked": 28,
+   "fails": []
+  },
+  {
+   "name": "import-error",
+   "width": 390,
+   "theme": "dark",
+   "checked": 28,
+   "fails": []
+  },
+  {
+   "name": "import-error",
+   "width": 1280,
+   "theme": "light",
+   "checked": 29,
+   "fails": []
+  },
+  {
+   "name": "import-error",
+   "width": 1280,
+   "theme": "dark",
+   "checked": 29,
+   "fails": []
+  },
+  {
+   "name": "setup",
+   "width": 390,
+   "theme": "light",
+   "checked": 62,
+   "fails": []
+  },
+  {
+   "name": "setup",
+   "width": 390,
+   "theme": "dark",
+   "checked": 62,
+   "fails": []
+  },
+  {
+   "name": "setup",
+   "width": 1280,
+   "theme": "light",
+   "checked": 63,
+   "fails": []
+  },
+  {
+   "name": "setup",
+   "width": 1280,
+   "theme": "dark",
+   "checked": 63,
+   "fails": []
+  },
+  {
+   "name": "setup-empty",
+   "width": 390,
+   "theme": "light",
+   "checked": 51,
+   "fails": []
+  },
+  {
+   "name": "setup-empty",
+   "width": 390,
+   "theme": "dark",
+   "checked": 51,
+   "fails": []
+  },
+  {
+   "name": "setup-empty",
+   "width": 1280,
+   "theme": "light",
+   "checked": 52,
+   "fails": []
+  },
+  {
+   "name": "setup-empty",
+   "width": 1280,
+   "theme": "dark",
+   "checked": 52,
+   "fails": []
+  },
+  {
+   "name": "week-empty",
+   "width": 390,
+   "theme": "light",
+   "checked": 58,
+   "fails": []
+  },
+  {
+   "name": "week-empty",
+   "width": 390,
+   "theme": "dark",
+   "checked": 58,
+   "fails": []
+  },
+  {
+   "name": "week-empty",
+   "width": 1280,
+   "theme": "light",
+   "checked": 61,
+   "fails": []
+  },
+  {
+   "name": "week-empty",
+   "width": 1280,
+   "theme": "dark",
+   "checked": 61,
+   "fails": []
+  },
+  {
+   "name": "week-first-run",
+   "width": 390,
+   "theme": "light",
+   "checked": 133,
+   "fails": []
+  },
+  {
+   "name": "week-first-run",
+   "width": 390,
+   "theme": "dark",
+   "checked": 133,
+   "fails": []
+  },
+  {
+   "name": "week-first-run",
+   "width": 1280,
+   "theme": "light",
+   "checked": 81,
+   "fails": []
+  },
+  {
+   "name": "week-first-run",
+   "width": 1280,
+   "theme": "dark",
+   "checked": 81,
+   "fails": []
+  },
+  {
+   "name": "week",
+   "width": 390,
+   "theme": "light",
+   "checked": 320,
+   "fails": []
+  },
+  {
+   "name": "week",
+   "width": 390,
+   "theme": "dark",
+   "checked": 320,
+   "fails": []
+  },
+  {
+   "name": "week",
+   "width": 1280,
+   "theme": "light",
+   "checked": 115,
+   "fails": []
+  },
+  {
+   "name": "week",
+   "width": 1280,
+   "theme": "dark",
+   "checked": 115,
+   "fails": []
+  },
+  {
+   "name": "week-list",
+   "width": 390,
+   "theme": "light",
+   "checked": 320,
+   "fails": []
+  },
+  {
+   "name": "week-list",
+   "width": 390,
+   "theme": "dark",
+   "checked": 320,
+   "fails": []
+  },
+  {
+   "name": "week-list",
+   "width": 1280,
+   "theme": "light",
+   "checked": 321,
+   "fails": []
+  },
+  {
+   "name": "week-list",
+   "width": 1280,
+   "theme": "dark",
+   "checked": 321,
+   "fails": []
+  },
+  {
+   "name": "week-calendar",
+   "width": 390,
+   "theme": "light",
+   "checked": 114,
+   "fails": []
+  },
+  {
+   "name": "week-calendar",
+   "width": 390,
+   "theme": "dark",
+   "checked": 114,
+   "fails": []
+  },
+  {
+   "name": "week-calendar",
+   "width": 1280,
+   "theme": "light",
+   "checked": 115,
+   "fails": []
+  },
+  {
+   "name": "week-calendar",
+   "width": 1280,
+   "theme": "dark",
+   "checked": 115,
+   "fails": []
+  },
+  {
+   "name": "week-block-open",
+   "width": 390,
+   "theme": "light",
+   "checked": 120,
+   "fails": []
+  },
+  {
+   "name": "week-block-open",
+   "width": 390,
+   "theme": "dark",
+   "checked": 120,
+   "fails": []
+  },
+  {
+   "name": "week-block-open",
+   "width": 1280,
+   "theme": "light",
+   "checked": 121,
+   "fails": []
+  },
+  {
+   "name": "week-block-open",
+   "width": 1280,
+   "theme": "dark",
+   "checked": 121,
+   "fails": []
+  },
+  {
+   "name": "month",
+   "width": 390,
+   "theme": "light",
+   "checked": 83,
+   "fails": []
+  },
+  {
+   "name": "month",
+   "width": 390,
+   "theme": "dark",
+   "checked": 83,
+   "fails": []
+  },
+  {
+   "name": "month",
+   "width": 1280,
+   "theme": "light",
+   "checked": 84,
+   "fails": []
+  },
+  {
+   "name": "month",
+   "width": 1280,
+   "theme": "dark",
+   "checked": 84,
+   "fails": []
+  },
+  {
+   "name": "week-add-sheet",
+   "width": 390,
+   "theme": "light",
+   "checked": 330,
+   "fails": []
+  },
+  {
+   "name": "week-add-sheet",
+   "width": 390,
+   "theme": "dark",
+   "checked": 330,
+   "fails": []
+  },
+  {
+   "name": "week-add-sheet",
+   "width": 1280,
+   "theme": "light",
+   "checked": 125,
+   "fails": []
+  },
+  {
+   "name": "week-add-sheet",
+   "width": 1280,
+   "theme": "dark",
+   "checked": 125,
+   "fails": []
+  },
+  {
+   "name": "bad-week-lapse",
+   "width": 390,
+   "theme": "light",
+   "checked": 287,
+   "fails": []
+  },
+  {
+   "name": "bad-week-lapse",
+   "width": 390,
+   "theme": "dark",
+   "checked": 287,
+   "fails": []
+  },
+  {
+   "name": "bad-week-lapse",
+   "width": 1280,
+   "theme": "light",
+   "checked": 111,
+   "fails": []
+  },
+  {
+   "name": "bad-week-lapse",
+   "width": 1280,
+   "theme": "dark",
+   "checked": 111,
+   "fails": []
+  },
+  {
+   "name": "bad-week-away",
+   "width": 390,
+   "theme": "light",
+   "checked": 161,
+   "fails": []
+  },
+  {
+   "name": "bad-week-away",
+   "width": 390,
+   "theme": "dark",
+   "checked": 161,
+   "fails": []
+  },
+  {
+   "name": "bad-week-away",
+   "width": 1280,
+   "theme": "light",
+   "checked": 95,
+   "fails": []
+  },
+  {
+   "name": "bad-week-away",
+   "width": 1280,
+   "theme": "dark",
+   "checked": 95,
+   "fails": []
+  },
+  {
+   "name": "day",
+   "width": 390,
+   "theme": "light",
+   "checked": 67,
+   "fails": []
+  },
+  {
+   "name": "day",
+   "width": 390,
+   "theme": "dark",
+   "checked": 67,
+   "fails": []
+  },
+  {
+   "name": "day",
+   "width": 1280,
+   "theme": "light",
+   "checked": 68,
+   "fails": []
+  },
+  {
+   "name": "day",
+   "width": 1280,
+   "theme": "dark",
+   "checked": 68,
+   "fails": []
+  },
+  {
+   "name": "day-empty",
+   "width": 390,
+   "theme": "light",
+   "checked": 22,
+   "fails": []
+  },
+  {
+   "name": "day-empty",
+   "width": 390,
+   "theme": "dark",
+   "checked": 22,
+   "fails": []
+  },
+  {
+   "name": "day-empty",
+   "width": 1280,
+   "theme": "light",
+   "checked": 23,
+   "fails": []
+  },
+  {
+   "name": "day-empty",
+   "width": 1280,
+   "theme": "dark",
+   "checked": 23,
+   "fails": []
+  },
+  {
+   "name": "settings",
+   "width": 390,
+   "theme": "light",
+   "checked": 28,
+   "fails": []
+  },
+  {
+   "name": "settings",
+   "width": 390,
+   "theme": "dark",
+   "checked": 28,
+   "fails": []
+  },
+  {
+   "name": "settings",
+   "width": 1280,
+   "theme": "light",
+   "checked": 29,
+   "fails": []
+  },
+  {
+   "name": "settings",
+   "width": 1280,
+   "theme": "dark",
+   "checked": 29,
+   "fails": []
+  },
+  {
+   "name": "privacy",
+   "width": 390,
+   "theme": "light",
+   "checked": 56,
+   "fails": []
+  },
+  {
+   "name": "privacy",
+   "width": 390,
+   "theme": "dark",
+   "checked": 56,
+   "fails": []
+  },
+  {
+   "name": "privacy",
+   "width": 1280,
+   "theme": "light",
+   "checked": 57,
+   "fails": []
+  },
+  {
+   "name": "privacy",
+   "width": 1280,
+   "theme": "dark",
+   "checked": 57,
+   "fails": []
+  },
+  {
+   "name": "welcome",
+   "width": 390,
+   "theme": "light",
+   "checked": 9,
+   "fails": []
+  },
+  {
+   "name": "welcome",
+   "width": 390,
+   "theme": "dark",
+   "checked": 9,
+   "fails": []
+  },
+  {
+   "name": "welcome",
+   "width": 1280,
+   "theme": "light",
+   "checked": 9,
+   "fails": []
+  },
+  {
+   "name": "welcome",
+   "width": 1280,
+   "theme": "dark",
+   "checked": 9,
+   "fails": []
+  },
+  {
+   "name": "onboarding",
+   "width": 390,
+   "theme": "light",
+   "checked": 27,
+   "fails": []
+  },
+  {
+   "name": "onboarding",
+   "width": 390,
+   "theme": "dark",
+   "checked": 27,
+   "fails": []
+  },
+  {
+   "name": "onboarding",
+   "width": 1280,
+   "theme": "light",
+   "checked": 27,
+   "fails": []
+  },
+  {
+   "name": "onboarding",
+   "width": 1280,
+   "theme": "dark",
+   "checked": 27,
+   "fails": []
+  }
+ ],
+ "perf": {
+  "cold": {
+   "cls": 0,
+   "shifts": [],
+   "lcp": 2436,
+   "lcpElement": "P \"Session 1 of 3 — you haven't started thi\"",
+   "weekOnScreen": 1901,
+   "entranceDone": 2293,
+   "fcp": 728,
+   "domContentLoaded": 601,
+   "heroVisible": true,
+   "loadToSettledMs": 5851,
+   "transferredKB": {
+    "script": 231,
+    "stylesheet": 9,
+    "document": 5,
+    "other": 91
+   },
+   "profile": "4x CPU, 1.6 Mbps down, 150ms latency, 390px"
+  },
+  "warm": {
+   "cls": 0,
+   "shifts": [],
+   "lcp": 4032,
+   "lcpElement": "P \"Session 1 of 3 — you haven't started thi\"",
+   "weekOnScreen": 123,
+   "entranceDone": 515,
+   "fcp": 68,
+   "domContentLoaded": 41,
+   "heroVisible": true,
+   "loadToSettledMs": 4076,
+   "transferredKB": {
+    "script": 0,
+    "stylesheet": 0,
+    "document": 0,
+    "other": 15
+   },
+   "profile": "4x CPU, 1.6 Mbps down, 150ms latency, 390px"
+  }
+ }
+}

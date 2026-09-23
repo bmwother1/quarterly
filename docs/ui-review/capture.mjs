@@ -2,7 +2,7 @@
 /**
  * Screenshots every screen and state, in both themes, at 390px and 1280px.
  *
- *   node docs/ui-review/capture.mjs <out-dir> [--base http://localhost:3100] [--only name,name]
+ *   node docs/ui-review/capture.mjs <out-dir> [--base http://localhost:3100] [--only name,name] [--checks]
  *
  * Needs a running `next dev` and Google Chrome. No dependencies: it drives
  * headless Chrome over the DevTools protocol with Node's built-in WebSocket.
@@ -341,6 +341,218 @@ const WIDTHS = [390, 1280];
 const THEMES = ['light', 'dark'];
 
 // ---------------------------------------------------------------------------
+// Checks: `--checks` runs these instead of taking screenshots, and writes
+// <out-dir>/checks.json.
+
+/**
+ * Every visible run of text on the page against WCAG AA: 4.5:1, or 3:1 for
+ * large text. Colours are resolved by painting them into a canvas pixel,
+ * because computed styles come back as oklab() and color-mix() that no
+ * formula here could parse. The background is composited up the ancestor
+ * chain, and an element's opacity is folded into its text colour, which is
+ * the case that caught done blocks at 45% before.
+ *
+ * Skipped: disabled controls (exempt), anything aria-hidden (decorative),
+ * and screen-reader-only text.
+ */
+const CONTRAST_SCAN = `(() => {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 1;
+  const cx = cv.getContext('2d', { willReadFrequently: true });
+  const rgba = (css) => {
+    cx.clearRect(0, 0, 1, 1); cx.fillStyle = '#000'; cx.fillStyle = css; cx.fillRect(0, 0, 1, 1);
+    const d = cx.getImageData(0, 0, 1, 1).data; return [d[0], d[1], d[2], d[3] / 255];
+  };
+  const over = (top, bottom) => {
+    const a = top[3] + bottom[3] * (1 - top[3]);
+    if (a === 0) return [0, 0, 0, 0];
+    return [0, 1, 2].map((i) => (top[i] * top[3] + bottom[i] * bottom[3] * (1 - top[3])) / a).concat(a);
+  };
+  const lum = ([r, g, b]) => {
+    const f = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+    return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+  };
+  const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+  const pageBg = rgba(getComputedStyle(document.body).backgroundColor);
+
+  const bgOf = (el) => {
+    const layers = [];
+    for (let n = el; n && n.nodeType === 1; n = n.parentElement) {
+      const c = rgba(getComputedStyle(n).backgroundColor);
+      if (c[3] > 0) layers.push(c);
+      if (c[3] >= 1) break;
+    }
+    let acc = pageBg;
+    for (let i = layers.length - 1; i >= 0; i--) acc = over(layers[i], acc);
+    return acc;
+  };
+  const opacityOf = (el) => {
+    let o = 1;
+    for (let n = el; n && n.nodeType === 1; n = n.parentElement) o *= parseFloat(getComputedStyle(n).opacity);
+    return o;
+  };
+
+  const fails = []; let checked = 0;
+  const all = document.body.querySelectorAll('*');
+  for (const el of all) {
+    const own = [...el.childNodes].filter((n) => n.nodeType === 3 && n.textContent.trim()).map((n) => n.textContent.trim()).join(' ');
+    if (!own) continue;
+    if (el.closest('[aria-hidden="true"], nextjs-portal, script, style, noscript')) continue;
+    if (el.closest('button:disabled, input:disabled, select:disabled, textarea:disabled')) continue;
+    const cs = getComputedStyle(el);
+    if (cs.visibility === 'hidden' || cs.display === 'none') continue;
+    const r = el.getBoundingClientRect();
+    if (r.width < 2 || r.height < 2) continue;
+    if (cs.position === 'absolute' && cs.clip && cs.clip !== 'auto') continue;
+    const fg = rgba(cs.color); fg[3] *= opacityOf(el);
+    const bg = bgOf(el);
+    const shown = over(fg, bg);
+    const cr = ratio(shown, bg);
+    const size = parseFloat(cs.fontSize); const weight = parseInt(cs.fontWeight, 10);
+    const large = size >= 24 || (size >= 18.66 && weight >= 700);
+    const need = large ? 3 : 4.5;
+    checked++;
+    if (cr < need - 0.01) {
+      fails.push({ text: own.slice(0, 48), ratio: +cr.toFixed(2), need, size, fg: shown.slice(0, 3).map(Math.round), bg: bg.slice(0, 3).map(Math.round), el: el.tagName.toLowerCase() + '.' + String(el.className).split(' ').slice(0, 3).join('.') });
+    }
+  }
+  return { checked, fails };
+})()`;
+
+async function runChecks(page) {
+  const out = { scannerSelfTest: null, overflow375: [], contrast: [], perf: null };
+
+  // 0. The contrast scanner has to catch what it claims to. Two planted
+  //    failures: the old --faint grey as text, and ink at 45% opacity, which
+  //    is how done blocks used to be drawn. Both must come back as failing.
+  await page.setClock(0);
+  await page.viewport(390, 'light');
+  await loadSeed(page, 'fresh');
+  await page.goto('/privacy', 800);
+  await page.eval(`(() => {
+    const a = document.createElement('p'); a.textContent = 'probe-faint'; a.style.color = '#97918a';
+    const b = document.createElement('p'); b.textContent = 'probe-opacity'; b.style.opacity = '0.45';
+    document.querySelector('main').prepend(a, b); return true;
+  })()`);
+  const probe = await page.eval(CONTRAST_SCAN);
+  const caught = probe.fails.filter((f) => f.text.startsWith('probe-')).map((f) => `${f.text} ${f.ratio}:1`);
+  out.scannerSelfTest = { planted: 2, caught, ok: caught.length === 2 };
+  console.log('self', JSON.stringify(out.scannerSelfTest));
+
+  // 1. No horizontal scroll at 375px, on every screen and state.
+  for (const sc of SCENARIOS) {
+    if (only && !only.has(sc.name)) continue;
+    await page.setClock(sc.clock ?? 0);
+    await page.viewport(375, 'light', 812);
+    await loadSeed(page, sc.seed);
+    await page.send('Emulation.setScriptExecutionDisabled', { value: !!sc.noJs });
+    await page.goto(sc.path, sc.noJs ? 400 : 1400);
+    if (sc.act) { await sc.act(page).catch(() => {}); await sleep(600); }
+    const o = await page.eval(`({ scroll: document.documentElement.scrollWidth, view: window.innerWidth })`);
+    await page.send('Emulation.setScriptExecutionDisabled', { value: false });
+    out.overflow375.push({ name: sc.name, ...o, overflows: o.scroll > o.view + 1 });
+    console.log('375 ', sc.name, o.scroll > o.view + 1 ? `OVERFLOW ${o.scroll}px` : 'ok');
+  }
+
+  // 2. Contrast, every screen, both themes, phone and laptop.
+  for (const sc of SCENARIOS) {
+    if (only && !only.has(sc.name)) continue;
+    if (sc.noJs) continue;
+    for (const width of WIDTHS) {
+      for (const theme of THEMES) {
+        await page.setClock(sc.clock ?? 0);
+        await page.viewport(width, theme);
+        await loadSeed(page, sc.seed);
+        await page.goto(sc.path, 1400);
+        if (sc.act) { await sc.act(page).catch(() => {}); await sleep(900); }
+        const r = await page.eval(CONTRAST_SCAN);
+        out.contrast.push({ name: sc.name, width, theme, checked: r.checked, fails: r.fails });
+        console.log('AA  ', sc.name, width, theme, `${r.checked} checked, ${r.fails.length} below AA`);
+      }
+    }
+  }
+
+  // 3. The week on a throttled phone: 4x CPU slowdown and a slow 4G link.
+  //    Layout shift and paint timings are read from the page's own
+  //    performance observers.
+  //    Twice: a cold first visit with no service worker and an empty cache,
+  //    and a warm one, which is what an installed app opening from the home
+  //    screen gets.
+  out.perf = {};
+  for (const visit of ['cold', 'warm']) {
+  await page.setClock(0);
+  await page.viewport(390, 'light');
+  await loadSeed(page, 'full');
+  await page.send('Network.enable');
+  if (visit === 'cold') {
+    await page.send('Storage.clearDataForOrigin', { origin: base, storageTypes: 'service_workers,cache_storage' });
+    await page.send('Network.clearBrowserCache');
+  }
+  await page.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+  await page.send('Network.emulateNetworkConditions', {
+    offline: false, latency: 150, downloadThroughput: (1.6 * 1024 * 1024) / 8, uploadThroughput: (750 * 1024) / 8,
+  });
+  const { identifier } = await page.send('Page.addScriptToEvaluateOnNewDocument', {
+    source: `window.__cls = 0; window.__lcp = 0; window.__shifts = [];
+      new PerformanceObserver((l) => { for (const e of l.getEntries()) if (!e.hadRecentInput) { window.__cls += e.value; window.__shifts.push({ v: +e.value.toFixed(4), t: Math.round(e.startTime), src: (e.sources || []).map((s) => s.node && s.node.nodeName + '.' + String(s.node.className || '').split(' ')[0]) }); } }).observe({ type: 'layout-shift', buffered: true });
+      window.__lcpEl = '';
+      new PerformanceObserver((l) => { for (const e of l.getEntries()) { window.__lcp = e.startTime; window.__lcpEl = e.element ? e.element.nodeName + ' "' + (e.element.textContent || '').trim().slice(0, 40) + '"' : e.url; } }).observe({ type: 'largest-contentful-paint', buffered: true });
+      // When the real week (not a placeholder) is in the page and painted:
+      // the first block's reason, which both old and new layouts render.
+      window.__entered = 0;
+      (function poll() {
+        const rows = document.querySelectorAll('.enter');
+        if (rows.length && [...rows].every((r) => r.getAnimations().every((a) => a.playState === 'finished'))) {
+          window.__entered = performance.now(); return;
+        }
+        requestAnimationFrame(poll);
+      })();
+      if (${JSON.stringify(process.env.SKIP_ENTRANCE === '1')}) sessionStorage.setItem('heron.week.entered', '1');
+      window.__content = 0;
+      new MutationObserver((_, obs) => {
+        if (window.__content) return obs.disconnect();
+        const h = [...document.querySelectorAll('h1')].find((e) => e.textContent.trim() === 'This week');
+        if (h) requestAnimationFrame(() => { window.__content = performance.now(); });
+      }).observe(document, { childList: true, subtree: true });`,
+  });
+  // Bytes over the wire, by kind, for this one load.
+  const bytes = { script: 0, stylesheet: 0, document: 0, other: 0 };
+  const kinds = new Map();
+  const onNet = (msg) => {
+    if (msg.sessionId !== page.s) return;
+    if (msg.method === 'Network.responseReceived') kinds.set(msg.params.requestId, msg.params.type);
+    if (msg.method === 'Network.loadingFinished') {
+      const k = (kinds.get(msg.params.requestId) ?? 'Other').toLowerCase();
+      bytes[k in bytes ? k : 'other'] += msg.params.encodedDataLength;
+    }
+  };
+  page.cdp.listeners.push(onNet);
+  const t0 = Date.now();
+  await page.goto('/week', 4000);
+  page.cdp.listeners = page.cdp.listeners.filter((l) => l !== onNet);
+  out.perf[visit] = await page.eval(`({
+    cls: +window.__cls.toFixed(4),
+    shifts: window.__shifts,
+    lcp: Math.round(window.__lcp),
+    lcpElement: window.__lcpEl,
+    weekOnScreen: Math.round(window.__content),
+    entranceDone: Math.round(window.__entered),
+    fcp: Math.round((performance.getEntriesByName('first-contentful-paint')[0] || {}).startTime || 0),
+    domContentLoaded: Math.round(performance.getEntriesByType('navigation')[0].domContentLoadedEventEnd),
+    heroVisible: !!document.querySelector('section[data-block-id]'),
+  })`);
+  out.perf[visit].loadToSettledMs = Date.now() - t0;
+  out.perf[visit].transferredKB = Object.fromEntries(Object.entries(bytes).map(([k, v]) => [k, Math.round(v / 1024)]));
+  out.perf[visit].profile = '4x CPU, 1.6 Mbps down, 150ms latency, 390px';
+  console.log('perf', visit, JSON.stringify(out.perf[visit]));
+  await page.send('Page.removeScriptToEvaluateOnNewDocument', { identifier });
+  await page.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+  await page.send('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+  }
+
+  await writeFile(join(outDir, 'checks.json'), JSON.stringify(out, null, 1));
+}
+
+// ---------------------------------------------------------------------------
 
 async function main() {
   await mkdir(outDir, { recursive: true });
@@ -369,6 +581,12 @@ async function main() {
     if (!existsSync(join(seedDir, 'full.json')) || args.includes('--reseed')) {
       console.log('seeding through the app…');
       await seed(page);
+    }
+
+    if (args.includes('--checks')) {
+      await runChecks(page);
+      cdp.ws.close();
+      return;
     }
 
     for (const sc of SCENARIOS) {
