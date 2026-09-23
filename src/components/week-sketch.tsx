@@ -72,7 +72,7 @@ export function WeekSketch({ blocks }: { blocks: SketchBlock[] }) {
           >
             {b.missed && (
               <span
-                className="absolute left-1/2 top-1/2 h-[1.5px] w-[80%] -translate-x-1/2 -translate-y-1/2 rounded"
+                className="absolute left-1/2 top-1/2 h-[1.5px] w-[80%] -translate-x-1/2 -translate-y-1/2 rounded-full"
                 style={{ background: 'var(--warn)' }}
               />
             )}
