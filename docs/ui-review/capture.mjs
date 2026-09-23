@@ -323,6 +323,10 @@ const SCENARIOS = [
       const b = all.find((e) => e.dataset.status === 'planned') ?? all.find((e) => !e.className.includes('opacity'));
       b.click(); return true; })()`);
     } },
+  { name: 'week-deadline-open', seed: 'full', path: '/week', act: async (p) => {
+      await p.click('Calendar');
+      await p.eval(`(() => { const d = document.querySelector('[data-deadline-id]'); d.scrollIntoView({ block: 'center' }); d.click(); return true; })()`);
+    } },
   { name: 'month', seed: 'full', path: '/week', act: async (p) => { await p.click('Month'); } },
   { name: 'week-add-sheet', seed: 'full', path: '/week', act: async (p) => { await p.click('Add an event or task'); } },
   { name: 'bad-week-lapse', seed: 'full', path: '/week', clock: 30 * HOUR + 20 * 60_000 },
