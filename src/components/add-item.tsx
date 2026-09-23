@@ -126,19 +126,15 @@ export function AddItem({
 
   return (
     <div className="space-y-4">
-      <div className={`flex gap-1 text-sm ${editing ? 'hidden' : ''}`}>
-        {(['event', 'task'] as const).map((m) => (
-          <button
-            key={m}
-            onClick={() => setMode(m)}
-            className={`rounded-full px-3.5 py-1.5 transition-colors ${
-              mode === m ? 'bg-[var(--accent)] text-[var(--accent-ink)]' : 'text-[var(--muted)] hover:text-[var(--ink)]'
-            }`}
-          >
-            {m === 'event' ? 'At a set time' : 'Needs doing by'}
-          </button>
-        ))}
-      </div>
+      {!editing && (
+        <div className="segmented" role="group" aria-label="What kind of thing">
+          {(['event', 'task'] as const).map((m) => (
+            <button key={m} onClick={() => setMode(m)} aria-pressed={mode === m}>
+              {m === 'event' ? 'At a set time' : 'Needs doing by'}
+            </button>
+          ))}
+        </div>
+      )}
 
       {!compact && (
         <p className="text-sm text-[var(--muted)]">
@@ -148,7 +144,7 @@ export function AddItem({
         </p>
       )}
 
-      <div className={compact ? 'space-y-3' : 'space-y-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4'}>
+      <div className={compact ? 'space-y-4' : 'space-y-4 rounded-md border border-[var(--border)] p-4'}>
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -156,49 +152,52 @@ export function AddItem({
           // screen readers treat it inconsistently.
           aria-label={mode === 'event' ? 'Event name' : 'Task name'}
           placeholder={mode === 'event' ? 'Dentist' : 'FE exam registration'}
-          className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm"
+          className="field w-full"
         />
 
         {mode === 'task' && (
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2">
             <input
               value={course}
               onChange={(e) => setCourse(e.target.value)}
               aria-label="Course or label"
               placeholder="Course or label (optional)"
-              className="min-w-0 flex-1 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm"
+              className="field min-w-0 flex-1"
             />
             <select
               value={kind}
               onChange={(e) => setKind(e.target.value as WorkKind)}
-              className="rounded-lg border border-[var(--border)] bg-[var(--bg)] px-2 py-2 text-sm"
+              aria-label="Kind of work"
+              className="field"
             >
               {KINDS.map((k) => <option key={k} value={k}>{k}</option>)}
             </select>
           </div>
         )}
 
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="text-sm text-[var(--muted)]">
-            <span className="mr-2">{mode === 'event' ? 'On' : 'Due'}</span>
+        {/* Labels above their fields, so each pair stays together however the
+            row wraps on a narrow screen. */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-[1fr_auto_auto]">
+          <label className="col-span-2 flex flex-col gap-1 text-sm text-[var(--muted)] sm:col-span-1">
+            {mode === 'event' ? 'On' : 'Due'}
             <input
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="rounded-lg border border-[var(--border)] bg-[var(--bg)] px-2 py-1.5 text-sm text-[var(--ink)]"
+              className="field w-full"
             />
           </label>
-          <label className="text-sm text-[var(--muted)]">
-            <span className="mr-2">At</span>
+          <label className="flex flex-col gap-1 text-sm text-[var(--muted)]">
+            At
             <input
               type="time"
               value={time}
               onChange={(e) => setTime(e.target.value)}
-              className="rounded-lg border border-[var(--border)] bg-[var(--bg)] px-2 py-1.5 text-sm text-[var(--ink)]"
+              className="field w-full"
             />
           </label>
-          <label className="text-sm text-[var(--muted)]">
-            <span className="mr-2">{mode === 'event' ? 'For' : 'Takes about'}</span>
+          <label className="flex flex-col gap-1 text-sm text-[var(--muted)]">
+            {mode === 'event' ? 'Minutes' : 'Takes about, in minutes'}
             <input
               type="number"
               min={15}
@@ -206,30 +205,25 @@ export function AddItem({
               step={15}
               value={durationMin}
               onChange={(e) => setDurationMin(e.target.value)}
-              className="w-20 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-2 py-1.5 text-sm text-[var(--ink)]"
+              className="field w-full sm:w-24"
             />
-            <span className="ml-1 text-[var(--faint)]">min</span>
           </label>
         </div>
 
         {mode === 'event' && (
-          <div>
-            <span className="text-sm text-[var(--muted)]">What kind of time is this?</span>
-            <div className="mt-2 flex flex-wrap gap-1.5">
+          <div role="group" aria-label="What kind of time is this?">
+            <p className="text-sm text-[var(--muted)]">What kind of time is this?</p>
+            <div className="mt-2 flex flex-wrap gap-2">
               {EVENT_CATEGORIES.map((c) => (
                 <button
                   key={c}
                   type="button"
                   onClick={() => setCategory(c)}
                   aria-pressed={category === c}
-                  className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm ${
-                    category === c
-                      ? 'border-[var(--accent)] bg-[var(--accent-soft)] font-medium'
-                      : 'border-[var(--border)] text-[var(--muted)]'
-                  }`}
+                  className="chip"
                 >
                   <span
-                    className="h-2.5 w-2.5 rounded-full"
+                    className="h-2 w-2 rounded-full"
                     style={{ background: colorVar(c, 0) }}
                     aria-hidden
                   />
@@ -240,35 +234,32 @@ export function AddItem({
           </div>
         )}
 
-        <button
-          onClick={submit}
-          disabled={!title.trim()}
-          className="rounded-lg bg-[var(--accent)] px-3.5 py-2 text-sm font-medium text-[var(--accent-ink)] disabled:bg-transparent disabled:text-[var(--faint)] disabled:ring-1 disabled:ring-[var(--border)]"
-        >
-          {editing ? 'Save changes' : `Add ${mode === 'event' ? 'event' : 'task'}`}
-        </button>
-
-        {mode === 'task' && (
-          <p className="text-xs text-[var(--faint)]">Replan afterwards and it gets a slot.</p>
-        )}
+        <div>
+          <button onClick={submit} disabled={!title.trim()} className="btn-primary w-full sm:w-auto">
+            {editing ? 'Save changes' : `Add ${mode === 'event' ? 'event' : 'task'}`}
+          </button>
+          {mode === 'task' && (
+            <p className="mt-2 text-sm text-[var(--muted)]">Replan afterwards and it gets a slot.</p>
+          )}
+        </div>
       </div>
 
       {!compact && upcoming.length > 0 && (
         <div>
-          <h3 className="text-sm font-medium">Coming up</h3>
+          <h3 className="text-sm font-semibold">Coming up</h3>
           <ul className="mt-2 divide-y divide-[var(--border)]">
             {upcoming.map((e) => (
               <li key={e.id} className="flex items-center gap-3 py-2 text-sm">
-                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colorVar(e.category, e.shade) }} aria-hidden />
+                <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: colorVar(e.category, e.shade) }} aria-hidden />
                 <span className="min-w-0 flex-1 truncate">{e.title}</span>
                 <span className="shrink-0 text-[var(--muted)]">
                   {fmtDay(e.start, tz)} · {fmtTime(e.start, tz)}
                 </span>
                 <button
                   onClick={() => onRemoveEvent(e.id)}
-                  className="shrink-0 text-[var(--faint)] underline underline-offset-4 hover:text-[var(--warn)]"
+                  className="btn-quiet shrink-0 px-2 hover:text-[var(--warn)]"
                 >
-                  remove
+                  Remove
                 </button>
               </li>
             ))}
