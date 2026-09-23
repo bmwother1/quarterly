@@ -18,7 +18,7 @@
  */
 
 import type { Assignment, Commitment, StudyBlock } from './types.ts';
-import { fmtTime, localParts } from './time.ts';
+import { addDays, fmtTime, localParts, zonedInstant } from './time.ts';
 import { durationBias } from './schedule/observed.ts';
 
 export type NoticeKind = 'next-up' | 'recovery' | 'look-ahead' | 'duration-bias' | 'quota-strain';
@@ -191,19 +191,27 @@ function durationNotice({ blocks, now, tz }: NotifyInput): Notice | null {
  * A commitment that keeps falling short. Proposes shrinking the plan rather
  * than suggesting the student try harder — the plan is the thing that was wrong.
  */
-function quotaStrain({ commitments, now, tz }: NotifyInput): Notice | null {
+function quotaStrain({ blocks, commitments, now, tz }: NotifyInput): Notice | null {
   const p = localParts(now, tz);
   if (p.weekday !== 6 || p.hour < 16) return null;   // Sunday, looking back
 
+  // The tally is wiped when the week's first replan comes after a session was
+  // already done, so it can read low. The sessions reported this week can't;
+  // the larger of the two is what the planner uses too.
+  const monday = zonedInstant(addDays(p.dateKey, -p.weekday), 0, tz).getTime();
+  const done = (c: Commitment) => Math.max(c.doneThisWeek, blocks.filter((b) =>
+    b.commitmentId === c.id && (b.status === 'done' || b.status === 'partial') &&
+    new Date(b.start).getTime() >= monday && new Date(b.start).getTime() <= now.getTime()).length);
+
   const struggling = commitments
-    .filter((c) => c.active && c.sessionsPerWeek > 1 && c.doneThisWeek <= c.sessionsPerWeek / 2)
-    .sort((a, b) => (a.doneThisWeek / a.sessionsPerWeek) - (b.doneThisWeek / b.sessionsPerWeek))[0];
+    .filter((c) => c.active && c.sessionsPerWeek > 1 && done(c) <= c.sessionsPerWeek / 2)
+    .sort((a, b) => (done(a) / a.sessionsPerWeek) - (done(b) / b.sessionsPerWeek))[0];
 
   if (!struggling) return null;
 
   return {
     kind: 'quota-strain',
-    title: `${struggling.title}: ${struggling.doneThisWeek} of ${struggling.sessionsPerWeek} this week.`,
+    title: `${struggling.title}: ${done(struggling)} of ${struggling.sessionsPerWeek} this week.`,
     body: `${struggling.sessionsPerWeek} a week might be more than there’s room for. Want to drop it to ${Math.max(1, struggling.sessionsPerWeek - 1)}?`,
     priority: 50,
     href: '/setup',
