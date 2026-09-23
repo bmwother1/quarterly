@@ -142,32 +142,32 @@ export function MonthGrid({
 
   return (
     <div>
-      <div className="mb-3 flex items-center justify-between">
-        <button
-          onClick={() => setOffset((o) => o - 1)}
-          aria-label="Previous month"
-          className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--muted)]"
-        >
-          ‹
-        </button>
-        <h2 className="text-sm font-medium">
-          {MONTH_NAMES[month]} {year}
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="text-base font-semibold">
+          {MONTH_NAMES[month]} <span className="font-normal text-[var(--muted)]">{year}</span>
         </h2>
-        <button
-          onClick={() => setOffset((o) => o + 1)}
-          aria-label="Next month"
-          className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--muted)]"
-        >
-          ›
-        </button>
+        <div className="-mr-3 flex">
+          <button onClick={() => setOffset((o) => o - 1)} aria-label="Previous month" className="btn-quiet px-3">
+            <Chevron dir="left" />
+          </button>
+          <button onClick={() => setOffset((o) => o + 1)} aria-label="Next month" className="btn-quiet px-3">
+            <Chevron dir="right" />
+          </button>
+        </div>
       </div>
 
-      <div className="mb-1 grid grid-cols-7 gap-1 text-center text-[10px] text-[var(--faint)]">
+      <div className="mb-1 grid grid-cols-7 gap-1 text-center text-xs text-[var(--muted)]">
         {WEEKDAYS.map((d, i) => <span key={i}>{d}</span>)}
       </div>
 
+      {/*
+        No box around each day. Forty-two bordered cells made the month a wall
+        of outlines, and the grid reads as a grid from alignment alone. A day
+        is lit only by its bar, and today by its date.
+      */}
       <div
-        className="grid grid-cols-7 gap-1 touch-pan-y"
+        key={`${year}-${month}`}
+        className="rise grid grid-cols-7 gap-1 touch-pan-y"
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
@@ -181,26 +181,34 @@ export function MonthGrid({
             <button
               key={dateKey}
               onClick={() => router.push(`/day/${dateKey}`)}
-              // Days outside the month stay tappable but recede. Hiding them
-              // leaves ragged holes; dimming keeps the grid a grid.
-              className={`relative flex h-14 flex-col justify-between rounded-lg border p-1.5 text-left transition-colors ${
-                isToday
-                  ? 'border-[var(--accent)] bg-[var(--accent-soft)]'
-                  : 'border-[var(--border)] hover:bg-[var(--raised)]'
-              } ${inMonth ? '' : 'opacity-35'}`}
+              // Days outside the month stay tappable but recede, by colour
+              // rather than opacity: at 35% opacity their dates fell below the
+              // contrast minimum. Hiding them leaves ragged holes; dimming keeps
+              // the grid a grid.
+              className="flex h-14 flex-col items-start justify-between rounded-md p-1 text-left hover:bg-[color-mix(in_oklab,var(--ink)_5%,transparent)]"
               aria-label={
                 d.minutes > 0
                   ? `${dateKey}, ${hours.toFixed(1)} hours, mostly ${d.category ? CATEGORY_META[d.category].label : 'unplanned'}`
                   : `${dateKey}, nothing planned`
               }
             >
-              <span className={`text-[11px] ${isToday ? 'font-semibold text-[var(--accent)]' : 'text-[var(--muted)]'}`}>
+              <span
+                className={`flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-xs ${
+                  isToday
+                    ? 'bg-[var(--accent)] font-semibold text-[var(--accent-ink)]'
+                    : inMonth ? 'text-[var(--ink)]' : 'text-[var(--muted)]'
+                }`}
+              >
                 {Number(dateKey.slice(8, 10))}
               </span>
 
               {/* The bar. Always present as a track so the grid keeps its
                   rhythm on an empty day rather than collapsing. */}
-              <span className="block h-1.5 w-full rounded-full bg-[var(--raised)]" aria-hidden>
+              <span
+                className="block h-1 w-full rounded-full bg-[color-mix(in_oklab,var(--ink)_8%,transparent)]"
+                style={{ opacity: inMonth ? 1 : 0.5 }}
+                aria-hidden
+              >
                 {d.category && d.load > 0 && (
                   <span
                     className="block h-full rounded-full"
@@ -221,15 +229,26 @@ export function MonthGrid({
   );
 }
 
+function Chevron({ dir }: { dir: 'left' | 'right' }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path
+        d={dir === 'left' ? 'M10 3.5L5.5 8l4.5 4.5' : 'M6 3.5L10.5 8 6 12.5'}
+        stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function Legend() {
   // Sleep is deliberately absent: it is excluded from dominance, so it can
   // never colour a bar, and listing it would promise something that never
   // appears.
   const shown: Category[] = ['deadline', 'focus', 'class', 'work', 'personal'];
   return (
-    <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 text-[11px] text-[var(--muted)]">
+    <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--muted)]">
       {shown.map((c) => (
-        <span key={c} className="flex items-center gap-1.5">
+        <span key={c} className="flex items-center gap-2">
           <span
             className="h-2 w-2 rounded-full"
             style={{ background: colorVar(c, 0) }}
