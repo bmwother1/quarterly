@@ -144,78 +144,63 @@ export default function ImportPage() {
     setResult(null);
   }
 
+  const link = 'text-[var(--ink)] underline decoration-[var(--border-strong)] underline-offset-4 hover:decoration-[var(--ink)]';
+
   return (
-    <main className="rise mx-auto max-w-2xl px-5 py-10 sm:py-14">
-      <h1 className="text-2xl font-semibold">Import a calendar</h1>
-      <p className="mt-1.5 text-[var(--muted)]">
+    <main className="rise mx-auto max-w-2xl px-5 pb-12 pt-8 sm:pt-12">
+      <h1 className="text-heading font-semibold">Import a calendar</h1>
+      <p className="mt-2 text-base text-[var(--muted)]">
         Canvas, Google, Apple or Outlook. Paste a link, or import a file you exported.
       </p>
 
-      <form onSubmit={fetchFeed} className="mt-6 space-y-3">
+      <form onSubmit={fetchFeed} className="mt-6 flex flex-col gap-2 sm:flex-row">
         <input
           type="url"
           required
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           aria-label="Calendar link"
+          aria-describedby={error ? 'import-error' : undefined}
+          aria-invalid={error ? true : undefined}
           placeholder="Paste an iCal or ICS link"
           autoComplete="off"
           spellCheck={false}
-          className="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3 text-sm outline-none placeholder:text-[var(--faint)] focus:border-[var(--accent)]"
+          className="field min-w-0 flex-1"
         />
+        {/* While an import waits to be confirmed below, that is the step that
+            matters, so this one steps back to secondary. */}
         <button
           type="submit"
           disabled={busy || !url.trim()}
-          className="w-full rounded-xl bg-[var(--accent)] px-4 py-3 text-sm font-medium text-[var(--accent-ink)] disabled:bg-transparent disabled:text-[var(--faint)] disabled:ring-1 disabled:ring-[var(--border)] sm:w-auto"
+          className={result ? 'btn-secondary' : 'btn-primary'}
         >
           {busy ? 'Reading…' : 'Import'}
         </button>
       </form>
 
-      <div className="mt-5 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
-        <p className="text-sm font-medium">Using Apple Calendar?</p>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          A link means publishing your calendar publicly, which is buried in the share settings
-          and only works for iCloud calendars. Exporting a file is easier and nothing leaves
-          your device: <strong>File, then Export</strong>, then pick the file here.
-        </p>
-        <label className="mt-3 inline-block cursor-pointer rounded-lg border border-[var(--border-strong)] px-3.5 py-2 text-sm">
-          Choose an .ics file
-          <input
-            type="file"
-            accept=".ics,text/calendar"
-            className="sr-only"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              // Cleared so picking the same file twice still fires a change.
-              e.target.value = '';
-              if (f) void importFile(f);
-            }}
-          />
-        </label>
-      </div>
-
+      {/* Straight under the field that caused it, not below the next section. */}
       {error && (
-        <div role="alert" className="mt-4 rounded-xl border border-[var(--warn)]/40 bg-[var(--accent-soft)] p-3 text-sm">
+        <div id="import-error" role="alert" className="enter mt-3 border-l-3 border-[var(--warn)] pl-3 text-sm">
           <p className="font-medium text-[var(--warn)]">{error.error}</p>
           {error.hint && <p className="mt-1 text-[var(--muted)]">{error.hint}</p>}
         </div>
       )}
 
       {imported && (
-        <div role="status" className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
-          <p className="font-medium">Imported {imported}.</p>
-          <Link href="/week" className="mt-2 inline-block text-sm text-[var(--accent)] underline underline-offset-4">
+        <div role="status" className="well enter mt-4">
+          <p className="text-base font-semibold">Imported {imported}.</p>
+          <Link href="/week" className="btn-secondary mt-3">
             See your week
           </Link>
         </div>
       )}
 
       {/* Nothing is saved until it's been looked at. An import that silently
-          rewrote a schedule would be the worst kind of surprise. */}
+          rewrote a schedule would be the worst kind of surprise. The one box
+          on this page, because it is a decision waiting to be made. */}
       {result && (
-        <section className="mt-6 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
-          <h2 className="font-medium">From {result.source}</h2>
+        <section className="enter mt-6 rounded-md border border-[var(--border)] p-4">
+          <h2 className="text-base font-semibold">From {result.source}</h2>
 
           {result.kind === 'assignments' ? (
             <>
@@ -238,14 +223,14 @@ export default function ImportPage() {
               {result.skippedRecurring > 0 && (
                 <p className="mt-2 text-sm text-[var(--muted)]">
                   {result.skippedRecurring} repeating {result.skippedRecurring === 1 ? 'event repeats' : 'events repeat'}{' '}
-                  monthly or yearly, which isn&rsquo;t supported yet — those were left out rather
+                  monthly or yearly, which isn&rsquo;t supported yet, so those were left out rather
                   than guessed at.
                 </p>
               )}
               <ul className="mt-3 divide-y divide-[var(--border)] text-sm">
                 {result.events.slice(0, 6).map((e) => (
-                  <li key={e.id} className="flex items-baseline gap-3 py-1.5">
-                    <span className="w-28 shrink-0 tabular-nums text-[var(--faint)]">
+                  <li key={e.id} className="flex items-baseline gap-3 py-2">
+                    <span className="w-28 shrink-0 text-[var(--muted)]">
                       {fmtDay(e.start, TZ)} {fmtTime(e.start, TZ)}
                     </span>
                     <span className="min-w-0 flex-1 truncate">{e.title}</span>
@@ -253,49 +238,69 @@ export default function ImportPage() {
                 ))}
               </ul>
               {result.events.length > 6 && (
-                <p className="mt-2 text-sm text-[var(--faint)]">…and {result.events.length - 6} more</p>
+                <p className="mt-2 text-sm text-[var(--muted)]">and {result.events.length - 6} more</p>
               )}
             </>
           )}
 
           <div className="mt-4 flex flex-wrap gap-2">
-            <button
-              onClick={keep}
-              className="rounded-lg bg-[var(--accent)] px-3.5 py-2 text-sm font-medium text-[var(--accent-ink)]"
-            >
+            <button onClick={keep} className="btn-primary">
               Add to my week
             </button>
-            <button onClick={() => setResult(null)} className="px-2 text-sm text-[var(--faint)] underline underline-offset-4">
-              discard
+            <button onClick={() => setResult(null)} className="btn-quiet">
+              Discard
             </button>
           </div>
         </section>
       )}
 
-      <section className="mt-10">
-        <h2 className="font-medium">Where to find the link</h2>
-        <dl className="mt-3 divide-y divide-[var(--border)]">
+      <section className="mt-10 border-t border-[var(--border)] pt-6">
+        <h2 className="text-base font-semibold">Using Apple Calendar?</h2>
+        <p className="mt-1 text-base text-[var(--muted)]">
+          A link means publishing your calendar publicly, which is buried in the share settings
+          and only works for iCloud calendars. Exporting a file is easier and nothing leaves
+          your device: <span className="text-[var(--ink)]">File, then Export</span>, then pick the file here.
+        </p>
+        <label className="btn-secondary mt-3 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--accent)]">
+          Choose an .ics file
+          <input
+            type="file"
+            accept=".ics,text/calendar"
+            className="sr-only"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              // Cleared so picking the same file twice still fires a change.
+              e.target.value = '';
+              if (f) void importFile(f);
+            }}
+          />
+        </label>
+      </section>
+
+      <section className="mt-10 border-t border-[var(--border)] pt-6">
+        <h2 className="text-base font-semibold">Where to find the link</h2>
+        <dl className="mt-2 divide-y divide-[var(--border)]">
           {SOURCE_HELP.map((s) => (
-            <div key={s.kind} className="py-2.5">
-              <dt className="text-sm font-medium">{s.label}</dt>
-              <dd className="text-sm text-[var(--muted)]">{s.where}</dd>
+            <div key={s.kind} className="py-3">
+              <dt className="text-sm font-semibold">{s.label}</dt>
+              <dd className="mt-1 text-sm text-[var(--muted)]">{s.where}</dd>
             </div>
           ))}
         </dl>
       </section>
 
-      <section className="mt-8 rounded-xl border border-[var(--border)] p-4 text-sm text-[var(--muted)]">
-        <p className="font-medium text-[var(--ink)]">Treat these links like passwords</p>
-        <p className="mt-1">
+      <section className="mt-10 border-t border-[var(--border)] pt-6">
+        <h2 className="text-base font-semibold">Treat these links like passwords</h2>
+        <p className="mt-1 text-base text-[var(--muted)]">
           Anyone holding one can read that calendar. Heron uses it once to fetch, then forgets
-          it — nothing is stored, so refreshing later means pasting again.{' '}
-          <Link href="/privacy" className="underline underline-offset-4">The privacy page</Link>{' '}
+          it. Nothing is stored, so refreshing later means pasting again.{' '}
+          <Link href="/privacy" className={link}>The privacy page</Link>{' '}
           spells out exactly what that means.
         </p>
       </section>
 
       {state.courses.length > 0 && (
-        <p className="mt-6 text-sm text-[var(--faint)]">
+        <p className="mt-8 text-sm text-[var(--muted)]">
           Currently tracking {state.courses.length} courses and{' '}
           {state.events.filter((e) => e.id.startsWith('imp-')).length} imported events.
         </p>
