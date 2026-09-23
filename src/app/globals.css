@@ -203,77 +203,86 @@
   :root { --fab-lift: 1.5rem; }
 }
 
-body {
-  background: var(--bg);
-  color: var(--ink);
-  font-family: var(--font-geist-sans), ui-sans-serif, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-  /* Every time and duration in this app is a number that changes, and a
-     proportional 1 is narrower than a 4. Tabular figures everywhere means a
-     column of times lines up and a ticking number never nudges its
-     neighbours. */
-  font-variant-numeric: tabular-nums;
-  /* Installed as a PWA there is no browser chrome, so the notch and the home
-     indicator are the app's problem to avoid. */
-  padding-left: env(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
-}
-
-/* The phone tab bar used to reserve its space with an unconditional
-   `body { padding-bottom }` here. It now renders its own spacer, because the
-   bar is hidden on the landing and onboarding routes and a global rule cannot
-   know that. See TabBar in site-header.tsx. */
-
-/* Headings get tighter tracking as they get larger. Default tracking on a 36px
-   heading is the single most common reason a page reads as unfinished. */
-h1 { letter-spacing: -0.022em; }
-h2 { letter-spacing: -0.014em; }
-
 /*
- * One visible focus treatment everywhere, rather than the browser default in
- * some places and nothing in others.
- *
- * It used to set `border-radius: 4px` as well, which reshaped whatever had
- * focus: a 12px button went square the moment you tabbed to it. The outline
- * follows the element's own radius now. Fields draw it over their border
- * instead of outside it, so a focused input has one ring, not two.
+ * Base rules live in the base layer, so a utility on an element always wins.
+ * They were unlayered, and unlayered CSS beats every layer whatever its
+ * specificity: `outline-none` on a field lost to the global focus ring, which
+ * is where the double ring on /import came from.
  */
-:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-:where(input, select, textarea):focus-visible {
-  outline-offset: -1px;
+@layer base {
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-geist-sans), ui-sans-serif, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    /* Every time and duration in this app is a number that changes, and a
+       proportional 1 is narrower than a 4. Tabular figures everywhere means a
+       column of times lines up and a ticking number never nudges its
+       neighbours. */
+    font-variant-numeric: tabular-nums;
+    /* Installed as a PWA there is no browser chrome, so the notch and the home
+       indicator are the app's problem to avoid. */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* The phone tab bar used to reserve its space with an unconditional
+     `body { padding-bottom }` here. It now renders its own spacer, because the
+     bar is hidden on the landing and onboarding routes and a global rule cannot
+     know that. See TabBar in site-header.tsx. */
+
+  /* Headings get tighter tracking as they get larger. Default tracking on a 36px
+     heading is the single most common reason a page reads as unfinished. */
+  h1 { letter-spacing: -0.022em; }
+  h2 { letter-spacing: -0.014em; }
+
+  /*
+   * One visible focus treatment everywhere, rather than the browser default in
+   * some places and nothing in others.
+   *
+   * It used to set `border-radius: 4px` as well, which reshaped whatever had
+   * focus: a 12px button went square the moment you tabbed to it. The outline
+   * follows the element's own radius now. Fields draw it over their border
+   * instead of outside it, so a focused input has one ring, not two.
+   */
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  :where(input, select, textarea):focus-visible {
+    outline-offset: -1px;
+  }
+
+  /* Tap targets on iOS shouldn't flash grey, and a double tap on a button
+     should not zoom the page. */
+  button, a, label { -webkit-tap-highlight-color: transparent; }
+  :where(button, a[href], [role="button"], label, summary) { touch-action: manipulation; }
+
+  /*
+   * Press states on everything tappable.
+   *
+   * Declared once here with zero specificity, so every button and link in the
+   * app answers a press without each one having to remember to. A button
+   * sinks slightly; a text link dims, because a transform does nothing to an
+   * inline element.
+   */
+  :where(button, [role="button"], a[href], summary) {
+    transition-property: color, background-color, border-color, opacity, transform;
+    transition-duration: var(--dur-exit);
+    transition-timing-function: var(--ease);
+  }
+  :where(button:not(:disabled), [role="button"], summary):active {
+    transform: scale(0.97);
+  }
+  :where(a[href]):active {
+    opacity: 0.6;
+  }
+
+  /* Numbers that change should not reflow the layout around them. */
+  .tabular-nums { font-variant-numeric: tabular-nums; }
 }
 
-/* Tap targets on iOS shouldn't flash grey, and a double tap on a button
-   should not zoom the page. */
-button, a, label { -webkit-tap-highlight-color: transparent; }
-:where(button, a[href], [role="button"], label, summary) { touch-action: manipulation; }
-
-/*
- * Press states on everything tappable.
- *
- * Declared once here with zero specificity, so every button and link in the
- * app answers a press without each one having to remember to. A button
- * sinks slightly; a text link dims, because a transform does nothing to an
- * inline element.
- */
-:where(button, [role="button"], a[href], summary) {
-  transition-property: color, background-color, border-color, opacity, transform;
-  transition-duration: var(--dur-exit);
-  transition-timing-function: var(--ease);
-}
-:where(button:not(:disabled), [role="button"], summary):active {
-  transform: scale(0.97);
-}
-:where(a[href]):active {
-  opacity: 0.6;
-}
-
-/* Numbers that change should not reflow the layout around them. */
-.tabular-nums { font-variant-numeric: tabular-nums; }
 
 /*
  * The few components worth naming.
@@ -424,26 +433,30 @@ button, a, label { -webkit-tap-highlight-color: transparent; }
 @keyframes pop-in { from { opacity: 0; transform: scale(0.97); } }
 @keyframes pop-out { to { opacity: 0; transform: scale(0.97); } }
 
-.rise { animation: fade-in var(--dur-enter) var(--ease) backwards; }
-
 /* A block the student has just answered: its text eases from ink to its
    quieter done state, and the tick lands on the spring. */
 @keyframes settle-dim { from { color: var(--ink); } }
 @keyframes check-pop { from { opacity: 0; transform: scale(0.4); } }
-.settle, .settle * { animation: settle-dim var(--dur-move) var(--ease) backwards; }
-.settle svg { animation: check-pop var(--dur-move) var(--ease-spring) backwards; }
 
-/* The sheet rises from the bottom edge on a phone, where it is attached to
-   it, and settles in place on a laptop, where it floats. */
-.sheet-panel { animation: sheet-up var(--dur-move) var(--ease) backwards; }
-.sheet-panel[data-leaving] { animation: sheet-down 160ms var(--ease-exit) forwards; }
-@media (min-width: 640px) {
-  .sheet-panel { animation: pop-in var(--dur-enter) var(--ease) backwards; }
-  .sheet-panel[data-leaving] { animation: pop-out var(--dur-exit) var(--ease-exit) forwards; }
-}
-.enter {
-  animation: enter var(--dur-enter) var(--ease) backwards;
-  animation-delay: calc(min(var(--i, 0), 12) * 24ms);
+@layer components {
+  .rise { animation: fade-in var(--dur-enter) var(--ease) backwards; }
+
+  .enter {
+    animation: enter var(--dur-enter) var(--ease) backwards;
+    animation-delay: calc(min(var(--i, 0), 12) * 24ms);
+  }
+
+  .settle, .settle * { animation: settle-dim var(--dur-move) var(--ease) backwards; }
+  .settle svg { animation: check-pop var(--dur-move) var(--ease-spring) backwards; }
+
+  /* The sheet rises from the bottom edge on a phone, where it is attached to
+     it, and settles in place on a laptop, where it floats. */
+  .sheet-panel { animation: sheet-up var(--dur-move) var(--ease) backwards; }
+  .sheet-panel[data-leaving] { animation: sheet-down 160ms var(--ease-exit) forwards; }
+  @media (min-width: 640px) {
+    .sheet-panel { animation: pop-in var(--dur-enter) var(--ease) backwards; }
+    .sheet-panel[data-leaving] { animation: pop-out var(--dur-exit) var(--ease-exit) forwards; }
+  }
 }
 
 /*
