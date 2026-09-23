@@ -350,6 +350,18 @@ describe('the planner', () => {
     assert.deepEqual(result.overdue.map((a) => a.id), ['old']);
   });
 
+  test('a deadline that is exactly now is past', () => {
+    // Found by `npm run sweep`. The overdue filter said "not yet" and the
+    // placement said "already", so the work got the three-day runway meant for
+    // overdue items and landed hours after its deadline, explained as due soon.
+    const assignments = [
+      makeAssignment({ id: 'now', kind: 'problem set', title: 'Due this minute', due: MONDAY_8AM.toISOString() }),
+    ];
+    const result = planWeek(assignments, openWeek(), { now: MONDAY_8AM, tz: TZ });
+    assert.ok(!result.blocks.some((b) => b.assignmentId === 'now'), 'work due this minute was scheduled after its deadline');
+    assert.deepEqual(result.overdue.map((a) => a.id), ['now']);
+  });
+
   test('past deadlines can be opted back in', () => {
     const assignments = [
       makeAssignment({ id: 'old', kind: 'problem set', title: 'Homework 1', due: zonedInstant('2026-10-01', 23 * 60, TZ).toISOString() }),

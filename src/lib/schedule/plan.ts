@@ -605,7 +605,8 @@ export function planWeek(
   const horizonEnd = now.getTime() + (opts.days + 30) * 86_400_000;
   const live = assignments.filter((a) => a.status === 'todo' && new Date(a.due).getTime() < horizonEnd);
 
-  const overdue = live.filter((a) => dueInstant(a, tz).getTime() < now.getTime());
+  // Due this very minute is past: placement below already treats it that way.
+  const overdue = live.filter((a) => dueInstant(a, tz).getTime() <= now.getTime());
   const pending = [
     ...(opts.includeOverdue ? live : live.filter((a) => !overdue.includes(a)))
       .flatMap((a) => buildSessions(a, opts)),
@@ -994,7 +995,7 @@ function explain(
   const when = relativeDue(p.dueAt, now, tz);
   const session = p.count > 1 ? `Session ${p.index} of ${p.count} — ` : '';
 
-  if (p.dueAt < now) return 'Past due. Worth clearing before it starts costing you elsewhere.';
+  if (p.dueAt <= now) return 'Past due. Worth clearing before it starts costing you elsewhere.';
 
   switch (breakdown!.dominant) {
     case 'urgency':
