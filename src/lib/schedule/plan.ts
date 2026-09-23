@@ -197,8 +197,12 @@ interface Pending {
   weekDaysLeft: number;
   /** Slot-independent rank: how much this deserves time at all, before asking when. */
   priority: number;
-  /** Sessions must land on separate days: exams, and anything done once a day. */
-  separateDays: boolean;
+  /**
+   * Most sessions of this one day may hold. One for exam prep, which is the
+   * point of spacing it, and for anything done once a day; a commitment's own
+   * limit otherwise; no limit for the rest of coursework.
+   */
+  dayLimit: number;
   /** Shortest session worth placing. Below this, report short instead. */
   minMinutes: number;
   /** Reserved after the block and not part of it: shower, pack-up, travel. */
@@ -309,7 +313,7 @@ function buildSessions(a: Assignment, opts: Required<PlanOptions>): Pending[] {
     weekDaysLeft: 0,
     priority,
     // Spacing exam prep across days is the entire point of spacing it.
-    separateDays: a.kind === 'exam' || a.kind === 'quiz',
+    dayLimit: a.kind === 'exam' || a.kind === 'quiz' ? 1 : Infinity,
     // Coursework is happy to be trimmed: partial progress beats none.
     minMinutes: MIN_SESSION_MINUTES,
     bufferAfterMinutes: 0,
@@ -438,7 +442,7 @@ function buildCommitmentSessions(c: Commitment, opts: Required<PlanOptions>): Pe
           weekSession: already + i + 1,
           weekDaysLeft: daysLeftInWeek,
           priority: decayed,
-          separateDays: c.maxPerDay <= 1,
+          dayLimit: Math.max(1, c.maxPerDay),
           minMinutes: clamp(c.minSessionMinutes || MIN_SESSION_MINUTES, MIN_SESSION_MINUTES, minutes),
           bufferAfterMinutes: Math.max(0, c.bufferAfterMinutes ?? 0),
           windowStartMin: c.windowStartMin,
@@ -662,13 +666,15 @@ export function planWeek(
   }
   openings.sort((a, b) => a.startMs - b.startMs);
 
-  // Days a commitment already happened on, so "five times a week" stays five days.
-  const settledDaysByKey = new Map<string, Set<string>>();
+  // Sessions of each commitment already on each day, so "five times a week"
+  // stays five days and "twice a day" stays twice.
+  const settledPerDay = new Map<string, Map<string, number>>();
   for (const b of opts.existingBlocks) {
     if (!b.commitmentId || b.status === 'skipped') continue;
-    const set = settledDaysByKey.get(b.commitmentId) ?? new Set<string>();
-    set.add(localParts(new Date(b.start), tz).dateKey);
-    settledDaysByKey.set(b.commitmentId, set);
+    const days = settledPerDay.get(b.commitmentId) ?? new Map<string, number>();
+    const dateKey = localParts(new Date(b.start), tz).dateKey;
+    days.set(dateKey, (days.get(dateKey) ?? 0) + 1);
+    settledPerDay.set(b.commitmentId, days);
   }
 
   // Every hour boundary in the horizon, resolved once. Fit only varies by the
@@ -713,11 +719,15 @@ export function planWeek(
       p.notBefore.getTime(),
     );
 
-    const spaced = p.separateDays;
-    const usedDays = new Set([
-      ...siblings.filter((q) => q.placed).map((q) => localParts(new Date(q.placed!.start), tz).dateKey),
-      ...(p.commitment ? settledDaysByKey.get(p.commitment.id) ?? [] : []),
-    ]);
+    // How many of this each day already holds, against how many it may. A
+    // commitment has its own daily limit; only a limit of one used to be
+    // enforced, so twice a day with two days left put three on each.
+    const perDay = new Map(p.commitment ? settledPerDay.get(p.commitment.id) : undefined);
+    for (const q of siblings) {
+      if (!q.placed) continue;
+      const dateKey = localParts(new Date(q.placed.start), tz).dateKey;
+      perDay.set(dateKey, (perDay.get(dateKey) ?? 0) + 1);
+    }
 
     const spans = spansByCourse.get(p.group) ?? [];
     const placeByMs = p.placeBy.getTime();
@@ -727,7 +737,7 @@ export function planWeek(
     for (let i = 0; i < openings.length; i++) {
       const o = openings[i];
       if (o.endMs <= earliestMs) continue;
-      if (spaced && usedDays.has(o.dateKey)) continue;
+      if ((perDay.get(o.dateKey) ?? 0) >= p.dayLimit) continue;
 
       const dayLeft = capacity.get(o.dateKey) ?? 0;
       if (dayLeft < MIN_SESSION_MINUTES) continue;

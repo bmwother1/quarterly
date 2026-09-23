@@ -533,4 +533,23 @@ describe('weekly quotas are weekly', () => {
     const n = perWeek([ran, ...plan.blocks], '2026-10-05');
     assert.ok(n <= 3, `${n} runs this week against a target of 3`);
   });
+
+  test('a daily limit above one is still a limit', () => {
+    // Found by `npm run sweep`. Only a limit of one was ever enforced. Two a day
+    // with two days of the week left put three on each.
+    const reading = commitment({ id: 'read', title: 'Reading', sessionsPerWeek: 6, minutesPerSession: 30, maxPerDay: 2 });
+    const saturday = zonedInstant('2026-10-10', 12 * 60, TZ);
+    const done = [session(reading, '2026-10-10', 9 * 60)];
+
+    const plan = planWeek([], { ...defaultAvailability(), maxDailyMinutes: 600 }, {
+      tz: TZ, commitments: [reading], now: saturday, existingBlocks: done,
+    });
+
+    const perDay = new Map<string, number>();
+    for (const b of [...done, ...plan.blocks]) {
+      const day = localParts(new Date(b.start), TZ).dateKey;
+      perDay.set(day, (perDay.get(day) ?? 0) + 1);
+    }
+    for (const [day, n] of perDay) assert.ok(n <= 2, `${n} sessions on ${day} against a limit of 2`);
+  });
 });
