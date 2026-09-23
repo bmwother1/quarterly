@@ -42,11 +42,11 @@ export const metadata = {
  */
 export default function Privacy() {
   return (
-    <main className="mx-auto max-w-2xl px-5 py-14">
-      <h1 className="text-2xl font-semibold tracking-tight">Privacy</h1>
-      <p className="mt-2 text-sm text-[var(--faint)]">Last updated 21 September 2026</p>
+    <main className="mx-auto max-w-2xl px-5 pb-12 pt-8 sm:pt-12">
+      <h1 className="text-heading font-semibold">Privacy</h1>
+      <p className="mt-1 text-sm text-[var(--muted)]">Last updated 21 September 2026</p>
 
-      <p className="mt-6 text-[var(--muted)]">
+      <p className="mt-6 text-title font-normal text-[var(--ink)]">
         Short version: Heron works with no account at all, and in that mode your schedule
         never leaves your browser. If you make an account, your week and a small usage log are
         stored on our server so they survive a lost phone. You can delete all of it, permanently,
@@ -184,7 +184,7 @@ export default function Privacy() {
       <Section title="Deleting everything">
         <p>
           <strong className="text-[var(--ink)]">Delete my data</strong> in{' '}
-          <Link href="/settings" className="underline underline-offset-4">Settings</Link> removes
+          <Link href="/settings" className={LINK}>Settings</Link> removes
           your account, your week and your entire usage log, then clears this browser. It is
           immediate and there is no recovery, for you or for us.
         </p>
@@ -205,11 +205,11 @@ export default function Privacy() {
 
       <Section title="Questions">
         <p>
-          Email <a href="mailto:bmwother1@gmail.com" className="underline underline-offset-4">
+          Email <a href="mailto:bmwother1@gmail.com" className={LINK}>
           bmwother1@gmail.com</a>. The code is{' '}
           <a
             href="https://github.com/bmwother1/heron"
-            className="underline underline-offset-4"
+            className={LINK}
             rel="noreferrer"
           >
             public
@@ -221,11 +221,18 @@ export default function Privacy() {
   );
 }
 
+const LINK = 'text-[var(--ink)] underline decoration-[var(--border-strong)] underline-offset-4 hover:decoration-[var(--ink)]';
+
+/**
+ * One question the page answers. Body text is 16px: this is the page people
+ * read closely when they are deciding whether to trust the app, and 14px grey
+ * made it the hardest page in the product to read.
+ */
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="mt-9">
-      <h2 className="font-medium">{title}</h2>
-      <div className="mt-2 space-y-1 text-sm leading-relaxed text-[var(--muted)]">{children}</div>
+    <section className="mt-8 border-t border-[var(--border)] pt-6">
+      <h2 className="text-base font-semibold">{title}</h2>
+      <div className="mt-2 max-w-prose space-y-2 text-base text-[var(--muted)]">{children}</div>
     </section>
   );
 }

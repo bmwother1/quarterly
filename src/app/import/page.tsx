@@ -191,119 +191,64 @@ export default function ImportPage() {
     setResult(null);
   }
 
+  const link = 'text-[var(--ink)] underline decoration-[var(--border-strong)] underline-offset-4 hover:decoration-[var(--ink)]';
+
   return (
-    <main className="rise mx-auto max-w-2xl px-5 py-10 sm:py-14">
-      <h1 className="text-2xl font-semibold">Import a calendar</h1>
-      <p className="mt-1.5 text-[var(--muted)]">
+    <main className="rise mx-auto max-w-2xl px-5 pb-12 pt-8 sm:pt-12">
+      <h1 className="text-heading font-semibold">Import a calendar</h1>
+      <p className="mt-2 text-base text-[var(--muted)]">
         Canvas, your work schedule, Google, Apple, Outlook, or any other calendar link. Paste
         it here, or import a file you exported.
       </p>
 
-      <form onSubmit={fetchFeed} className="mt-6 space-y-3">
+      <form onSubmit={fetchFeed} className="mt-6 flex flex-col gap-2 sm:flex-row">
         <input
           type="url"
           required
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           aria-label="Calendar link"
+          aria-describedby={error ? 'import-error' : undefined}
+          aria-invalid={error ? true : undefined}
           placeholder="Paste an iCal or ICS link"
           autoComplete="off"
           spellCheck={false}
-          className="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3 text-sm outline-none placeholder:text-[var(--faint)] focus:border-[var(--accent)]"
+          className="field min-w-0 flex-1"
         />
+        {/* While an import waits to be confirmed below, that is the step that
+            matters, so this one steps back to secondary. */}
         <button
           type="submit"
           disabled={busy || !url.trim()}
-          className="w-full rounded-xl bg-[var(--accent)] px-4 py-3 text-sm font-medium text-[var(--accent-ink)] disabled:bg-transparent disabled:text-[var(--faint)] disabled:ring-1 disabled:ring-[var(--border)] sm:w-auto"
+          className={result ? 'btn-secondary' : 'btn-primary'}
         >
           {busy ? 'Reading…' : 'Import'}
         </button>
       </form>
 
-      {/* The whole point: updating a calendar is a button on a phone, not a trip
-          to a laptop to find a feed URL again. Heron also does it daily on its own. */}
-      {remembered.length > 0 && (
-        <div className="mt-5 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
-          <p className="text-sm font-medium">Saved on this device, checked daily</p>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            Stored in this browser only. Never synced to your account, never in your backups.
-          </p>
-          <ul className="mt-2 divide-y divide-[var(--border)]">
-            {remembered.map((f) => (
-              <li key={f.url} className="flex items-center gap-3 py-2 text-sm">
-                <span className="min-w-0 flex-1 truncate">
-                  <span className="font-medium">{f.label}</span>
-                  <span className="text-[var(--faint)]"> · {f.host}</span>
-                </span>
-                <button
-                  onClick={() => { forget(f.url); setRefreshed(`Forgot ${f.label}. It is gone from this browser.`); }}
-                  className="shrink-0 text-sm text-[var(--muted)] underline underline-offset-4 hover:text-[var(--ink)]"
-                >
-                  Forget
-                </button>
-              </li>
-            ))}
-          </ul>
-          <button
-            disabled={refreshing}
-            onClick={() => {
-              setRefreshed(null);
-              void refresh('tap').then((r) => setRefreshed(describeRefresh(r)));
-            }}
-            className="mt-3 rounded-lg bg-[var(--accent)] px-3.5 py-2 text-sm font-medium text-[var(--accent-ink)] disabled:opacity-60"
-          >
-            {refreshing ? 'Checking…' : 'Check them all now'}
-          </button>
-        </div>
-      )}
-      {/* Outside the panel, because forgetting removes the panel. A revocation
-          with no confirmation reads as a button that did nothing. */}
-      {refreshed && <p role="status" className="mt-2 text-sm">{refreshed}</p>}
-
-      <div className="mt-5 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
-        <p className="text-sm font-medium">Using Apple Calendar?</p>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          A link means publishing your calendar publicly, which is buried in the share settings
-          and only works for iCloud calendars. Exporting a file is easier and nothing leaves
-          your device: <strong>File, then Export</strong>, then pick the file here.
-        </p>
-        <label className="mt-3 inline-block cursor-pointer rounded-lg border border-[var(--border-strong)] px-3.5 py-2 text-sm">
-          Choose an .ics file
-          <input
-            type="file"
-            accept=".ics,text/calendar"
-            className="sr-only"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              // Cleared so picking the same file twice still fires a change.
-              e.target.value = '';
-              if (f) void importFile(f);
-            }}
-          />
-        </label>
-      </div>
-
+      {/* Straight under the field that caused it, not below the next section. */}
       {error && (
-        <div role="alert" className="mt-4 rounded-xl border border-[var(--warn)]/40 bg-[var(--accent-soft)] p-3 text-sm">
+        <div id="import-error" role="alert" className="enter mt-3 border-l-3 border-[var(--warn)] pl-3 text-sm">
           <p className="font-medium text-[var(--warn)]">{error.error}</p>
           {error.hint && <p className="mt-1 text-[var(--muted)]">{error.hint}</p>}
         </div>
       )}
 
       {imported && (
-        <div role="status" className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
-          <p className="font-medium">Imported {imported}.</p>
-          <Link href="/week" className="mt-2 inline-block text-sm text-[var(--accent)] underline underline-offset-4">
+        <div role="status" className="well enter mt-4">
+          <p className="text-base font-semibold">Imported {imported}.</p>
+          <Link href="/week" className="btn-secondary mt-3">
             See your week
           </Link>
         </div>
       )}
 
       {/* Nothing is saved until it's been looked at. An import that silently
-          rewrote a schedule would be the worst kind of surprise. */}
+          rewrote a schedule would be the worst kind of surprise. The one box
+          on this page, because it is a decision waiting to be made. */}
       {result && (
-        <section className="mt-6 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
-          <h2 className="font-medium">From {result.source}</h2>
+        <section className="enter mt-6 rounded-md border border-[var(--border)] p-4">
+          <h2 className="text-base font-semibold">From {result.source}</h2>
 
           {result.kind === 'assignments' ? (
             <>
@@ -326,14 +271,14 @@ export default function ImportPage() {
               {result.skippedRecurring > 0 && (
                 <p className="mt-2 text-sm text-[var(--muted)]">
                   {result.skippedRecurring} repeating {result.skippedRecurring === 1 ? 'event repeats' : 'events repeat'}{' '}
-                  monthly or yearly, which isn&rsquo;t supported yet — those were left out rather
+                  monthly or yearly, which isn&rsquo;t supported yet, so those were left out rather
                   than guessed at.
                 </p>
               )}
               <ul className="mt-3 divide-y divide-[var(--border)] text-sm">
                 {result.events.slice(0, 6).map((e) => (
-                  <li key={e.id} className="flex items-baseline gap-3 py-1.5">
-                    <span className="w-28 shrink-0 tabular-nums text-[var(--faint)]">
+                  <li key={e.id} className="flex items-baseline gap-3 py-2">
+                    <span className="w-28 shrink-0 text-[var(--muted)]">
                       {fmtDay(e.start, TZ)} {fmtTime(e.start, TZ)}
                     </span>
                     <span className="min-w-0 flex-1 truncate">{e.title}</span>
@@ -341,22 +286,24 @@ export default function ImportPage() {
                 ))}
               </ul>
               {result.events.length > 6 && (
-                <p className="mt-2 text-sm text-[var(--faint)]">…and {result.events.length - 6} more</p>
+                <p className="mt-2 text-sm text-[var(--muted)]">and {result.events.length - 6} more</p>
               )}
             </>
           )}
 
+          {/* Only once a fetch has worked, next to what it found, which is the
+              moment a student can see what remembering it is for. */}
           {((result.kind === 'assignments' && !result.demo) || (result.kind === 'events' && !result.fromFile)) && (
-            <label className="mt-4 flex cursor-pointer items-start gap-2.5 rounded-lg border border-[var(--border)] p-3 text-sm">
+            <label className="mt-4 flex cursor-pointer items-start gap-3 border-t border-[var(--border)] pt-4 text-sm">
               <input
                 type="checkbox"
                 checked={rememberIt}
                 onChange={(e) => setRememberIt(e.target.checked)}
-                className="mt-0.5 accent-[var(--accent)]"
+                className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--accent)]"
               />
               <span>
                 <span className="font-medium">Remember this link on this device</span>
-                <span className="mt-0.5 block text-[var(--muted)]">
+                <span className="mt-1 block text-[var(--muted)]">
                   {result.kind === 'assignments'
                     ? 'Heron then checks Canvas once a day and fits new assignments into your week, so work posted the week it is due still shows up.'
                     : `Heron then checks ${result.source} once a day, so a changed ${result.sourceKind === 'work' ? 'shift' : 'event'} shows up without you pasting again.`}{' '}
@@ -368,52 +315,112 @@ export default function ImportPage() {
           )}
 
           <div className="mt-4 flex flex-wrap gap-2">
-            <button
-              onClick={keep}
-              className="rounded-lg bg-[var(--accent)] px-3.5 py-2 text-sm font-medium text-[var(--accent-ink)]"
-            >
+            <button onClick={keep} className="btn-primary">
               Add to my week
             </button>
-            <button onClick={() => setResult(null)} className="px-2 text-sm text-[var(--faint)] underline underline-offset-4">
-              discard
+            <button onClick={() => setResult(null)} className="btn-quiet">
+              Discard
             </button>
           </div>
         </section>
       )}
 
-      <section className="mt-10">
-        <h2 className="font-medium">Where to find the link</h2>
-        <dl className="mt-3 divide-y divide-[var(--border)]">
+      {/* The whole point: updating a calendar is a button on a phone, not a trip
+          to a laptop to find a feed URL again. Heron also does it daily on its own. */}
+      {remembered.length > 0 && (
+        <section className="mt-10 border-t border-[var(--border)] pt-6">
+          <h2 className="text-base font-semibold">Saved on this device, checked daily</h2>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            Stored in this browser only. Never synced to your account, never in your backups.
+          </p>
+          <ul className="mt-2 divide-y divide-[var(--border)] border-y border-[var(--border)]">
+            {remembered.map((f) => (
+              <li key={f.url} className="flex items-center gap-3 py-1 text-sm">
+                <span className="min-w-0 flex-1 truncate">
+                  <span className="font-medium">{f.label}</span>
+                  <span className="text-[var(--muted)]"> · {f.host}</span>
+                </span>
+                <button
+                  onClick={() => { forget(f.url); setRefreshed(`Forgot ${f.label}. It is gone from this browser.`); }}
+                  className="btn-quiet shrink-0 px-2"
+                >
+                  Forget
+                </button>
+              </li>
+            ))}
+          </ul>
+          <button
+            disabled={refreshing}
+            onClick={() => {
+              setRefreshed(null);
+              void refresh('tap').then((r) => setRefreshed(describeRefresh(r)));
+            }}
+            className="btn-secondary mt-3"
+          >
+            {refreshing ? 'Checking…' : 'Check them all now'}
+          </button>
+        </section>
+      )}
+      {/* Outside the section, because forgetting the last link removes it. A
+          revocation with no confirmation reads as a button that did nothing. */}
+      {refreshed && <p role="status" className="enter mt-3 text-sm">{refreshed}</p>}
+
+      <section className="mt-10 border-t border-[var(--border)] pt-6">
+        <h2 className="text-base font-semibold">Using Apple Calendar?</h2>
+        <p className="mt-1 text-base text-[var(--muted)]">
+          A link means publishing your calendar publicly, which is buried in the share settings
+          and only works for iCloud calendars. Exporting a file is easier and nothing leaves
+          your device: <span className="text-[var(--ink)]">File, then Export</span>, then pick the file here.
+        </p>
+        <label className="btn-secondary mt-3 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--accent)]">
+          Choose an .ics file
+          <input
+            type="file"
+            accept=".ics,text/calendar"
+            className="sr-only"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              // Cleared so picking the same file twice still fires a change.
+              e.target.value = '';
+              if (f) void importFile(f);
+            }}
+          />
+        </label>
+      </section>
+
+      <section className="mt-10 border-t border-[var(--border)] pt-6">
+        <h2 className="text-base font-semibold">Where to find the link</h2>
+        <dl className="mt-2 divide-y divide-[var(--border)]">
           {SOURCE_HELP.map((s) => (
-            <div key={s.kind} className="py-2.5">
-              <dt className="text-sm font-medium">{s.label}</dt>
-              <dd className="text-sm text-[var(--muted)]">{s.where}</dd>
-              {s.note && <dd className="mt-1 text-xs text-[var(--faint)]">{s.note}</dd>}
+            <div key={s.kind} className="py-3">
+              <dt className="text-sm font-semibold">{s.label}</dt>
+              <dd className="mt-1 text-sm text-[var(--muted)]">{s.where}</dd>
+              {s.note && <dd className="mt-1 text-sm text-[var(--muted)]">{s.note}</dd>}
             </div>
           ))}
         </dl>
       </section>
 
-      <section className="mt-8 rounded-xl border border-[var(--border)] p-4 text-sm text-[var(--muted)]">
-        <p className="font-medium text-[var(--ink)]">Treat these links like passwords</p>
-        <p className="mt-1">
+      <section className="mt-10 border-t border-[var(--border)] pt-6">
+        <h2 className="text-base font-semibold">Treat these links like passwords</h2>
+        <p className="mt-1 text-base text-[var(--muted)]">
           Anyone holding one can read that calendar, indefinitely, without logging in. So
           Heron never stores yours on its server: it is sent once per fetch, used, and
           dropped, and it is never written to a log.
         </p>
-        <p className="mt-2">
-          If you tick <strong className="text-[var(--ink)]">Remember this link</strong>, it is
+        <p className="mt-2 text-base text-[var(--muted)]">
+          If you tick <span className="text-[var(--ink)]">Remember this link</span>, it is
           kept in this browser and nowhere else, and Heron uses it to check that calendar once a
           day. It is not part of your account, so it never syncs to our server or to your other
           devices, and it is not in the backup file you can download. Forgetting it here or in
           Settings removes it immediately, and so does deleting your data.{' '}
-          <Link href="/privacy" className="underline underline-offset-4">The privacy page</Link>{' '}
+          <Link href="/privacy" className={link}>The privacy page</Link>{' '}
           spells out exactly what that means.
         </p>
       </section>
 
       {state.courses.length > 0 && (
-        <p className="mt-6 text-sm text-[var(--faint)]">
+        <p className="mt-8 text-sm text-[var(--muted)]">
           Currently tracking {state.courses.length} courses and{' '}
           {state.events.filter((e) => e.id.startsWith('imp-')).length} imported events.
         </p>

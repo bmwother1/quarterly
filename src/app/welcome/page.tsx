@@ -85,7 +85,7 @@ function RebuildDemo() {
   return (
     <div>
       <WeekSketch blocks={BEATS[beat].blocks} />
-      <p className="mt-2 text-center text-xs text-[var(--faint)] transition-opacity duration-300">
+      <p className="mt-2 text-center text-sm text-[var(--muted)]">
         {BEATS[beat].caption}
       </p>
     </div>
@@ -94,14 +94,14 @@ function RebuildDemo() {
 
 function DidntFit() {
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
-      <p className="text-xs uppercase tracking-wide text-[var(--faint)]">Didn&rsquo;t fit</p>
-      <p className="mt-2 text-sm font-medium">CHEM 142 problem set</p>
-      <p className="text-xs text-[var(--muted)]">
+    <div className="rounded-md border border-[var(--border)] bg-[var(--surface)] p-4">
+      <p className="text-sm font-semibold">Didn&rsquo;t fit</p>
+      <p className="mt-2 text-sm font-medium">CHEM&nbsp;142 problem set</p>
+      <p className="text-sm text-[var(--muted)]">
         1 session short. The week ran out before you hit the target.
       </p>
       <p className="mt-3 text-sm font-medium">Run</p>
-      <p className="text-xs text-[var(--muted)]">
+      <p className="text-sm text-[var(--muted)]">
         4 of 5. Two shifts and an exam left one evening too short.
       </p>
     </div>
@@ -117,7 +117,7 @@ export default function Welcome() {
       <div className="mb-6 flex justify-end">
         {/* Reachable from the first frame. A walkthrough you cannot leave is one
             people back out of entirely. */}
-        <Link href="/start" className="text-sm text-[var(--muted)] underline underline-offset-4">
+        <Link href="/start" className="-mr-3 btn-quiet">
           Skip
         </Link>
       </div>
@@ -125,12 +125,14 @@ export default function Welcome() {
       <div className="flex-1">
         {SLIDES[i].render()}
 
-        <h1 className="rise mt-7 text-[1.6rem] font-semibold leading-tight">{SLIDES[i].title}</h1>
-        <p className="rise mt-2.5 leading-relaxed text-[var(--muted)]">{SLIDES[i].body}</p>
+        <div key={i}>
+          <h1 className="enter mt-8 text-heading font-semibold">{SLIDES[i].title}</h1>
+          <p className="enter mt-2 text-base text-[var(--muted)]" style={{ '--i': 1 } as React.CSSProperties}>{SLIDES[i].body}</p>
+        </div>
       </div>
 
       <div className="mt-8">
-        <div className="mb-5 flex justify-center gap-1.5" role="tablist" aria-label="Slides">
+        <div className="mb-4 flex justify-center gap-1" role="tablist" aria-label="Slides">
           {SLIDES.map((s, n) => (
             <button
               key={s.title}
@@ -138,30 +140,28 @@ export default function Welcome() {
               role="tab"
               aria-selected={n === i}
               aria-label={s.title}
-              className={`h-1.5 rounded-full transition-all ${
-                n === i ? 'w-6 bg-[var(--accent)]' : 'w-1.5 bg-[var(--border-strong)]'
-              }`}
-            />
+              // A 24px tap area around a 6px dot.
+              className="flex h-6 items-center px-1 active:transform-none"
+            >
+              <span
+                className={`block h-1.5 rounded-full ${n === i ? 'w-6 bg-[var(--accent)]' : 'w-1.5 bg-[var(--border-strong)]'}`}
+                style={{ transition: 'width var(--dur-move) var(--ease), background-color var(--dur-move) var(--ease)' }}
+              />
+            </button>
           ))}
         </div>
 
         {last ? (
-          <Link
-            href="/start"
-            className="block w-full rounded-xl bg-[var(--accent)] px-5 py-3.5 text-center font-medium text-[var(--accent-ink)] shadow-[var(--shadow-md)]"
-          >
+          <Link href="/start" className="btn-primary btn-lg w-full">
             Get started
           </Link>
         ) : (
-          <button
-            onClick={() => setI((n) => n + 1)}
-            className="w-full rounded-xl bg-[var(--accent)] px-5 py-3.5 font-medium text-[var(--accent-ink)] shadow-[var(--shadow-md)]"
-          >
+          <button onClick={() => setI((n) => n + 1)} className="btn-primary btn-lg w-full">
             Next
           </button>
         )}
 
-        <p className="mt-3 text-center text-sm text-[var(--faint)]">
+        <p className="mt-3 text-center text-sm text-[var(--muted)]">
           No account needed. Nothing to install.
         </p>
       </div>

@@ -63,12 +63,11 @@ export default function Start() {
     if (!narrow && hydrated) field.current?.focus({ preventScroll: true });
   }, [narrow, hydrated]);
 
+  // Nothing here depends on stored state until the button is pressed, but the
+  // examples do read it, so the page waits the one frame hydration takes
+  // rather than rendering twice. An empty main of the same size, not a word.
   if (!hydrated) {
-    return (
-      <main className="mx-auto max-w-lg px-5 py-16">
-        <p className="text-[var(--muted)]">Loading…</p>
-      </main>
-    );
+    return <main className="mx-auto min-h-[60vh] max-w-lg px-5 pt-12 sm:pt-20" aria-busy="true" />;
   }
 
   function begin() {
@@ -107,16 +106,16 @@ export default function Start() {
   }
 
   return (
-    <main className="rise mx-auto max-w-lg px-5 py-14 sm:py-20">
-      <h1 className="text-[1.9rem] font-semibold leading-tight sm:text-[2.3rem]">
+    <main className="rise mx-auto max-w-lg px-5 pb-12 pt-12 sm:pt-20">
+      <h1 className="text-heading font-semibold">
         What do you want to make time for?
       </h1>
-      <p className="mt-3 text-[var(--muted)]">
+      <p className="mt-2 text-base text-[var(--muted)]">
         One thing is enough to start. Heron works out when it happens, around everything else
         in your week.
       </p>
 
-      <div className="mt-7 space-y-5">
+      <div className="mt-8 space-y-8">
         <div>
           <input
             ref={field}
@@ -125,15 +124,17 @@ export default function Start() {
             onKeyDown={(e) => { if (e.key === 'Enter') begin(); }}
             aria-label="What you want to make time for"
             placeholder="Studying for CHEM 142"
-            className="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3.5 text-base outline-none placeholder:text-[var(--faint)] focus:border-[var(--accent)]"
+            className="field min-h-12 w-full px-4"
           />
           {/* An empty box is a harder question than a list of answers. */}
-          <div className="mt-2.5 flex flex-wrap gap-1.5">
+          <div className="mt-3 flex flex-wrap gap-2">
             {EXAMPLES.map((e) => {
               // Tapping an example fills four fields at once, so it has to look
               // chosen afterwards. Without this the page silently changed three
               // answers below the fold and nothing on screen said which example
-              // did it.
+              // did it. The chip carries the state in its text and border as
+              // well as its fill, because --accent-soft is close to invisible
+              // against the page in dark mode.
               const picked = title === e.title;
               return (
                 <button
@@ -145,16 +146,7 @@ export default function Start() {
                     setMinutes(e.mins);
                   }}
                   aria-pressed={picked}
-                  className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                    picked
-                      // Accent *text*, not just an accent fill. Measured in dark
-                      // mode, --accent-soft sits at 1.11:1 against the page, so
-                      // as a selected state the fill is invisible and the border
-                      // was carrying it alone. The fill still earns its place in
-                      // light mode; the colour change is what reads in both.
-                      ? 'border-[var(--accent)] bg-[var(--accent-soft)] font-medium text-[var(--accent)]'
-                      : 'border-[var(--border)] text-[var(--muted)] hover:bg-[var(--raised)] hover:text-[var(--ink)]'
-                  }`}
+                  className="chip"
                 >
                   {e.title}
                 </button>
@@ -163,38 +155,33 @@ export default function Start() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
-          <p className="text-sm font-medium">How often?</p>
-          <div className="mt-2.5 flex flex-wrap gap-1.5">
+        <div role="group" aria-labelledby="how-often">
+          {/* "a week" lives in the question, so all seven fit on one row at 375px. */}
+          <p id="how-often" className="text-sm font-semibold">How many times a week?</p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
             {[1, 2, 3, 4, 5, 6, 7].map((n) => (
               <button
                 key={n}
                 onClick={() => setPerWeek(n)}
                 aria-pressed={perWeek === n}
-                className={`h-10 w-10 rounded-lg text-sm transition-colors ${
-                  perWeek === n
-                    ? 'bg-[var(--accent)] font-medium text-[var(--accent-ink)]'
-                    : 'border border-[var(--border)] text-[var(--muted)]'
-                }`}
+                aria-label={`${n} a week`}
+                className="chip w-10 justify-center px-0"
               >
                 {n}
               </button>
             ))}
-            <span className="self-center pl-1 text-sm text-[var(--muted)]">× a week</span>
           </div>
+        </div>
 
-          <p className="mt-4 text-sm font-medium">For how long?</p>
-          <div className="mt-2.5 flex flex-wrap gap-1.5">
+        <div role="group" aria-labelledby="how-long">
+          <p id="how-long" className="text-sm font-semibold">For how long?</p>
+          <div className="mt-2 flex flex-wrap gap-2">
             {[30, 45, 60, 90, 120].map((m) => (
               <button
                 key={m}
                 onClick={() => setMinutes(m)}
                 aria-pressed={minutes === m}
-                className={`rounded-lg px-3 py-2 text-sm transition-colors ${
-                  minutes === m
-                    ? 'bg-[var(--accent)] font-medium text-[var(--accent-ink)]'
-                    : 'border border-[var(--border)] text-[var(--muted)]'
-                }`}
+                className="chip"
               >
                 {m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)}h ${m % 60}` : `${m / 60}h`}
               </button>
@@ -212,18 +199,14 @@ export default function Start() {
         */}
         <div className="sticky bottom-0 -mx-5 border-t border-[var(--border)] bg-[var(--bg)] px-5 pt-4 sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0"
              style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
-          <button
-            onClick={begin}
-            disabled={!title.trim()}
-            className="w-full rounded-xl bg-[var(--accent)] px-5 py-3.5 font-medium text-[var(--accent-ink)] shadow-[var(--shadow-md)] transition-transform active:scale-[0.98] disabled:bg-transparent disabled:text-[var(--faint)] disabled:shadow-none disabled:ring-1 disabled:ring-[var(--border)]"
-          >
+          <button onClick={begin} disabled={!title.trim()} className="btn-primary btn-lg w-full">
             Plan my week
           </button>
         </div>
 
-        <p className="text-center text-sm text-[var(--faint)]">
+        <p className="text-center text-sm text-[var(--muted)]">
           No account. Nothing to install.{' '}
-          <Link href="/onboarding" className="underline underline-offset-4">
+          <Link href="/onboarding" className="text-[var(--ink)] underline decoration-[var(--border-strong)] underline-offset-4 hover:decoration-[var(--ink)]">
             Or set everything up properly
           </Link>
           .

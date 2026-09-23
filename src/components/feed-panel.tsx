@@ -19,34 +19,36 @@ export function FeedPanel({ tz }: { tz: string }) {
     return (
       <p className="text-sm text-[var(--muted)]">
         No calendar links are saved on this device.{' '}
-        <Link href="/import" className="underline underline-offset-4">Import a calendar</Link>{' '}
+        <Link
+          href="/import"
+          className="text-[var(--ink)] underline decoration-[var(--border-strong)] underline-offset-4 hover:decoration-[var(--ink)]"
+        >
+          Import a calendar
+        </Link>{' '}
         to save one, or keep pasting each time. Both work.
       </p>
     );
   }
 
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
-      <ul className="divide-y divide-[var(--border)]">
+    <div>
+      <ul className="divide-y divide-[var(--border)] border-y border-[var(--border)]">
         {remembered.map((f) => (
-          <li key={f.url} className="flex items-center gap-3 py-2.5">
+          <li key={f.url} className="flex items-center gap-3 py-2">
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{f.label}</p>
-              <p className="truncate text-xs text-[var(--muted)]">
+              <p className="truncate text-base font-medium">{f.label}</p>
+              <p className="truncate text-sm text-[var(--muted)]">
                 {f.host} · saved {fmtDay(f.rememberedAt, tz)}
                 {f.fetchedAt && ` · last checked ${fmtDay(f.fetchedAt, tz)}`}
               </p>
             </div>
-            <button
-              onClick={() => forget(f.url)}
-              className="shrink-0 rounded-lg border border-[var(--border-strong)] px-3 py-1.5 text-sm"
-            >
+            <button onClick={() => forget(f.url)} className="btn-secondary shrink-0">
               Forget
             </button>
           </li>
         ))}
       </ul>
-      <p className="mt-2 text-xs text-[var(--faint)]">
+      <p className="mt-2 text-sm text-[var(--muted)]">
         In this browser only. Not in your account, not on our server, not in your backup file.
       </p>
     </div>

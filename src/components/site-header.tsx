@@ -90,16 +90,16 @@ export function SiteHeader() {
   const entry = ENTRY_ROUTES.has(pathname);
 
   return (
-    <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-[var(--bg)]/85 backdrop-blur-md">
-      <div
-        className="mx-auto flex max-w-[1080px] items-center justify-between gap-4 px-5 py-3"
-        style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
-      >
+    <header
+      className="sticky top-0 z-30 border-b border-[var(--border)] bg-[var(--bg)]"
+      style={{ paddingTop: 'env(safe-area-inset-top)' }}
+    >
+      <div className="mx-auto flex h-14 max-w-[1080px] items-center justify-between gap-4 px-5">
         <Link
           href={entry ? '/' : '/week'}
           className="flex items-center gap-2 font-semibold tracking-tight"
         >
-          <span className="flex h-5 w-5 items-end gap-[2px]" aria-hidden>
+          <span className="flex h-5 w-5 items-end gap-0.5" aria-hidden>
             <span className="h-2.5 w-1 rounded-sm bg-[var(--border-strong)]" />
             <span className="h-5 w-1 rounded-sm bg-[var(--accent)]" />
             <span className="h-3.5 w-1 rounded-sm bg-[var(--border-strong)]" />
@@ -107,30 +107,29 @@ export function SiteHeader() {
           Heron
         </Link>
 
-        {/* Laptops get the links inline; phones get them at the bottom instead. */}
+        {/* Laptops get the links inline; phones get them at the bottom instead.
+            Each link is the full height of the bar, so the active rule sits
+            exactly on the bar's bottom edge. */}
         {!entry && (
-        <nav className="hidden gap-5 text-sm sm:flex">
-          {TABS.map((t) => {
+        <nav className="hidden h-full gap-6 text-sm sm:flex">
+          {[...TABS, { href: '/import', label: 'Import' }].map((t) => {
             const active = pathname === t.href;
             return (
               <Link
                 key={t.href}
                 href={t.href}
                 aria-current={active ? 'page' : undefined}
-                className={`relative py-1 transition-colors ${
-                  active ? 'text-[var(--ink)]' : 'text-[var(--muted)] hover:text-[var(--ink)]'
+                className={`relative flex h-full items-center ${
+                  active ? 'font-medium text-[var(--ink)]' : 'text-[var(--muted)] hover:text-[var(--ink)]'
                 }`}
               >
                 {t.label}
                 {active && (
-                  <span className="absolute inset-x-0 -bottom-[13px] h-[2px] rounded-full bg-[var(--accent)]" />
+                  <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-[var(--accent)]" />
                 )}
               </Link>
             );
           })}
-          <Link href="/import" className="py-1 text-[var(--muted)] transition-colors hover:text-[var(--ink)]">
-            Import
-          </Link>
         </nav>
         )}
       </div>
@@ -173,8 +172,8 @@ export function TabBar() {
               key={t.href}
               href={t.href}
               aria-current={active ? 'page' : undefined}
-              className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] transition-colors ${
-                active ? 'text-[var(--accent)]' : 'text-[var(--muted)]'
+              className={`flex flex-1 flex-col items-center gap-1 pb-2 pt-2 text-xs ${
+                active ? 'font-medium text-[var(--accent)]' : 'text-[var(--muted)]'
               }`}
             >
               <Icon>{t.icon}</Icon>
@@ -192,18 +191,19 @@ export function SiteFooter() {
   return (
     <footer className="mt-16 border-t border-[var(--border)]">
       <div
-        className="mx-auto flex max-w-[1080px] flex-wrap items-center justify-between gap-3 px-5 py-6 text-sm text-[var(--faint)]"
-        // Clears the tab bar on a phone so the last row isn't sitting under it.
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 5.5rem)' }}
+        className="mx-auto flex max-w-[1080px] flex-wrap items-center justify-between gap-4 px-5 pt-6 text-sm text-[var(--muted)]"
+        // The tab bar reserves its own space below this on a phone, so the
+        // footer only has to clear the home indicator where there is no bar.
+        style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
       >
         <span>Heron · free for students</span>
         <nav className="flex gap-4">
-          <Link href="/privacy" className="underline underline-offset-4 hover:text-[var(--muted)]">
+          <Link href="/privacy" className="underline decoration-[var(--border-strong)] underline-offset-4 hover:text-[var(--ink)]">
             Privacy
           </Link>
           <a
             href="https://github.com/bmwother1/heron"
-            className="underline underline-offset-4 hover:text-[var(--muted)]"
+            className="underline decoration-[var(--border-strong)] underline-offset-4 hover:text-[var(--ink)]"
             rel="noreferrer"
           >
             Source

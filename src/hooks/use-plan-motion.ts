@@ -45,20 +45,25 @@ import { useLayoutEffect, useRef, type RefObject } from 'react';
  * it did last time, the surplus is simply unmatched and does not animate.
  */
 
-/** Long enough to follow, shorter than the carousel's 720ms. See below. */
-const DURATION = 560;
-
 /**
- * The carousel is a demo nobody asked for, so it can afford 720ms to make one
- * block's journey unmissable. Here the student pressed replan and is waiting to
- * use the result, and there may be twenty blocks rather than one. Slightly
- * quicker, with a stagger so the eye gets a sequence instead of a stampede.
+ * 240ms, which is long enough to follow and short enough that nobody waits
+ * for it.
+ *
+ * It was 560ms with an overshoot, modelled on the welcome carousel. The
+ * carousel is a demo that has to be watched and can afford that. Here the
+ * student pressed replan and wants the result, and there may be twenty blocks
+ * moving at once: at 560ms the week spent over half a second unusable after
+ * every replan. The eye still follows a block from Tuesday to Thursday at
+ * 240ms because the stagger turns twenty moves into a sequence.
  */
-const STAGGER = 24;
-const MAX_STAGGER = 160;
+const DURATION = 240;
 
-/** The carousel's easing. The settle at the end reads as being placed. */
-const EASE = 'cubic-bezier(0.34, 1.32, 0.5, 1)';
+/** Per block, and capped, so the last block lands within 340ms of the press. */
+const STAGGER = 20;
+const MAX_STAGGER = 100;
+
+/** The app's decelerating curve. No overshoot: a plan should land, not bounce. */
+const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
 
 /** Below this, a "move" is a rounding artifact rather than a replan. */
 const MIN_DELTA_PX = 1;
@@ -80,15 +85,34 @@ function sourceKey(id: string): string {
   return at === -1 ? id : id.slice(0, at);
 }
 
-export function usePlanMotion(grid: RefObject<HTMLElement | null>, enabled = true) {
+/**
+ * `shifts` is for lists. In a list a block that keeps its id can still move,
+ * because the blocks around it changed: one checked off above it, a new one
+ * planned before it. Those are matched on the whole id and travel too, so
+ * answering a block reads as it settling into place rather than the list
+ * being redrawn. The calendar leaves it off, since there a block that keeps
+ * its id keeps its position.
+ */
+export function usePlanMotion(
+  grid: RefObject<HTMLElement | null>,
+  enabled = true,
+  { shifts = false }: { shifts?: boolean } = {},
+) {
   const previous = useRef<Map<string, Placed[]>>(new Map());
+  const previousById = useRef<Map<string, Placed>>(new Map());
 
   // Deliberately runs after every render rather than on a dependency list: the
   // snapshot has to stay current, or the first replan after any other update
   // animates from a stale position.
   useLayoutEffect(() => {
     const root = grid.current;
-    if (!root) return;
+    if (!root) {
+      // Unmounted, as when the view is switched. Forget everything, or coming
+      // back would animate from wherever the blocks were last time.
+      previous.current = new Map();
+      previousById.current = new Map();
+      return;
+    }
 
     const origin = root.getBoundingClientRect();
     const nodes = Array.from(root.querySelectorAll<HTMLElement>('[data-block-id]'));
@@ -96,7 +120,9 @@ export function usePlanMotion(grid: RefObject<HTMLElement | null>, enabled = tru
     // Everything on screen now, grouped by source and ordered by start, which is
     // the order the pairing below depends on.
     const current = new Map<string, Placed[]>();
-    const nodesByKey = new Map<string, Array<{ node: HTMLElement; at: Placed }>>();
+    const currentById = new Map<string, Placed>();
+    const nodesByKey = new Map<string, Array<{ node: HTMLElement; at: Placed; handled: boolean }>>();
+    const moved: Array<{ node: HTMLElement; dx: number; dy: number }> = [];
 
     for (const node of nodes) {
       const id = node.dataset.blockId;
@@ -105,18 +131,28 @@ export function usePlanMotion(grid: RefObject<HTMLElement | null>, enabled = tru
       const box = node.getBoundingClientRect();
       const at: Placed = { x: box.left - origin.left, y: box.top - origin.top, start };
 
+      currentById.set(id, at);
+
+      // Matched on the whole id, so the pairing below leaves it alone. It
+      // still goes into the snapshot, which the next replan pairs against.
+      const same = shifts ? previousById.current.get(id) : undefined;
+      if (same) {
+        const dx = same.x - at.x;
+        const dy = same.y - at.y;
+        if (Math.abs(dx) >= MIN_DELTA_PX || Math.abs(dy) >= MIN_DELTA_PX) moved.push({ node, dx, dy });
+      }
+
       const key = sourceKey(id);
+      const entry = { node, at, handled: !!same };
       const list = nodesByKey.get(key);
-      if (list) list.push({ node, at });
-      else nodesByKey.set(key, [{ node, at }]);
+      if (list) list.push(entry);
+      else nodesByKey.set(key, [entry]);
     }
 
     for (const [key, list] of nodesByKey) {
       list.sort((a, b) => a.at.start.localeCompare(b.at.start));
       current.set(key, list.map((entry) => entry.at));
     }
-
-    const moved: Array<{ node: HTMLElement; dx: number; dy: number }> = [];
 
     for (const [key, list] of nodesByKey) {
       const before = previous.current.get(key);
@@ -125,6 +161,7 @@ export function usePlanMotion(grid: RefObject<HTMLElement | null>, enabled = tru
       if (!before) continue;
 
       list.forEach((entry, i) => {
+        if (entry.handled) return;
         const was = before[i];
         if (!was) return;
         if (was.start === entry.at.start) return;
@@ -138,6 +175,7 @@ export function usePlanMotion(grid: RefObject<HTMLElement | null>, enabled = tru
     }
 
     previous.current = current;
+    previousById.current = currentById;
 
     if (!enabled || moved.length === 0) return;
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;

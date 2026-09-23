@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Heron interface review</title>
+<style>
+  :root {
+    --bg: #faf9f7; --surface: #ffffff; --ink: #191714; --muted: #6b645c;
+    --border: #e6e1db; --accent: #b4531f; --well: #f1efec;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #121110; --surface: #1b1917; --ink: #f2eee9; --muted: #a49c93;
+            --border: #2e2b28; --accent: #e0894f; --well: #1d1b19; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.5 ui-sans-serif, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 1240px; margin: 0 auto; padding: 32px 16px 96px; }
+  h1 { font-size: 26px; line-height: 32px; letter-spacing: -0.019em; margin: 0; }
+  h2 { font-size: 16px; line-height: 24px; margin: 0; }
+  p { margin: 0; }
+  a { color: var(--ink); text-decoration-color: var(--border); text-underline-offset: 4px; }
+  a:hover { text-decoration-color: var(--ink); }
+  .muted { color: var(--muted); }
+  .lede { margin-top: 8px; color: var(--muted); max-width: 70ch; }
+
+  .figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px 24px;
+             margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .figures dt { font-size: 14px; color: var(--muted); }
+  .figures dd { margin: 4px 0 0; font-size: 20px; line-height: 26px; font-weight: 600; }
+  .figures dd span { font-weight: 400; color: var(--muted); font-size: 14px; }
+
+  .bar { position: sticky; top: 0; z-index: 2; background: var(--bg);
+         display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center;
+         margin-top: 32px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .seg { display: inline-flex; gap: 4px; padding: 4px; border-radius: 999px;
+         background: color-mix(in oklab, var(--ink) 6%, transparent); }
+  .seg button { font: inherit; font-size: 14px; border: 0; background: none; color: var(--muted);
+                min-height: 32px; padding: 0 14px; border-radius: 999px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 500;
+                                      box-shadow: 0 0 0 1px var(--border); }
+  .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .jump { font-size: 14px; color: var(--muted); margin-left: auto; }
+  .jump select { font: inherit; font-size: 14px; color: var(--ink); background: var(--surface);
+                 border: 1px solid var(--border); border-radius: 10px; min-height: 36px; padding: 0 8px; }
+
+  section.screen { padding-top: 32px; margin-top: 32px; border-top: 1px solid var(--border); scroll-margin-top: 72px; }
+  section.screen header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+  section.screen header code { font-size: 14px; color: var(--muted); }
+  section.screen .why { margin-top: 4px; max-width: 80ch; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; align-items: start; }
+  .pair.phone { grid-template-columns: repeat(2, minmax(0, 390px)); }
+  figure { margin: 0; }
+  figcaption { font-size: 14px; color: var(--muted); margin-bottom: 8px; }
+  figcaption b { color: var(--ink); font-weight: 600; }
+  .shot { display: block; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--well); }
+  .shot img { display: block; width: 100%; height: auto; }
+  @media (max-width: 720px) {
+    .pair, .pair.phone { grid-template-columns: 1fr; }
+    .jump { margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Heron interface review</h1>
+  <p class="lede">
+    Branch <code>claude/ui-overhaul</code>, 23 September 2026. Every screen and state, before and after,
+    in both themes at 390px and 1280px. The week in every shot is the same one, seeded through the app's own
+    screens, and the clock is pinned to Wednesday 23 September at 1:40pm, so the two sides differ only in the
+    interface. Read the <a href="audit.md">audit</a> for what was wrong and the <a href="report.md">report</a>
+    for what changed, with commits.
+  </p>
+
+  <dl class="figures">
+    <div><dt>Text below WCAG AA</dt><dd>2,774 → 0 <span>of 8,158 checked</span></dd></div>
+    <div><dt>Layout shift, cold load of /week</dt><dd>0.158 → 0</dd></div>
+    <div><dt>Real week on screen, throttled phone</dt><dd>1,845 → 1,901 ms <span>cold</span></dd></div>
+    <div><dt>JavaScript over the wire</dt><dd>228 → 231 KB <span>no new dependencies</span></dd></div>
+    <div><dt>Horizontal scroll at 375px</dt><dd>None, before or after</dd></div>
+  </dl>
+  <p class="muted" style="font-size:14px;margin-top:12px">
+    Measured by <code>capture.mjs --checks</code> against production builds of <code>main</code> and this branch:
+    4x CPU slowdown, 1.6 Mbps, 150ms latency, 390px. Raw results in <a href="before/checks.json">before/checks.json</a>
+    and <a href="after/checks.json">after/checks.json</a>.
+  </p>
+
+  <div class="bar" role="toolbar" aria-label="Which screenshots">
+    <div class="seg" data-key="width" aria-label="Width">
+      <button data-value="390" aria-pressed="true">Phone 390</button>
+      <button data-value="1280" aria-pressed="false">Laptop 1280</button>
+    </div>
+    <div class="seg" data-key="theme" aria-label="Theme">
+      <button data-value="light" aria-pressed="true">Light</button>
+      <button data-value="dark" aria-pressed="false">Dark</button>
+    </div>
+    <div class="seg" data-key="crop" aria-label="Crop">
+      <button data-value="fold" aria-pressed="true">First screen</button>
+      <button data-value="full" aria-pressed="false">Whole page</button>
+    </div>
+    <label class="jump">Jump to <select id="jump"></select></label>
+  </div>
+
+  <div id="screens"></div>
+</main>
+
+<script>
+  // One line per screen: what changed and why.
+  const SCREENS = [
+    ['week', '/week', 'The next block, when it starts and why it is there are the top of the screen, with the one filled Done. Replan and the view switcher step back.'],
+    ['week-first-run', '/week after /start', 'The first thing after two questions is the next block and its time, not a header, a count and a Replan button.'],
+    ['week-list', '/week, List', 'A timeline: times in one column so the day reads down one edge, course colour as a thin rule, done blocks collapsed to a line.'],
+    ['week-calendar', '/week, Calendar', 'Hour labels sit on their hours (they were drawn twenty minutes early), fixed time recedes into a neutral band, text is 12px and readable.'],
+    ['week-block-open', '/week, a block tapped', 'The detail is a quiet well laid out like the next block, not another bordered card.'],
+    ['month', '/week, Month', 'No box around each day. Today is the accent disc used on the calendar, and dates outside the month stay readable.'],
+    ['week-add-sheet', '/week, add sheet', 'The sheet is anchored to the screen; it used to open mid-page. Fields are 16px so iOS stops zooming, and the mode is a segmented control.'],
+    ['bad-week-lapse', '/week, two days behind', 'A calm note, then the first open block to answer, with the one primary. Nothing on screen treats a normal week as an error.'],
+    ['bad-week-away', '/week, back after six days', 'Plan from today is the only filled button. The block below steps back to secondary so the two do not compete.'],
+    ['week-empty', '/week, nothing set up', 'One sentence, one primary, one secondary. Empty days are single lines, and "0 blocks · 0.0h planned" is gone.'],
+    ['week-loading', '/week before JavaScript', 'A skeleton in the week’s own shape instead of a line of text on an empty page.'],
+    ['day', '/day', 'Opens on the block that matters. Blocks and fixed events share one time axis, colours match the week, and the chart moves to the end.'],
+    ['day-empty', '/day, empty', 'Says there is nothing planned and how much of the day is free, then shows where the day goes.'],
+    ['landing', '/', 'The cards and the pill badge are gone. The four points are a ruled list, and the two actions are the first thing to do.'],
+    ['start', '/start', 'Choices are chips instead of accent-filled squares, so Plan my week is the only filled thing, and all seven options fit one row.'],
+    ['start-picked', '/start, example picked', 'A picked example shows it in text and border as well as fill, which still reads in dark mode.'],
+    ['import', '/import', 'Help and the password note are plain sections under rules. The page keeps one box, for the decision.'],
+    ['import-error', '/import, bad link', 'The error sits under the field that caused it, as a warn rule, instead of below the Apple help.'],
+    ['setup', '/setup', 'One primary, at the end. Toggles are chips, fields are 16px, and the dark-mode buttons are readable.'],
+    ['setup-empty', '/setup, nothing set up', 'Same system, with Import demoted to secondary so the page has one primary.'],
+    ['settings', '/settings', 'One primary. Captions readable, sections ruled, and the saved toast is above the tab bar where it can be seen.'],
+    ['privacy', '/privacy', '16px body at a readable measure, sections under rules, and the date no longer below contrast.'],
+    ['onboarding', '/onboarding', 'The same chips, fields and single primary as the rest of the app.'],
+    ['welcome', '/welcome', 'Shared type and buttons. The miniature week still moves at 720ms, on purpose; see the report.'],
+  ];
+
+  const state = { width: '390', theme: 'light', crop: 'fold' };
+  try { Object.assign(state, JSON.parse(localStorage.getItem('heron-review') || '{}')); } catch {}
+
+  const root = document.getElementById('screens');
+  const jump = document.getElementById('jump');
+
+  function src(side, name) {
+    return `${side}/${name}--${state.width}--${state.theme}${state.crop === 'fold' ? '--fold' : ''}.webp`;
+  }
+
+  function render() {
+    root.innerHTML = '';
+    jump.innerHTML = '';
+    for (const [name, path, why] of SCREENS) {
+      const s = document.createElement('section');
+      s.className = 'screen';
+      s.id = name;
+      s.innerHTML = `
+        <header><h2>${name}</h2><code>${path}</code></header>
+        <p class="why">${why}</p>
+        <div class="pair ${state.width === '390' ? 'phone' : ''}">
+          ${['before', 'after'].map((side) => `
+            <figure>
+              <figcaption><b>${side === 'before' ? 'Before' : 'After'}</b></figcaption>
+              <a class="shot" href="${src(side, name)}" target="_blank" rel="noopener">
+                <img loading="lazy" decoding="async" src="${src(side, name)}" alt="${name}, ${side}, ${state.width}px, ${state.theme}">
+              </a>
+            </figure>`).join('')}
+        </div>`;
+      root.appendChild(s);
+      const o = document.createElement('option');
+      o.value = name; o.textContent = name;
+      jump.appendChild(o);
+    }
+    for (const seg of document.querySelectorAll('.seg')) {
+      for (const b of seg.querySelectorAll('button')) {
+        b.setAttribute('aria-pressed', String(state[seg.dataset.key] === b.dataset.value));
+      }
+    }
+  }
+
+  for (const seg of document.querySelectorAll('.seg')) {
+    seg.addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      state[seg.dataset.key] = b.dataset.value;
+      try { localStorage.setItem('heron-review', JSON.stringify(state)); } catch {}
+      render();
+    });
+  }
+  jump.addEventListener('change', () => document.getElementById(jump.value)?.scrollIntoView({ behavior: 'smooth' }));
+
+  render();
+</script>
+</body>
+</html>

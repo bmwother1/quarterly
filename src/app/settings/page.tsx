@@ -9,6 +9,7 @@ import { BackupControls } from '@/components/backup-controls';
 import { AccountPanel } from '@/components/account-panel';
 import { NotificationToggle } from '@/components/notification-toggle';
 import { FeedPanel } from '@/components/feed-panel';
+import { Toast } from '@/components/toast';
 import { deleteServerAccount } from '@/supabase/account';
 import { DEFAULT_TZ } from '@/lib/time';
 
@@ -31,19 +32,12 @@ export default function Settings() {
   }
 
   if (!hydrated) {
-    return (
-      <main className="mx-auto max-w-2xl px-5 py-12">
-        <p className="text-[var(--muted)]">Loading…</p>
-      </main>
-    );
+    return <main className="mx-auto min-h-[60vh] max-w-2xl px-5 pt-8 sm:pt-12" aria-busy="true" />;
   }
 
   return (
-    <main className="rise mx-auto max-w-2xl px-5 py-10 sm:py-14">
-      <header className="mb-8 flex flex-wrap items-baseline justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Settings</h1>
-
-      </header>
+    <main className="rise mx-auto max-w-2xl px-5 pb-12 pt-8 sm:pt-12">
+      <h1 className="text-heading font-semibold">Settings</h1>
 
       <Section title="Account">
         <AccountPanel lastSyncedAt={state.lastSyncedAt} tz={TZ} />
@@ -93,11 +87,7 @@ export default function Settings() {
           title="Go through setup again"
           hint="Your commitments, hours and plan all stay. This only reopens the questions."
         >
-          <Link
-            href="/onboarding"
-            onClick={reopenSetup}
-            className="inline-block rounded-lg border border-[var(--border-strong)] px-3.5 py-2 text-sm"
-          >
+          <Link href="/onboarding" onClick={reopenSetup} className="btn-secondary">
             Redo setup
           </Link>
         </Section>
@@ -125,30 +115,24 @@ export default function Settings() {
               flash(result.hadAccount ? 'Account and data deleted' : 'Everything deleted');
             });
           }}
-          className="rounded-lg border border-[var(--warn)]/50 px-3.5 py-2 text-sm text-[var(--warn)]"
+          className="btn-danger"
         >
           Delete my data
         </button>
       </Section>
 
-      {saved && (
-        <div
-          role="status"
-          className="fixed inset-x-0 bottom-4 z-10 mx-auto w-fit rounded-full bg-[var(--ink)] px-4 py-2 text-sm text-[var(--bg)] shadow-lg"
-        >
-          {saved}
-        </div>
-      )}
+      <Toast message={saved} />
     </main>
   );
 }
 
+/** A setting, set apart from the one above it by a rule and space, not a box. */
 function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
-    <section className="mb-10">
-      <h2 className="font-medium">{title}</h2>
-      {hint && <p className="mb-3 mt-0.5 text-sm text-[var(--muted)]">{hint}</p>}
-      <div className={hint ? '' : 'mt-3'}>{children}</div>
+    <section className="mt-8 border-t border-[var(--border)] pt-6">
+      <h2 className="text-base font-semibold">{title}</h2>
+      {hint && <p className="mt-1 text-sm text-[var(--muted)]">{hint}</p>}
+      <div className="mt-3">{children}</div>
     </section>
   );
 }

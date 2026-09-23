@@ -1,20 +1,28 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useHeron } from '@/hooks/use-heron';
 import { useNarrow } from '@/hooks/use-narrow';
-import { BlockCard } from '@/components/block-card';
+import { useNow } from '@/hooks/use-now';
+import { useFirstVisit } from '@/hooks/use-first-visit';
+import { usePlanMotion } from '@/hooks/use-plan-motion';
+import { BlockCard, BlockRow } from '@/components/block-card';
 import { WeekGrid } from '@/components/week-grid';
 import { MonthGrid } from '@/components/month-grid';
 import { Sheet, AddButton } from '@/components/sheet';
 import { UndoBar } from '@/components/undo-bar';
+import { Toast } from '@/components/toast';
+import { CountUp } from '@/components/count-up';
+import { keepCodes } from '@/components/course-name';
+import { dayName, focusLabel, shortDate } from '@/components/when';
 import { AddItem } from '@/components/add-item';
 import { SetupPrompt } from '@/components/setup-prompt';
 import { RescueNotice } from '@/components/rescue-notice';
 import { FeedFreshness } from '@/components/feed-freshness';
 import { DeadlineCard } from '@/components/deadline-card';
-import { deadlinesByDay, statusLabel } from '@/lib/schedule/deadlines';
+import { DeadlineRow } from '@/components/deadline-row';
+import { deadlinesByDay, type Deadline } from '@/lib/schedule/deadlines';
 import { dueInstant } from '@/lib/schedule/plan';
 import { DEFAULT_TZ, addDays, fmtDay, fmtTime, localParts } from '@/lib/time';
 import { missedBlocks } from '@/lib/schedule/complete';
@@ -24,6 +32,10 @@ import { categoryForCommitment, colorVar, type Category } from '@/lib/categories
 
 const TZ = DEFAULT_TZ;
 
+const hours = (min: number) => `${(min / 60).toFixed(1)}h`;
+
+type ListRow = { kind: 'block'; at: string; block: StudyBlock } | { kind: 'due'; at: string; deadline: Deadline };
+
 export default function WeekPage() {
   const {
     state, hydrated, replan, complete, drop, moveBlock,
@@ -31,8 +43,12 @@ export default function WeekPage() {
     skipStep, confirmSleep, markLiveIfReady, ackLive, startFresh,
   } = useHeron(TZ);
   // Fixed at mount so every render agrees on "now" — reading the clock during
-  // render is impure and drifts between the server and client passes.
+  // render is impure and drifts between the server and client passes. Anything
+  // that decides something reads this one.
   const [now] = useState(() => new Date());
+  // Kept current, for labels only: "in 20 min" should not stay "in 20 min".
+  const liveNow = useNow();
+  const firstVisit = useFirstVisit('heron.week.entered');
   /**
    * Which lens the week is shown through.
    *
@@ -64,6 +80,18 @@ export default function WeekPage() {
   }
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedDeadlineId, setSelectedDeadlineId] = useState<string | null>(null);
+  // The block at the top when the page first showed. A different one arriving
+  // there later (because the first was answered) is worth an entrance; the
+  // same one on every visit is not.
+  const [firstFocusId, setFirstFocusId] = useState<string | null>(null);
+
+  /**
+   * The next block and the list travel together: answering the block at the
+   * top sends it down into the day's done rows, and the one after it rises
+   * to take its place. The calendar has its own motion inside WeekGrid.
+   */
+  const flowRef = useRef<HTMLDivElement>(null);
+  usePlanMotion(flowRef, true, { shifts: true });
 
   const colourFor = useMemo(() => {
     // Resolves to a CSS variable, not a hex, so the same block follows the
@@ -91,12 +119,11 @@ export default function WeekPage() {
     return (group: string): Category => map.get(group) ?? 'deadline';
   }, [state.courses, state.commitments]);
 
+  const todayKey = localParts(now, TZ).dateKey;
+
   // Fourteen days, matching the planner's horizon. Showing seven while planning
   // fourteen is what made next week look empty.
-  const days = useMemo(() => {
-    const start = localParts(now, TZ).dateKey;
-    return Array.from({ length: 14 }, (_, i) => addDays(start, i));
-  }, [now]);
+  const days = useMemo(() => Array.from({ length: 14 }, (_, i) => addDays(todayKey, i)), [todayKey]);
 
   const byDay = useMemo(() => {
     const map = new Map<string, StudyBlock[]>();
@@ -136,11 +163,25 @@ export default function WeekPage() {
     }
     return map;
   }, [state.assignments]);
+  const dueOf = (b: StudyBlock) => (b.assignmentId ? dueById.get(b.assignmentId) ?? null : null);
 
   const missed = useMemo(() => missedBlocks(state.blocks, now), [state.blocks, now]);
   const gap = useMemo(() => absence(state.blocks, now, TZ), [state.blocks, now]);
 
-  // What the app would send right now, if delivery existed. Shown rather than
+  /**
+   * The one block the screen is about: the first unanswered block from today
+   * on. A block today whose time has already passed comes first, because
+   * answering it is what the rest of the week depends on; after that it is
+   * whatever is under way or next.
+   */
+  const focus = useMemo(() => {
+    for (const dateKey of days) {
+      const hit = (byDay.get(dateKey) ?? []).find((b) => b.status === 'planned');
+      if (hit) return hit;
+    }
+    return null;
+  }, [days, byDay]);
+
   const selected = useMemo(
     () => state.blocks.find((b) => b.id === selectedId) ?? null,
     [state.blocks, selectedId],
@@ -162,17 +203,29 @@ export default function WeekPage() {
     [state.events, editingEventId],
   );
 
-  if (!hydrated) {
-    return (
-      <main className="mx-auto max-w-2xl px-5 py-12">
-        <p className="text-[var(--muted)]">Loading your week…</p>
-      </main>
-    );
-  }
+  if (!hydrated) return <WeekSkeleton />;
 
   const hasInputs = state.assignments.length > 0 || state.commitments.length > 0 || state.events.length > 0;
-
   const planned = state.blocks.filter((b) => b.status === 'planned');
+  const today = byDay.get(todayKey) ?? [];
+  const leftToday = today.filter((b) => b.status === 'planned').length;
+  const doneToday = today.filter((b) => b.status === 'done' || b.status === 'partial').length;
+
+  // One primary action per screen. After an absence it is "Plan from today";
+  // with nothing planned it is planning; otherwise it is the next block's Done.
+  const away = gap.kind === 'away';
+  const replanIsPrimary = hasInputs && !focus && !away;
+  const focusIsPrimary = !away;
+
+  const focusPast = focus ? new Date(focus.end) < now : false;
+  const label = focus ? focusLabel(focus, focusPast, liveNow, todayKey, TZ) : null;
+
+  if (focus && firstFocusId === null) setFirstFocusId(focus.id);
+  const heroEnters = firstVisit || (firstFocusId !== null && focus?.id !== firstFocusId);
+
+  let order = 0;
+  const stagger = () => (firstVisit ? order++ : undefined);
+  const heroOrder = stagger() ?? 0;
 
   return (
     <main
@@ -181,178 +234,193 @@ export default function WeekPage() {
       // class name stitched together at runtime is a string it never sees, so
       // the utility is never generated. That is what broke here before, not the
       // `max-w-*` utilities themselves, which work everywhere else in the app.
-      className={`rise mx-auto w-full px-5 py-10 sm:py-14 ${
+      className={`rise mx-auto w-full px-5 pb-12 pt-6 sm:pt-10 ${
         view === 'grid' ? 'max-w-[1080px]' : 'max-w-2xl'
       }`}
     >
-      <header className="mb-8 flex flex-wrap items-baseline justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">This week</h1>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            {planned.length} blocks · {(planned.reduce((s, b) => s + b.minutes, 0) / 60).toFixed(1)}h planned
-          </p>
-        </div>
-
-      </header>
-
-      {!hasInputs && (
-        <div className="mb-6 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
-          <h2 className="font-medium">This is your week. Nothing in it yet.</h2>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            Tell it about your classes, your job and your sleep, and they&rsquo;ll appear below as
-            time already spoken for. Study blocks get fitted around them.
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2 text-sm">
-            <Link href="/setup" className="rounded-lg bg-[var(--accent)] px-3.5 py-2 font-medium text-[var(--accent-ink)]">
-              Set up my week
-            </Link>
-            <Link href="/import" className="rounded-lg border border-[var(--border-strong)] px-3.5 py-2">
-              Import a calendar
-            </Link>
-          </div>
-        </div>
-      )}
-
-      <>
-          {/*
-            A skipped block and a week away are not the same event and must not
-            get the same screen. Asking someone to adjudicate fifteen blocks
-            from last Tuesday is a toll gate charged at the exact moment they
-            are deciding whether to keep using this.
-          */}
-          <RescueNotice tz={TZ} />
-
-          {gap.kind === 'away' && (
-            <div className="mb-6 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)]">
-              <h2 className="font-medium">Welcome back.</h2>
-              <p className="mt-1 text-sm text-[var(--muted)]">
-                {gap.blocks.length} block{gap.blocks.length === 1 ? '' : 's'} went by over{' '}
-                {gap.days} day{gap.days === 1 ? '' : 's'} while you were away. You don&rsquo;t have to
-                account for them. They stay in your history as missed, so nothing here pretends
-                the week happened.
-              </p>
-              <div className="mt-3 flex flex-wrap items-center gap-3">
-                <button
-                  onClick={() => startFresh(new Date())}
-                  className="rounded-lg bg-[var(--accent)] px-3.5 py-2 text-sm font-medium text-[var(--accent-ink)]"
-                >
-                  Plan from today
-                </button>
-                <span className="text-sm text-[var(--faint)]">
-                  or mark them yourself below
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/*
-            Same container as the 'away' notice above, deliberately.
-            
-            An absence was made calm in August; a lapse never was, and it kept a
-            warn border, a warn heading, and a count of blocks that "passed
-            without an answer". `notify.ts` bans exactly that phrasing for the
-            recovery notice, on the grounds that a count of failures is never
-            the thing to lead with, and this banner was doing it on the screen
-            the student actually opens.
-
-            A lapse still asks, because two days is inside honest recall and the
-            answers are worth having. It just stops treating a normal week as an
-            error condition.
-          */}
-          {gap.kind === 'lapse' && (
-            <div className="mb-6 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)]">
-              <h2 className="font-medium">
-                {missed.length} block{missed.length === 1 ? '' : 's'} still open
-              </h2>
-              <p className="mt-1 text-sm text-[var(--muted)]">
-                Mark what happened and the rest of the week rebuilds around what&rsquo;s left.
-                Nothing moves until you say so.
-              </p>
-            </div>
-          )}
-
+      <header>
+        <div className="flex items-center justify-between gap-4">
+          <h1 className="text-base font-semibold">This week</h1>
           {hasInputs && (
-          <div className="mb-8 flex flex-wrap items-center gap-3">
             <button
               onClick={() => replan(new Date())}
-              className="rounded-xl bg-[var(--accent)] px-4 py-2.5 text-sm font-medium text-[var(--accent-ink)] shadow-[var(--shadow-sm)] transition-transform active:scale-[0.98]"
+              className={replanIsPrimary ? 'btn-primary' : 'btn-secondary'}
             >
-              {state.lastPlannedAt ? 'Replan from now' : 'Plan my week'}
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
+                <path d="M13.5 8A5.5 5.5 0 1 1 11.9 4.1M13.5 2.5v3h-3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              {state.lastPlannedAt ? (
+                <>
+                  <span className="sm:hidden">Replan</span>
+                  <span className="hidden sm:inline">Replan from now</span>
+                </>
+              ) : 'Plan my week'}
             </button>
-            {state.lastPlannedAt && (
-              <span className="text-xs text-[var(--faint)]">
-                last planned {fmtDay(state.lastPlannedAt, TZ)}
-              </span>
-            )}
-          </div>
           )}
+        </div>
+        <p className="text-sm text-[var(--muted)]">
+          {fmtDay(now, TZ)}
+          {leftToday > 0 && <> · {leftToday} left today</>}
+          {doneToday > 0 && <> · <CountUp value={doneToday} format={(n) => String(Math.round(n))} /> done</>}
+        </p>
+      </header>
 
-          {/*
-            Above the week, where the setup prompt used to be. The setup prompt
-            moved below the plan (the first screen after setup should be the
-            plan), but stale deadlines are the failure that looks like success,
-            so this one is said before the week. It stays silent until Canvas
-            data exists.
-          */}
-          <FeedFreshness tz={TZ} onReplan={() => replan(new Date())} />
+      {/*
+        A skipped block and a week away are not the same event and must not
+        get the same screen. Asking someone to adjudicate fifteen blocks
+        from last Tuesday is a toll gate charged at the exact moment they
+        are deciding whether to keep using this.
+      */}
+      <div className="mt-6 space-y-4 empty:hidden">
+        <RescueNotice tz={TZ} />
 
-          {/*
-            The notification preview used to live here and told students
-            "delivery isn't wired up yet". Shipping an admission that a feature
-            is broken, to someone who has been using the app for ten seconds, is
-            worse than shipping nothing. It comes back when delivery works, and
-            it belongs in Settings rather than above the calendar.
-          */}
-
-          {state.unscheduled.length > 0 && (
-            <div className="mb-8 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
-              <h2 className="font-medium">Didn&rsquo;t fit</h2>
-              <p className="mt-0.5 text-sm text-[var(--muted)]">
-                Your week is smaller than your list. Better to know now than on Thursday.
-              </p>
-              <ul className="mt-3 space-y-1.5 text-sm">
-                {state.unscheduled.map((u) => (
-                  <li key={u.assignmentId ?? u.commitmentId ?? u.title} className="flex flex-wrap items-baseline gap-x-2">
-                    <span className="font-medium">{u.course}</span>
-                    {u.title !== u.course && <span className="text-[var(--muted)]">{u.title}</span>}
-                    <span className="text-[var(--faint)]">
-                      {u.sessionsShort
-                        ? `${u.sessionsShort} session${u.sessionsShort === 1 ? '' : 's'} short`
-                        : `${u.minutes} min`}
-                      {' · '}{u.reason}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+        {away && (
+          <div className="well enter">
+            <h2 className="text-base font-semibold">Welcome back.</h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              {gap.blocks.length} block{gap.blocks.length === 1 ? '' : 's'} went by over{' '}
+              {gap.days} day{gap.days === 1 ? '' : 's'} while you were away. You don&rsquo;t have to
+              account for them. They stay in your history as missed, so nothing here pretends
+              the week happened.
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <button onClick={() => startFresh(new Date())} className="btn-primary">
+                Plan from today
+              </button>
+              <span className="text-sm text-[var(--muted)]">or mark them yourself below</span>
             </div>
-          )}
+          </div>
+        )}
 
-          <div className="mb-6 flex gap-1 text-sm">
+        {/*
+          Same container as the 'away' notice above, deliberately.
+
+          An absence was made calm in August; a lapse never was, and it kept a
+          warn border, a warn heading, and a count of blocks that "passed
+          without an answer". `notify.ts` bans exactly that phrasing for the
+          recovery notice, on the grounds that a count of failures is never
+          the thing to lead with, and this banner was doing it on the screen
+          the student actually opens.
+
+          A lapse still asks, because two days is inside honest recall and the
+          answers are worth having. It just stops treating a normal week as an
+          error condition.
+        */}
+        {gap.kind === 'lapse' && (
+          <div className="well enter">
+            <h2 className="text-base font-semibold">
+              {missed.length} block{missed.length === 1 ? '' : 's'} still open
+            </h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              Mark what happened and the rest of the week rebuilds around what&rsquo;s left.
+              Nothing moves until you say so.
+            </p>
+          </div>
+        )}
+
+        {/*
+          Above the week, while the setup prompt sits below it: stale
+          deadlines are the failure that looks like success, so this one is
+          said before the week. It stays silent until Canvas data exists.
+        */}
+        <FeedFreshness tz={TZ} onReplan={() => replan(new Date())} />
+      </div>
+
+      {!hasInputs && (
+        <section className="enter mt-8">
+          <h2 className="text-title font-semibold">Nothing in your week yet.</h2>
+          <p className="mt-1 max-w-prose text-base text-[var(--muted)]">
+            Tell it about your classes, your job and your sleep. Study time gets fitted around
+            them.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Link href="/setup" className="btn-primary">Set up my week</Link>
+            <Link href="/import" className="btn-secondary">Import a calendar</Link>
+          </div>
+        </section>
+      )}
+
+      <div ref={flowRef} className="mt-6">
+        {focus && label && (
+          <BlockCard
+            key={focus.id}
+            as="section"
+            tracked
+            block={focus}
+            tz={TZ}
+            colour={colourFor(focus.course)}
+            isPast={focusPast}
+            primary={focusIsPrimary}
+            label={
+              <>
+                <span className="font-semibold text-[var(--accent)]">{label.lead}</span>
+                <span className="text-[var(--muted)]"> · {label.rest}</span>
+              </>
+            }
+            due={dueOf(focus)}
+            onComplete={(outcome, minutes) => complete(focus.id, outcome, minutes)}
+            onDrop={() => drop(focus.id)}
+            className={heroEnters ? 'enter' : ''}
+            style={heroEnters ? ({ '--i': heroOrder } as React.CSSProperties) : undefined}
+          />
+        )}
+
+        {/*
+          The notification preview used to live here and told students
+          "delivery isn't wired up yet". Shipping an admission that a feature
+          is broken, to someone who has been using the app for ten seconds, is
+          worse than shipping nothing. It comes back when delivery works, and
+          it belongs in Settings rather than above the calendar.
+        */}
+
+        {state.unscheduled.length > 0 && (
+          <section className="mt-8">
+            <h2 className="text-base font-semibold">Didn&rsquo;t fit</h2>
+            <p className="text-sm text-[var(--muted)]">
+              Your week is smaller than your list. Better to know now than on Thursday.
+            </p>
+            <ul className="mt-2 divide-y divide-[var(--border)] border-y border-[var(--border)]">
+              {state.unscheduled.map((u) => (
+                <li key={u.assignmentId ?? u.commitmentId ?? u.title} className="py-2 text-sm">
+                  <span className="font-medium">{keepCodes(u.course)}</span>
+                  {u.title !== u.course && <span className="text-[var(--muted)]"> · {u.title}</span>}
+                  <span className="block text-[var(--muted)]">
+                    {u.sessionsShort
+                      ? `${u.sessionsShort} session${u.sessionsShort === 1 ? '' : 's'} short`
+                      : `${u.minutes} min`}
+                    {', '}{u.reason}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        <div className="mt-8 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <div className="segmented" role="group" aria-label="View">
             {(['grid', 'list', 'month'] as const).map((v) => (
-              <button
-                key={v}
-                onClick={() => setChosenView(v)}
-                className={`rounded-full px-3.5 py-1.5 transition-colors ${
-                  view === v
-                    ? 'bg-[var(--accent)] text-[var(--accent-ink)]'
-                    : 'text-[var(--muted)] hover:text-[var(--ink)]'
-                }`}
-              >
+              <button key={v} onClick={() => setChosenView(v)} aria-pressed={view === v}>
                 {v === 'grid' ? 'Calendar' : v === 'list' ? 'List' : 'Month'}
               </button>
             ))}
           </div>
+          {planned.length > 0 && (
+            <p className="text-sm text-[var(--muted)]">
+              {planned.length} blocks, {hours(planned.reduce((s, b) => s + b.minutes, 0))}
+              {state.lastPlannedAt && <> · planned {fmtDay(state.lastPlannedAt, TZ)}</>}
+            </p>
+          )}
+        </div>
 
-          {/*
-            Keyed on the view so switching Calendar / List / Month replays the
-            same 320ms arrival the rest of the app uses on first paint. Without
-            it the whole screen is replaced between frames, which on the busiest
-            control in the product reads as a page load rather than a change of
-            lens.
-          */}
-          <div key={view} className="rise">
+        {/*
+          Keyed on the view so switching Calendar / List / Month fades between
+          them. Without it the whole screen is replaced between frames, which on
+          the busiest control in the product reads as a page load rather than a
+          change of lens.
+        */}
+        <div key={view} className="rise mt-4">
           {view === 'grid' && (
-            <div className="mb-8 space-y-4">
+            <div className="space-y-4">
               <WeekGrid
                 days={days}
                 blocks={state.blocks}
@@ -374,7 +442,7 @@ export default function WeekPage() {
                   setSelectedDeadlineId(null);
                 }}
                 selectedEventId={selectedEventId}
-                todayKey={localParts(now, TZ).dateKey}
+                todayKey={todayKey}
                 deadlines={deadlines}
                 focusAssignmentId={selectedDeadlineId ?? selected?.assignmentId ?? null}
                 onSelectDeadline={(id) => {
@@ -385,191 +453,183 @@ export default function WeekPage() {
               />
 
               {selectedDeadline ? (
-                <DeadlineCard
-                  deadline={selectedDeadline}
-                  sessions={state.blocks.filter((b) => b.assignmentId === selectedDeadline.id)}
-                  tz={TZ}
-                  colour={colourFor(selectedDeadline.course)}
-                  onSelectBlock={(id) => { setSelectedId(id); setSelectedDeadlineId(null); }}
-                  onReplan={() => replan(new Date())}
-                />
+                <div key={`due-${selectedDeadline.id}`} className="well enter">
+                  <DeadlineCard
+                    deadline={selectedDeadline}
+                    sessions={state.blocks.filter((b) => b.assignmentId === selectedDeadline.id)}
+                    tz={TZ}
+                    colour={colourFor(selectedDeadline.course)}
+                    onSelectBlock={(id) => { setSelectedId(id); setSelectedDeadlineId(null); }}
+                    onReplan={() => replan(new Date())}
+                  />
+                </div>
               ) : selectedEvent ? (
-                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3.5 shadow-[var(--shadow-sm)]">
-                  <div className="flex items-start gap-3">
-                    <span
-                      className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full"
-                      style={{ background: colorVar(selectedEvent.category, selectedEvent.shade) }}
-                      aria-hidden
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm text-[var(--muted)]">
-                        {fmtDay(selectedEvent.start, TZ)} · {fmtTime(selectedEvent.start, TZ)}–{fmtTime(selectedEvent.end, TZ)}
-                      </p>
-                      <p className="mt-0.5 font-medium">{selectedEvent.title}</p>
-                      <p className="mt-1.5 text-sm text-[var(--muted)]">
-                        Fixed, so nothing gets scheduled over it.
-                      </p>
-                      <div className="mt-2.5 flex flex-wrap gap-2">
-                        <button
-                          onClick={() => setEditingEventId(selectedEvent.id)}
-                          className="rounded-lg border border-[var(--border-strong)] px-3 py-1.5 text-sm"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => { removeEvent(selectedEvent.id); setSelectedEventId(null); }}
-                          className="rounded-lg border border-[var(--warn)]/50 px-3 py-1.5 text-sm text-[var(--warn)]"
-                        >
-                          Remove
-                        </button>
-                      </div>
+                <div key={selectedEvent.id} className="well enter">
+                  <div
+                    className="border-l-3 pl-4"
+                    style={{ borderColor: colorVar(selectedEvent.category, selectedEvent.shade) }}
+                  >
+                    <p className="text-sm text-[var(--muted)]">
+                      {fmtDay(selectedEvent.start, TZ)} · {fmtTime(selectedEvent.start, TZ)} to {fmtTime(selectedEvent.end, TZ)}
+                    </p>
+                    <h2 className="mt-1 text-title font-semibold">{keepCodes(selectedEvent.title)}</h2>
+                    <p className="mt-1 text-sm text-[var(--muted)]">
+                      Fixed, so nothing gets scheduled over it.
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button onClick={() => setEditingEventId(selectedEvent.id)} className="btn-secondary">
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => { removeEvent(selectedEvent.id); setSelectedEventId(null); }}
+                        className="btn-danger"
+                      >
+                        Remove
+                      </button>
                     </div>
                   </div>
                 </div>
               ) : selected ? (
-                <BlockCard
-                  block={selected}
-                  tz={TZ}
-                  colour={colourFor(selected.course)}
-                  due={selected.assignmentId ? dueById.get(selected.assignmentId) : null}
-                  onShowDeadline={selected.assignmentId ? () => {
-                    setSelectedDeadlineId(selected.assignmentId);
-                    setSelectedId(null);
-                  } : undefined}
-                  isPast={new Date(selected.end) < now}
-                  onComplete={(outcome, minutes) => complete(selected.id, outcome, minutes)}
-                  onDrop={() => { drop(selected.id); setSelectedId(null); }}
-                />
-              ) : hasInputs ? (
-                <p className="text-sm text-[var(--faint)]">
-                  Tap a block to see why it&rsquo;s there and mark it off. Shaded bands are the
-                  hours you already gave away.
-                </p>
+                <div key={selected.id} className="well enter">
+                  <BlockCard
+                    block={selected}
+                    tz={TZ}
+                    colour={colourFor(selected.course)}
+                    isPast={new Date(selected.end) < now}
+                    label={
+                      <span className="text-[var(--muted)]">
+                        {fmtDay(selected.start, TZ)} · {fmtTime(selected.start, TZ)} to {fmtTime(selected.end, TZ)} · {selected.minutes} min
+                      </span>
+                    }
+                    due={dueOf(selected)}
+                    onShowDeadline={selected.assignmentId ? () => {
+                      setSelectedDeadlineId(selected.assignmentId);
+                      setSelectedId(null);
+                    } : undefined}
+                    onComplete={(outcome, minutes) => complete(selected.id, outcome, minutes)}
+                    onDrop={() => { drop(selected.id); setSelectedId(null); }}
+                  />
+                </div>
               ) : (
-                <p className="text-sm text-[var(--faint)]">
-                  Your study blocks will appear here, fitted around the shaded hours.
+                <p className="text-sm text-[var(--muted)]">
+                  {hasInputs
+                    ? `Tap a block to see why it is there. Drag it to move it.${deadlines.size > 0 ? ' Dashed flags are deadlines.' : ''}`
+                    : 'Study blocks appear here, fitted around the hours you already gave away.'}
                 </p>
               )}
             </div>
           )}
 
           {view === 'month' && (
-            <div className="mb-8">
-              <MonthGrid
-                blocks={state.blocks}
-                events={state.events}
-                availability={state.availability}
-                tz={TZ}
-                colorFor={colourFor}
-                categoryFor={categoryFor}
-                dueCounts={dueCounts}
-              />
-            </div>
+            <MonthGrid
+              blocks={state.blocks}
+              events={state.events}
+              availability={state.availability}
+              tz={TZ}
+              colorFor={colourFor}
+              categoryFor={categoryFor}
+              dueCounts={dueCounts}
+            />
           )}
 
           {view === 'list' && (
-          <div className="space-y-8">
-            {days.map((dateKey) => {
-              const blocks = byDay.get(dateKey) ?? [];
-              const total = blocks.filter((b) => b.status === 'planned').reduce((s, b) => s + b.minutes, 0);
-              const isToday = dateKey === localParts(now, TZ).dateKey;
+            <div>
+              {days.map((dateKey) => {
+                const all = byDay.get(dateKey) ?? [];
+                const dues = deadlines.get(dateKey) ?? [];
+                // The block at the top of the page is not repeated here. Blocks
+                // and deadlines run in time order on the one axis; on today,
+                // what is already answered collapses to the end of the day.
+                const rest = all.filter((b) => b.id !== focus?.id);
+                const asRows = (bs: StudyBlock[]): ListRow[] => bs.map((b) => ({ kind: 'block', at: b.start, block: b }));
+                const dueRows: ListRow[] = dues.map((d) => ({ kind: 'due', at: d.dueAt, deadline: d }));
+                const byTime = (a: ListRow, b: ListRow) => a.at.localeCompare(b.at);
+                const rows: ListRow[] = dateKey === todayKey
+                  ? [
+                      ...[...asRows(rest.filter((b) => b.status === 'planned')), ...dueRows].sort(byTime),
+                      ...asRows(rest.filter((b) => b.status !== 'planned')),
+                    ]
+                  : [...asRows(rest), ...dueRows].sort(byTime);
+                const total = all.filter((b) => b.status === 'planned').reduce((s, b) => s + b.minutes, 0);
+                const summary = [total > 0 ? hours(total) : '', dues.length > 0 ? `${dues.length} due` : '']
+                  .filter(Boolean).join(' · ');
 
-              return (
-                <section key={dateKey}>
-                  <div className="mb-2 flex items-baseline justify-between">
-                    <h2 className="font-medium">
-                      {fmtDay(new Date(dateKey + 'T12:00:00Z'), 'UTC')}
-                      {isToday && <span className="ml-2 text-xs font-normal text-[var(--accent)]">today</span>}
-                    </h2>
-                    {total > 0 && (
-                      <span className="text-xs tabular-nums text-[var(--faint)]">
-                        {(total / 60).toFixed(1)}h
+                return (
+                  <section key={dateKey} className="mt-2 first:mt-0">
+                    <div
+                      className="sticky z-10 flex items-baseline justify-between gap-4 border-b border-[var(--border)] bg-[var(--bg)] py-2"
+                      style={{ top: 'calc(3.5rem + env(safe-area-inset-top))' }}
+                    >
+                      <h2 className="text-sm">
+                        <Link href={`/day/${dateKey}`} className="font-semibold hover:text-[var(--accent)]">
+                          {dayName(dateKey, todayKey)}
+                        </Link>
+                        <span className="text-[var(--muted)]"> · {shortDate(dateKey)}</span>
+                      </h2>
+                      <span className="text-sm text-[var(--muted)]">
+                        {/* A day whose only block is the one at the top of the
+                            page says so, rather than showing hours over an
+                            empty list. */}
+                        {rows.length === 0
+                          ? all.length > 0
+                            ? dateKey === todayKey ? 'Nothing else today' : 'Nothing else planned'
+                            : 'Nothing planned'
+                          : summary}
                       </span>
-                    )}
-                  </div>
-
-                  {(deadlines.get(dateKey) ?? []).length > 0 && (
-                    <ul className="mb-2 space-y-1">
-                      {(deadlines.get(dateKey) ?? []).map((d) => (
-                        <li
-                          key={d.id}
-                          className="flex flex-wrap items-baseline gap-x-2 rounded-lg px-3 py-1.5 text-sm"
-                          style={{ border: `1px dashed ${colourFor(d.course)}`, borderLeft: `3px solid ${colourFor(d.course)}` }}
-                        >
-                          <span className="tabular-nums text-[var(--muted)]">
-                            Due{!d.allDay && ` ${fmtTime(d.dueAt, TZ)}`}
-                          </span>
-                          <span className={`font-medium ${d.status === 'done' ? 'line-through' : ''}`}>{d.course}</span>
-                          <span className="min-w-0 flex-1 truncate text-[var(--muted)]">{d.title}</span>
-                          <span
-                            className={`text-xs ${
-                              d.status === 'unplanned' || d.status === 'short' ? 'text-[var(--warn)]' : 'text-[var(--faint)]'
-                            }`}
-                          >
-                            {statusLabel(d)}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-
-                  {blocks.length === 0 ? (
-                    <p className="text-sm text-[var(--faint)]">Nothing scheduled.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {blocks.map((b) => (
-                        <BlockCard
-                          key={b.id}
-                          block={b}
-                          tz={TZ}
-                          colour={colourFor(b.course)}
-                          due={b.assignmentId ? dueById.get(b.assignmentId) : null}
-                          isPast={new Date(b.end) < now}
-                          onComplete={(outcome, minutes) => complete(b.id, outcome, minutes)}
-                          onDrop={() => drop(b.id)}
-                        />
-                      ))}
                     </div>
-                  )}
-                </section>
-              );
-            })}
-          </div>
-          )}
-          </div>
 
-          {/*
-            Setup sits under the week, not over it.
-            A student arrives here having asked for one thing: to see a plan. It
-            used to render above the calendar, so the first screen after a
-            two-question setup was another setup card, and the thing they came
-            for started roughly 900px down. Below the plan it reads as "and
-            here's how to make it better", which is what it is.
-          */}
-          {hasInputs && (
-            <SetupPrompt
-              state={state}
-              skipStep={skipStep}
-              confirmSleep={confirmSleep}
-              markLiveIfReady={markLiveIfReady}
-              ackLive={ackLive}
-            />
+                    {rows.length > 0 && (
+                      <ul className="divide-y divide-[var(--border)]">
+                        {rows.map((r) => r.kind === 'due' ? (
+                          <DeadlineRow key={`due-${r.deadline.id}`} deadline={r.deadline} colour={colourFor(r.deadline.course)} tz={TZ} />
+                        ) : (
+                          <BlockRow
+                            key={r.block.id}
+                            block={r.block}
+                            tz={TZ}
+                            colour={colourFor(r.block.course)}
+                            isPast={new Date(r.block.end) < now}
+                            due={dueOf(r.block)}
+                            stagger={dateKey === todayKey || dateKey === addDays(todayKey, 1) ? stagger() : undefined}
+                            onComplete={(outcome, minutes) => complete(r.block.id, outcome, minutes)}
+                            onDrop={() => drop(r.block.id)}
+                          />
+                        ))}
+                      </ul>
+                    )}
+                  </section>
+                );
+              })}
+            </div>
           )}
-        </>
+        </div>
+      </div>
 
-      {movedNotice && (
-        <div
-          role="status"
-          className="rise fixed inset-x-0 z-40 mx-auto w-fit max-w-[92vw] rounded-full border border-[var(--border)] bg-[var(--ink)] px-4 py-2.5 text-center text-sm text-[var(--bg)] shadow-[var(--shadow-md)]"
-          style={{ bottom: 'calc(env(safe-area-inset-bottom) + var(--fab-lift) + 4rem)' }}
-        >
-          {movedNotice}
+      {/*
+        Setup sits under the week, not over it.
+        A student arrives here having asked for one thing: to see a plan. It
+        used to render above the calendar, so the first screen after a
+        two-question setup was another setup card, and the thing they came
+        for started roughly 900px down. Below the plan it reads as "and
+        here's how to make it better", which is what it is.
+      */}
+      {hasInputs && (
+        <div className="mt-10">
+          <SetupPrompt
+            state={state}
+            skipStep={skipStep}
+            confirmSleep={confirmSleep}
+            markLiveIfReady={markLiveIfReady}
+            ackLive={ackLive}
+          />
         </div>
       )}
 
+      <Toast message={movedNotice} />
+
       <UndoBar label={undoLabel} onUndo={undo} onDismiss={dismissUndo} />
 
-      {/* Before anything is set up the page has one job — get you set up. A
+      {/* Before anything is set up the page has one job, to get you set up. A
           floating + there is a second, competing call to action. */}
       {hasInputs && <AddButton onClick={() => setAdding(true)} />}
 
@@ -607,6 +667,47 @@ export default function WeekPage() {
           />
         )}
       </Sheet>
+    </main>
+  );
+}
+
+/**
+ * The shape of the week before it has loaded.
+ *
+ * This is what the server sends, so it is what a cold load paints first. It
+ * used to be the words "Loading your week…" alone on an empty page, and the
+ * real layout then arrived underneath the header all at once. The skeleton
+ * holds the same places the week will fill, in the same sizes, with no
+ * shimmer: it is a placeholder, not a performance.
+ */
+function WeekSkeleton() {
+  const bar = 'rounded-sm bg-[color-mix(in_oklab,var(--ink)_7%,transparent)]';
+  // Laptops open on the calendar, which is the wider layout, so the skeleton
+  // takes that width there and the page does not change size when it loads.
+  return (
+    <main className="mx-auto w-full max-w-2xl px-5 pb-12 pt-6 sm:max-w-[1080px] sm:pt-10" aria-busy="true" aria-label="Loading your week">
+      <div className="space-y-2">
+        <div className={`h-5 w-24 ${bar}`} />
+        <div className={`h-4 w-40 ${bar}`} />
+      </div>
+      <div className="mt-6 space-y-2 border-l-3 border-[var(--border)] pl-4">
+        <div className={`h-4 w-44 ${bar}`} />
+        <div className={`h-6 w-64 ${bar}`} />
+        <div className={`h-4 w-36 ${bar}`} />
+        <div className={`h-12 w-full max-w-md ${bar}`} />
+      </div>
+      <div className="mt-8 h-11 w-56 rounded-full bg-[color-mix(in_oklab,var(--ink)_7%,transparent)]" />
+      <div className="mt-6 space-y-6">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="grid grid-cols-[4rem_1fr] gap-x-3">
+            <div className={`h-4 w-14 ${bar}`} />
+            <div className="space-y-2">
+              <div className={`h-5 w-48 ${bar}`} />
+              <div className={`h-4 w-full max-w-sm ${bar}`} />
+            </div>
+          </div>
+        ))}
+      </div>
     </main>
   );
 }

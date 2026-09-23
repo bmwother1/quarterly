@@ -53,16 +53,13 @@ export function SetupPrompt({
   // will not be asked again" is only reassuring if somebody says it.
   if (state.wentLiveAt && !state.liveNoticeSeen) {
     return (
-      <div className="mb-6 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)]">
-        <h2 className="font-medium">You&rsquo;re set up.</h2>
+      <div className="well enter">
+        <h2 className="text-base font-semibold">You&rsquo;re set up.</h2>
         <p className="mt-1 text-sm text-[var(--muted)]">
           That&rsquo;s the last of the setup questions. Everything from here is your actual
           week. You can change any of it in Settings whenever you like.
         </p>
-        <button
-          onClick={ackLive}
-          className="mt-3 rounded-lg bg-[var(--accent)] px-3.5 py-2 text-sm font-medium text-[var(--accent-ink)]"
-        >
+        <button onClick={ackLive} className="btn-secondary mt-3">
           Got it
         </button>
       </div>
@@ -84,29 +81,24 @@ export function SetupPrompt({
   const onSkip = step.id === 'sleep' ? confirmSleep : () => skipStep(step.id);
 
   return (
-    <div className="mb-6 rounded-xl border border-[var(--accent)]/30 bg-[var(--accent-soft)] p-4">
+    <div className="well">
       {/*
         No percentage. A completion meter is a score, and this product refused
         streaks and scores on the grounds that planners punish imperfection.
         A progress bar seconds after a flow whose whole point was avoiding setup
         is the same mistake wearing a different hat.
+
+        Secondary, not filled: this sits under the week, and the week's own
+        next block is the one primary action on the screen.
       */}
-      <div className="mb-2 text-xs font-medium tracking-wide text-[var(--faint)]">
-        One more thing
-      </div>
-      <h2 className="font-medium">{step.title}</h2>
+      <p className="text-sm text-[var(--muted)]">One more thing</p>
+      <h2 className="mt-1 text-base font-semibold">{step.title}</h2>
       <p className="mt-1 text-sm text-[var(--muted)]">{step.blurb}</p>
-      <div className="mt-3 flex flex-wrap items-center gap-4">
-        <Link
-          href={href}
-          className="rounded-lg bg-[var(--accent)] px-3.5 py-2 text-sm font-medium text-[var(--accent-ink)]"
-        >
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <Link href={href} className="btn-secondary">
           {cta}
         </Link>
-        <button
-          onClick={onSkip}
-          className="text-sm text-[var(--muted)] underline underline-offset-4 hover:text-[var(--ink)]"
-        >
+        <button onClick={onSkip} className="btn-quiet">
           {step.skipLabel}
         </button>
       </div>

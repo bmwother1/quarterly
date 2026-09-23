@@ -25,41 +25,44 @@ export function OnboardingShell({
   const pct = Math.round((stepNumber / (stepCount + 1)) * 100);
 
   return (
-    <main className="mx-auto max-w-lg px-5 pb-24 pt-10 sm:pt-16">
+    <main className="mx-auto max-w-lg px-5 pb-24 pt-8 sm:pt-16">
       <div className="mb-8">
-        <div className="mb-2 flex items-baseline justify-between text-xs text-[var(--faint)]">
-          <span className="font-medium tracking-wide">
+        <div className="mb-2 flex items-center justify-between text-sm text-[var(--muted)]">
+          <span>
             Step {stepNumber} of {stepCount}
           </span>
-          <Link href="/week" className="underline underline-offset-4 hover:text-[var(--muted)]">
+          <Link href="/week" className="-mr-3 btn-quiet">
             Finish later
           </Link>
         </div>
         <div
-          className="h-1 w-full overflow-hidden rounded-full bg-[var(--border)]"
+          className="h-1 w-full overflow-hidden rounded-full bg-[color-mix(in_oklab,var(--ink)_8%,transparent)]"
           role="progressbar"
           aria-valuenow={stepNumber}
           aria-valuemin={0}
           aria-valuemax={stepCount}
           aria-label="Setup progress"
         >
-          <div className="h-full rounded-full bg-[var(--accent)] transition-[width] duration-300" style={{ width: `${pct}%` }} />
+          <div
+            className="h-full rounded-full bg-[var(--accent)]"
+            style={{ width: `${pct}%`, transition: 'width var(--dur-move) var(--ease)' }}
+          />
         </div>
       </div>
 
-      <h1 className="rise text-[1.75rem] font-semibold leading-tight sm:text-[2.1rem]">{title}</h1>
-      <p className="rise mt-2.5 text-[var(--muted)]">{blurb}</p>
+      {/* Keyed on the step, so each question arrives rather than swapping in. */}
+      <div key={stepNumber}>
+        <h1 className="enter text-heading font-semibold">{title}</h1>
+        <p className="enter mt-2 text-base text-[var(--muted)]" style={{ '--i': 1 } as React.CSSProperties}>{blurb}</p>
 
-      <div className="rise mt-7">{children}</div>
+        <div className="enter mt-8" style={{ '--i': 2 } as React.CSSProperties}>{children}</div>
+      </div>
 
       {(footer || onSkip) && (
-        <div className="mt-6 flex flex-wrap items-center gap-4">
+        <div className="mt-8 flex flex-col gap-2 sm:flex-row sm:items-center">
           {footer}
           {onSkip && (
-            <button
-              onClick={onSkip}
-              className="text-sm text-[var(--muted)] underline underline-offset-4 hover:text-[var(--ink)]"
-            >
+            <button onClick={onSkip} className="btn-quiet">
               {skipLabel ?? 'Skip'}
             </button>
           )}
@@ -81,7 +84,7 @@ export function Continue({
     <button
       onClick={onClick}
       disabled={disabled}
-      className="w-full rounded-xl bg-[var(--accent)] px-5 py-3.5 font-medium text-[var(--accent-ink)] shadow-[var(--shadow-md)] transition-transform active:scale-[0.98] disabled:bg-transparent disabled:text-[var(--faint)] disabled:shadow-none disabled:ring-1 disabled:ring-[var(--border)] sm:w-auto sm:px-8"
+      className="btn-primary btn-lg w-full sm:w-auto sm:px-8"
     >
       {children}
     </button>

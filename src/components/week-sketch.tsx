@@ -46,21 +46,21 @@ const TONE: Record<SketchBlock['tone'], string> = {
 
 export function WeekSketch({ blocks }: { blocks: SketchBlock[] }) {
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3" aria-hidden>
-      <div className="mb-1.5 grid grid-cols-7 gap-1 text-center text-[10px] text-[var(--faint)]">
+    <div className="rounded-md border border-[var(--border)] bg-[var(--surface)] p-3" aria-hidden>
+      <div className="mb-2 grid grid-cols-7 gap-1 text-center text-xs text-[var(--muted)]">
         {DAYS.map((d, i) => <span key={i}>{d}</span>)}
       </div>
 
       {/* The columns are scenery. Everything that moves lives in the overlay. */}
       <div className="relative h-36">
         <div className="absolute inset-0 grid grid-cols-7 gap-1">
-          {DAYS.map((_, i) => <div key={i} className="rounded bg-[var(--raised)]" />)}
+          {DAYS.map((_, i) => <div key={i} className="rounded-sm bg-[color-mix(in_oklab,var(--ink)_4%,transparent)]" />)}
         </div>
 
         {blocks.map((b) => (
           <div
             key={b.id}
-            className="sketch-block absolute rounded-[3px]"
+            className="sketch-block absolute rounded-sm"
             style={{
               left: `calc(${(b.day * 100) / 7}% + 3px)`,
               width: `calc(${100 / 7}% - 6px)`,
@@ -72,7 +72,7 @@ export function WeekSketch({ blocks }: { blocks: SketchBlock[] }) {
           >
             {b.missed && (
               <span
-                className="absolute left-1/2 top-1/2 h-[1.5px] w-[80%] -translate-x-1/2 -translate-y-1/2 rounded"
+                className="absolute left-1/2 top-1/2 h-[1.5px] w-[80%] -translate-x-1/2 -translate-y-1/2 rounded-full"
                 style={{ background: 'var(--warn)' }}
               />
             )}

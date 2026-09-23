@@ -30,23 +30,25 @@ export function RescueNotice({ tz }: { tz: string }) {
   // Nothing was really lost. Saying so would be alarming for no reason.
   if (before <= now) return null;
 
+  // The one notice on /week that keeps --warn, because something really was
+  // overwritten. It says so in the heading and stays calm everywhere else.
   return (
-    <div className="mb-6 rounded-xl border border-[var(--warn)]/40 bg-[var(--accent-soft)] p-4">
-      <h2 className="font-medium text-[var(--warn)]">Your account replaced what was on this device.</h2>
+    <div className="well enter" role="alert">
+      <h2 className="text-base font-semibold text-[var(--warn)]">Your account replaced what was on this device.</h2>
       <p className="mt-1 text-sm text-[var(--muted)]">
         The copy from {fmtDay(held.at, tz)} had {before} things set up. This one has {now}.
         If that is the wrong way round, put the other one back.
       </p>
-      <div className="mt-3 flex flex-wrap items-center gap-3">
+      <div className="mt-3 flex flex-wrap items-center gap-2">
         <button
           onClick={() => { heronStore.restoreStash(); heronStore.discardStash(); setDismissed(true); }}
-          className="rounded-lg bg-[var(--accent)] px-3.5 py-2 text-sm font-medium text-[var(--accent-ink)]"
+          className="btn-secondary"
         >
           Put the other one back
         </button>
         <button
           onClick={() => { heronStore.discardStash(); setDismissed(true); }}
-          className="text-sm text-[var(--muted)] underline underline-offset-4"
+          className="btn-quiet"
         >
           This one is right
         </button>

@@ -107,7 +107,7 @@ export default function Onboarding() {
   }, [step, replan, markLiveIfReady]);
 
   if (!hydrated) {
-    return <main className="mx-auto max-w-lg px-5 py-16"><p className="text-[var(--muted)]">Loading…</p></main>;
+    return <main className="mx-auto min-h-[60vh] max-w-lg px-5 pt-10 sm:pt-16" aria-busy="true" />;
   }
 
   function addCommitment() {
@@ -187,39 +187,44 @@ export default function Onboarding() {
           aria-label="What you want to make time for"
           placeholder="Studying for CHEM 142"
           ref={firstField}
-          className="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3.5 text-base outline-none placeholder:text-[var(--faint)] focus:border-[var(--accent)]"
+          className="field min-h-12 w-full px-4"
         />
-        <div className="mt-2.5 flex flex-wrap gap-1.5">
+        <div className="mt-3 flex flex-wrap gap-2">
           {EXAMPLES.map((e) => (
             <button
               key={e.title}
               onClick={() => { setTitle(e.title); setCategory(e.category); setPerWeek(e.per); setMinutes(e.mins); }}
-              className="rounded-full border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--muted)] hover:bg-[var(--raised)] hover:text-[var(--ink)]"
+              aria-pressed={title === e.title}
+              className="chip"
             >
               {e.title}
             </button>
           ))}
         </div>
 
-        <div className="mt-5 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
-          <p className="text-sm font-medium">How often?</p>
-          <div className="mt-2.5 flex flex-wrap gap-1.5">
-            {[1, 2, 3, 4, 5, 6, 7].map((n) => (
-              <button
-                key={n} onClick={() => setPerWeek(n)} aria-pressed={perWeek === n}
-                className={`h-10 w-10 rounded-lg text-sm ${perWeek === n ? 'bg-[var(--accent)] font-medium text-[var(--accent-ink)]' : 'border border-[var(--border)] text-[var(--muted)]'}`}
-              >{n}</button>
-            ))}
-            <span className="self-center pl-1 text-sm text-[var(--muted)]">× a week</span>
+        <div className="mt-8 space-y-8">
+          <div role="group" aria-labelledby="ob-often">
+            <p id="ob-often" className="text-sm font-semibold">How many times a week?</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {[1, 2, 3, 4, 5, 6, 7].map((n) => (
+                <button
+                  key={n} onClick={() => setPerWeek(n)} aria-pressed={perWeek === n}
+                  aria-label={`${n} a week`}
+                  className="chip w-10 justify-center px-0"
+                >{n}</button>
+              ))}
+            </div>
           </div>
-          <p className="mt-4 text-sm font-medium">For how long?</p>
-          <div className="mt-2.5 flex flex-wrap gap-1.5">
-            {[30, 45, 60, 90, 120].map((m) => (
-              <button
-                key={m} onClick={() => setMinutes(m)} aria-pressed={minutes === m}
-                className={`rounded-lg px-3 py-2 text-sm ${minutes === m ? 'bg-[var(--accent)] font-medium text-[var(--accent-ink)]' : 'border border-[var(--border)] text-[var(--muted)]'}`}
-              >{m < 60 ? `${m} min` : `${m / 60}h`}</button>
-            ))}
+          <div role="group" aria-labelledby="ob-long">
+            <p id="ob-long" className="text-sm font-semibold">For how long?</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {[30, 45, 60, 90, 120].map((m) => (
+                <button
+                  key={m} onClick={() => setMinutes(m)} aria-pressed={minutes === m}
+                  className="chip"
+                >{m < 60 ? `${m} min` : `${m / 60}h`}</button>
+              ))}
+            </div>
           </div>
         </div>
       </OnboardingShell>
@@ -237,40 +242,38 @@ export default function Onboarding() {
         footer={<Continue onClick={addBusy} disabled={!busyDays.length}>Add it</Continue>}
       >
         <div className="space-y-4">
-          <div className="flex gap-2">
+          <div className="segmented" role="group" aria-label="Kind">
             {(['class', 'work'] as const).map((k) => (
               <button
                 key={k} onClick={() => setBusyKind(k)} aria-pressed={busyKind === k}
-                className={`rounded-lg px-3.5 py-2 text-sm capitalize ${busyKind === k ? 'bg-[var(--accent)] font-medium text-[var(--accent-ink)]' : 'border border-[var(--border)] text-[var(--muted)]'}`}
+                className="capitalize"
               >{k}</button>
             ))}
           </div>
           <input
             value={busyLabel} onChange={(e) => setBusyLabel(e.target.value)}
             aria-label="Name" placeholder={busyKind === 'class' ? 'CHEM 142 lecture' : 'Pro shop shift'}
-            className="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3 outline-none placeholder:text-[var(--faint)] focus:border-[var(--accent)]"
+            className="field w-full"
           />
-          <div>
-            <p className="mb-2 text-sm font-medium">Which days?</p>
-            <div className="flex flex-wrap gap-1.5">
+          <div role="group" aria-labelledby="ob-days">
+            <p id="ob-days" className="mb-2 text-sm font-semibold">Which days?</p>
+            <div className="flex flex-wrap gap-2">
               {DAYS.map((d, i) => (
                 <button
                   key={d}
                   onClick={() => setBusyDays((prev) => prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i])}
                   aria-pressed={busyDays.includes(i)}
-                  className={`h-11 w-12 rounded-lg text-sm ${busyDays.includes(i) ? 'bg-[var(--accent)] font-medium text-[var(--accent-ink)]' : 'border border-[var(--border)] text-[var(--muted)]'}`}
+                  className="chip"
                 >{d}</button>
               ))}
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <label className="text-sm text-[var(--muted)]">From
-              <input type="time" value={busyStart} onChange={(e) => setBusyStart(e.target.value)}
-                className="ml-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--ink)]" />
+          <div className="grid max-w-sm grid-cols-2 gap-3">
+            <label className="flex flex-col gap-1 text-sm text-[var(--muted)]">From
+              <input type="time" value={busyStart} onChange={(e) => setBusyStart(e.target.value)} className="field w-full" />
             </label>
-            <label className="text-sm text-[var(--muted)]">to
-              <input type="time" value={busyEnd} onChange={(e) => setBusyEnd(e.target.value)}
-                className="ml-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--ink)]" />
+            <label className="flex flex-col gap-1 text-sm text-[var(--muted)]">To
+              <input type="time" value={busyEnd} onChange={(e) => setBusyEnd(e.target.value)} className="field w-full" />
             </label>
           </div>
         </div>
@@ -288,14 +291,12 @@ export default function Onboarding() {
         skipLabel="The default is fine"
         footer={<Continue onClick={saveSleep} />}
       >
-        <div className="flex items-center gap-3">
-          <label className="text-sm text-[var(--muted)]">Asleep by
-            <input type="time" value={sleepStart} onChange={(e) => setSleepStart(e.target.value)}
-              className="ml-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--ink)]" />
+        <div className="grid max-w-sm grid-cols-2 gap-3">
+          <label className="flex flex-col gap-1 text-sm text-[var(--muted)]">Asleep by
+            <input type="time" value={sleepStart} onChange={(e) => setSleepStart(e.target.value)} className="field w-full" />
           </label>
-          <label className="text-sm text-[var(--muted)]">Awake at
-            <input type="time" value={sleepEnd} onChange={(e) => setSleepEnd(e.target.value)}
-              className="ml-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--ink)]" />
+          <label className="flex flex-col gap-1 text-sm text-[var(--muted)]">Awake at
+            <input type="time" value={sleepEnd} onChange={(e) => setSleepEnd(e.target.value)} className="field w-full" />
           </label>
         </div>
       </OnboardingShell>
@@ -311,12 +312,12 @@ export default function Onboarding() {
         onSkip={() => { skipStep('calendars'); setStep(5); }}
         skipLabel="Not now"
         footer={
-          <Link href="/import" className="rounded-xl bg-[var(--accent)] px-6 py-3.5 font-medium text-[var(--accent-ink)] shadow-[var(--shadow-md)]">
+          <Link href="/import" className="btn-primary btn-lg w-full sm:w-auto sm:px-8">
             Import a calendar
           </Link>
         }
       >
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-sm text-[var(--muted)]">
+        <div className="well text-sm text-[var(--muted)]">
           <p>
             If your quarter hasn&rsquo;t been published yet, your Canvas feed will be empty. That&rsquo;s
             normal in the weeks before instruction starts, and it isn&rsquo;t a broken link.
@@ -341,7 +342,7 @@ export default function Onboarding() {
         blurb={`Your week syncs to ${signedInAs}, so it survives a lost phone or a second browser.`}
         footer={<Continue onClick={finish}>Take me to my week</Continue>}
       >
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-sm text-[var(--muted)]">
+        <div className="well text-sm text-[var(--muted)]">
           <p>Nothing else to set up. You can sign out any time in Settings.</p>
         </div>
       </OnboardingShell>
@@ -357,7 +358,7 @@ export default function Onboarding() {
       skipLabel="No thanks, keep it on this device"
     >
       {!accountsAvailable ? (
-        <div className="rounded-lg border border-[var(--warn)]/40 bg-[var(--accent-soft)] px-3.5 py-2.5 text-sm text-[var(--warn)]">
+        <div className="border-l-3 border-[var(--warn)] pl-3 text-sm text-[var(--warn)]">
           Accounts aren&rsquo;t configured in this build. Skip for now and your week stays on this device.
         </div>
       ) : (

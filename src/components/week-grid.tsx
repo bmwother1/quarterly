@@ -6,24 +6,42 @@ import type { Availability, BusyBlock, FixedEvent, StudyBlock } from '@/lib/type
 import type { Deadline } from '@/lib/schedule/deadlines';
 import { statusLabel } from '@/lib/schedule/deadlines';
 import { localParts, fmtTime, zonedInstant } from '@/lib/time';
-import { colorVar } from '@/lib/categories';
+import { categoryForBusyKind, colorVar } from '@/lib/categories';
 import { usePlanMotion } from '@/hooks/use-plan-motion';
+import { isCourseCode, keepCodes } from './course-name';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+/** The grid is this tall whatever the range, so a pixel height is a percent of it. */
+const GRID_PX = 640;
+
 /**
- * Commitments you can't move get their own colours.
+ * Commitments you can't move are drawn as solid bands rather than hatched
+ * voids, because a work shift *is* an event. It is most of a weekday, and
+ * rendering it as an absence made the week look emptier and less true than
+ * it is.
  *
- * Drawn as solid blocks rather than hatched voids, because a work shift *is* an
- * event — it's most of a weekday — and rendering it as an absence made the week
- * look emptier and less true than it is.
+ * They recede, though. A band is a neutral wash with its category's colour as
+ * a thin edge, taken from the same validated palette as everything else. They
+ * used to carry four hex values of their own, so a work shift was slate here
+ * and teal in the month view's legend.
  */
-const BUSY_COLOR: Record<string, string> = {
-  work: '#64748b',
-  class: '#7c3aed',
-  commitment: '#0891b2',
-  sleep: '#475569',
-};
+const BAND_FILL = 'color-mix(in oklab, var(--ink) 5%, var(--surface))';
+
+/** Pixels per stacked deadline flag: a 16px flag and a 4px gap. */
+const FLAG_PX = 20;
+
+/** "9 AM", matching how every block's own time is written. */
+function hourLabel(min: number): string {
+  const h = Math.floor(min / 60) % 24;
+  return `${h % 12 === 0 ? 12 : h % 12} ${h < 12 ? 'AM' : 'PM'}`;
+}
+
+/** "1:40", for the marker in the gutter. The column says which day. */
+function clockLabel(min: number): string {
+  const h = Math.floor(min / 60) % 24;
+  return `${h % 12 === 0 ? 12 : h % 12}:${String(min % 60).padStart(2, '0')}`;
+}
 
 /**
  * A week as a time grid rather than a list.
@@ -59,9 +77,6 @@ function busyFor(busy: BusyBlock[], weekday: number): Array<{ startMin: number; 
   }
   return out;
 }
-
-/** Pixels per stacked deadline flag. The column is 640px tall. */
-const FLAG_PX = 15;
 
 export function WeekGrid({
   days, blocks, events, availability, tz, colourFor, selectedId, onSelect, onMove,
@@ -171,14 +186,19 @@ export function WeekGrid({
    * position on the first pass is a hydration mismatch by construction, and the
    * line is the one thing on this grid guaranteed to differ between the two.
    *
-   * A minute is the right tick. The grid is 640px for a waking day, so a second
-   * moves it a third of a pixel and costs a render for nothing.
+   * It ticks every thirty seconds and glides between ticks with a linear
+   * transition of the same length, so it moves the way a clock hand does
+   * rather than jumping a pixel a minute. A second would cost a render for a
+   * third of a pixel.
    */
   const [nowMin, setNowMin] = useState<number | null>(null);
   useEffect(() => {
-    const tick = () => setNowMin(localParts(new Date(), tz).minutesOfDay);
+    const tick = () => {
+      const p = localParts(new Date(), tz);
+      setNowMin(p.minutesOfDay + new Date().getSeconds() / 60);
+    };
     tick();
-    const id = setInterval(tick, 60_000);
+    const id = setInterval(tick, 30_000);
     return () => clearInterval(id);
   }, [tz]);
 
@@ -247,38 +267,15 @@ export function WeekGrid({
     return null;
   }
 
-  const isEmpty = blocks.length === 0 && events.length === 0;
+  const px = (pctValue: number) => (pctValue / 100) * GRID_PX;
 
   return (
     <div>
-      <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--faint)]">
-        <span className="inline-flex items-center gap-1.5">
-          <span
-            className="inline-block h-3 w-5 rounded-sm"
-            style={{ background: 'color-mix(in srgb, #64748b 40%, var(--surface))', borderLeft: '3px solid #64748b' }}
-            aria-hidden
-          />
-          fixed commitments
-        </span>
-        {deadlines && deadlines.size > 0 && (
-          <span className="inline-flex items-center gap-1.5">
-            <span
-              className="inline-block h-3 w-5 rounded-sm"
-              style={{ border: '1px dashed var(--muted)', borderLeft: '3px solid var(--muted)' }}
-              aria-hidden
-            />
-            deadline
-          </span>
-        )}
-        {!isEmpty && <span>tap a block for the reason, or drag it to move it</span>}
-        <span className="ml-auto">scroll sideways for next week</span>
-      </div>
-
       <div className="relative">
-        <div ref={scrollerRef} className="overflow-x-auto">
+        <div ref={scrollerRef} className="overflow-x-auto overscroll-x-contain">
         <div
           ref={gridRef}
-          className="flex gap-px"
+          className="flex"
           style={{ minWidth: days.length * 92 }}
           /**
            * The whole gesture lives here rather than on the block.
@@ -308,20 +305,37 @@ export function WeekGrid({
           // back rather than landing somewhere the student did not choose.
           onPointerCancel={() => setDragBoth(null)}
         >
-        {/* Hour gutter */}
-        <div className="relative w-11 shrink-0" style={{ height: 640 }}>
-          {hourMarks.map((m) => (
-            <div
-              key={m}
-              className="absolute right-1 -translate-y-1/2 text-[10px] tabular-nums text-[var(--faint)]"
-              style={{ top: `${pct(m)}%` }}
-            >
-              {String(Math.floor(m / 60) % 24).padStart(2, '0')}
-            </div>
-          ))}
+        {/*
+          Hour gutter. It starts with a spacer the height of the day headers,
+          so each label sits on its own line. Without it every label was drawn
+          a header's height above the hour it named, about twenty minutes out.
+        */}
+        <div className="sticky left-0 z-20 w-14 shrink-0 bg-[var(--bg)]">
+          <div className="h-12" />
+          <div className="relative" style={{ height: GRID_PX }}>
+            {hourMarks.map((m) => (
+              <div
+                key={m}
+                className="absolute right-2 -translate-y-1/2 whitespace-nowrap text-xs text-[var(--muted)]"
+                style={{ top: `${pct(m)}%` }}
+              >
+                {hourLabel(m)}
+              </div>
+            ))}
+            {/* The time now, on the axis, masking whichever hour it lands on. */}
+            {nowMin !== null && nowMin >= rangeStart && nowMin <= rangeEnd && (
+              <div
+                className="absolute right-1 z-10 -translate-y-1/2 rounded-sm bg-[var(--bg)] px-1 text-xs font-medium text-[var(--accent)]"
+                style={{ top: `${pct(nowMin)}%`, transition: 'top 30s linear' }}
+                aria-hidden
+              >
+                {clockLabel(Math.floor(nowMin))}
+              </div>
+            )}
+          </div>
         </div>
 
-        {days.map((dateKey) => {
+        {days.map((dateKey, col) => {
           const weekday = localParts(new Date(dateKey + 'T12:00:00Z'), 'UTC').weekday;
           /**
            * Blocks this column draws.
@@ -338,6 +352,8 @@ export function WeekGrid({
             return home === dateKey;
           });
           const isToday = dateKey === todayKey;
+          const first = col === 0;
+          const last = col === days.length - 1;
 
           const positioned: Positioned[] = dayBlocks.map((block) => {
             const s = minuteOfDay(block.start, tz);
@@ -349,24 +365,38 @@ export function WeekGrid({
             <div key={dateKey} className="min-w-0 flex-1">
               <Link
                 href={`/day/${dateKey}`}
-                className={`block rounded pb-1 text-center text-xs transition-colors hover:bg-[var(--raised)] ${
-                  isToday ? 'font-semibold text-[var(--accent)]' : 'text-[var(--muted)] hover:text-[var(--ink)]'
+                aria-label={new Date(dateKey + 'T12:00:00Z').toLocaleDateString('en-US', {
+                  timeZone: 'UTC', weekday: 'long', month: 'long', day: 'numeric',
+                })}
+                className={`flex h-12 flex-col items-center justify-center gap-1 text-xs ${
+                  isToday ? 'text-[var(--accent)]' : 'text-[var(--muted)] hover:text-[var(--ink)]'
                 }`}
               >
-                {DAY_LABELS[weekday]}{' '}
-                <span className="text-[var(--faint)]">{Number(dateKey.slice(8))}</span>
+                <span className={isToday ? 'font-medium' : ''}>{DAY_LABELS[weekday]}</span>
+                <span
+                  className={`flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-sm ${
+                    isToday ? 'bg-[var(--accent)] font-semibold text-[var(--accent-ink)]' : 'text-[var(--ink)]'
+                  }`}
+                >
+                  {Number(dateKey.slice(8))}
+                </span>
               </Link>
 
               <div
                 data-daycol={dateKey}
-                className={`relative overflow-hidden rounded border ${
-                  isToday ? 'border-[var(--accent)]/40' : 'border-[var(--border)]'
-                } bg-[var(--surface)]`}
-                style={{ height: 640 }}
+                className={`relative overflow-hidden border-y border-r border-[var(--border)] ${
+                  first ? 'rounded-l-sm border-l' : ''
+                } ${last ? 'rounded-r-sm' : ''}`}
+                style={{
+                  height: GRID_PX,
+                  background: isToday
+                    ? 'color-mix(in oklab, var(--accent) 5%, var(--surface))'
+                    : 'var(--surface)',
+                }}
               >
                 {/* Hour lines */}
                 {hourMarks.map((m) => (
-                  <div key={m} className="absolute inset-x-0 border-t border-[var(--border)]/50" style={{ top: `${pct(m)}%` }} />
+                  <div key={m} className="absolute inset-x-0 border-t border-[var(--border)]" style={{ top: `${pct(m)}%` }} />
                 ))}
 
                 {/*
@@ -374,8 +404,8 @@ export function WeekGrid({
 
                   Drawn above the blocks so it is never buried, and
                   `pointer-events-none` so it cannot swallow a tap or interrupt a
-                  drag passing under it. A dragged block carries `z-10` later in
-                  the DOM, so it still rides over the line rather than under it.
+                  drag passing under it. A dragged block carries a higher z-index,
+                  so it still rides over the line rather than under it.
 
                   Hidden when the clock is outside the drawn range. The grid
                   starts half an hour before the day does, so at 6am the line
@@ -385,11 +415,11 @@ export function WeekGrid({
                 {isToday && nowMin !== null && nowMin >= rangeStart && nowMin <= rangeEnd && (
                   <div
                     className="pointer-events-none absolute inset-x-0 z-10"
-                    style={{ top: `${pct(nowMin)}%` }}
+                    style={{ top: `${pct(nowMin)}%`, transition: 'top 30s linear' }}
                     aria-hidden
                   >
-                    <div className="h-px w-full bg-[var(--accent)]" />
-                    <div className="absolute -top-[3px] left-0 h-[7px] w-[7px] rounded-full bg-[var(--accent)]" />
+                    <div className="h-0.5 w-full -translate-y-1/2 bg-[var(--accent)]" />
+                    <div className="absolute -left-1 -top-1 h-2 w-2 rounded-full bg-[var(--accent)]" />
                   </div>
                 )}
 
@@ -398,21 +428,21 @@ export function WeekGrid({
                   const top = pct(Math.max(b.startMin, rangeStart));
                   const height = ((Math.min(b.endMin, rangeEnd) - Math.max(b.startMin, rangeStart)) / span) * 100;
                   if (height <= 0) return null;
-                  const colour = BUSY_COLOR[b.kind] ?? BUSY_COLOR.commitment;
+                  const edge = colorVar(categoryForBusyKind(b.kind as BusyBlock['kind']), 0);
                   return (
                     <div
                       key={`${b.label}-${i}`}
-                      className="absolute inset-x-0.5 overflow-hidden rounded px-1 py-0.5"
+                      className="absolute inset-x-0 overflow-hidden py-1 pl-2 pr-1"
                       style={{
                         top: `${top}%`,
                         height: `${height}%`,
-                        background: `color-mix(in srgb, ${colour} 26%, var(--surface))`,
-                        borderLeft: `3px solid ${colour}`,
+                        background: BAND_FILL,
+                        boxShadow: `inset 2px 0 0 ${edge}`,
                       }}
                       title={b.label}
                     >
-                      {height > 4 && (
-                        <span className="block truncate text-[10px] font-medium leading-tight text-[var(--ink)]">
+                      {px(height) >= 24 && (
+                        <span className="block truncate text-xs leading-4 text-[var(--muted)]">
                           {b.label}
                         </span>
                       )}
@@ -420,7 +450,8 @@ export function WeekGrid({
                   );
                 })}
 
-                {/* One-off events: fixed, so drawn like the recurring commitments. */}
+                {/* One-off events: fixed, so drawn like the recurring commitments,
+                    with a full-strength edge because each one can be tapped. */}
                 {events
                   .filter((e) => localParts(new Date(e.start), tz).dateKey === dateKey)
                   .map((e) => {
@@ -430,24 +461,25 @@ export function WeekGrid({
                     const height = ((Math.min(eMin, rangeEnd) - Math.max(sMin, rangeStart)) / span) * 100;
                     if (height <= 0) return null;
                     const chosen = e.id === selectedEventId;
+                    const edge = colorVar(e.category, e.shade);
                     return (
                       <button
                         key={e.id}
                         onClick={() => onSelectEvent(e.id)}
-                        className={`absolute inset-x-0.5 overflow-hidden rounded px-1 py-0.5 text-left ${
-                          chosen ? 'ring-2 ring-[var(--ink)]' : ''
+                        className={`absolute inset-x-0.5 overflow-hidden rounded-sm py-1 pl-2 pr-1 text-left active:transform-none ${
+                          chosen ? 'z-10 outline-2 outline-offset-1 outline-[var(--ink)]' : ''
                         }`}
                         style={{
                           top: `${top}%`,
                           height: `${Math.max(2.5, height)}%`,
-                          background: `color-mix(in srgb, ${colorVar(e.category, e.shade)} 28%, var(--surface))`,
-                          // The tint is a wash: at 28% the categories sit ~2 ΔE
-                          // apart. This border is the colour signal here.
-                          borderLeft: `3px solid ${colorVar(e.category, e.shade)}`,
+                          background: BAND_FILL,
+                          // The edge is the colour signal. At a wash's strength
+                          // the categories sit about 2 ΔE apart.
+                          boxShadow: `inset 3px 0 0 ${edge}`,
                         }}
                         title={`${e.title} · ${fmtTime(e.start, tz)}`}
                       >
-                        <span className="block truncate text-[10px] font-medium leading-tight">{e.title}</span>
+                        <span className="block truncate text-xs font-medium leading-4">{keepCodes(e.title)}</span>
                       </button>
                     );
                   })}
@@ -462,6 +494,15 @@ export function WeekGrid({
                   // While dragging, the block follows the pointer's quarter-hour.
                   // Which column draws it is already decided by `dayBlocks`.
                   const shownTop = dragging ? pct(drag!.minute) : topPct;
+
+                  // How many 16px lines fit, after 4px of padding. The name
+                  // comes first: the time can already be read off the axis. A
+                  // course code is one line and never wraps, so it leaves room
+                  // for the time sooner than a name does.
+                  const lines = Math.floor((px(heightPct) - 4) / 16);
+                  const code = isCourseCode(block.course);
+                  const nameLines = code ? 1 : Math.min(2, Math.max(1, lines));
+                  const showTime = dragging || lines > nameLines;
 
                   return (
                     <button
@@ -494,27 +535,42 @@ export function WeekGrid({
                       title={`${block.course} · ${fmtTime(block.start, tz)}`}
                       data-block-id={block.id}
                       data-block-start={block.start}
-                      className={`absolute inset-x-0.5 touch-none select-none overflow-hidden rounded px-1 py-0.5 text-left text-[10px] leading-tight ${
+                      data-status={block.status}
+                      className={`absolute inset-x-0.5 touch-none select-none overflow-hidden rounded-sm pb-1 pl-2 pr-1 pt-1 text-left active:transform-none ${
                         selected
-                          ? 'ring-2 ring-[var(--ink)]'
+                          ? 'z-10 outline-2 outline-offset-1 outline-[var(--ink)]'
                           : focusAssignmentId && block.assignmentId === focusAssignmentId
-                            ? 'ring-1 ring-[var(--ink)]/60'
+                            // The sessions of the deadline being looked at.
+                            ? 'z-10 outline-1 outline-offset-1 outline-[var(--muted)]'
                             : ''
-                      } ${settled ? 'opacity-45' : 'cursor-grab active:cursor-grabbing'} ${
-                        dragging ? 'z-10 shadow-[var(--shadow-md)] ring-2 ring-[var(--accent)]' : 'transition-shadow'
+                      } ${settled ? '' : 'cursor-grab'} ${
+                        dragging ? 'z-20 scale-[1.03] cursor-grabbing shadow-float' : ''
                       }`}
                       style={{
                         top: `${shownTop}%`,
                         height: `${heightPct}%`,
-                        background: `color-mix(in srgb, ${colour} 24%, var(--surface))`,
-                        borderLeft: `3px solid ${colour}`,
+                        background: settled
+                          ? 'transparent'
+                          : `color-mix(in oklab, ${colour} 14%, var(--surface))`,
+                        boxShadow: `inset 3px 0 0 ${
+                          settled ? `color-mix(in oklab, ${colour} 40%, transparent)` : colour
+                        }`,
+                        // Under the finger it glides between quarter-hours on a
+                        // spring instead of stepping, and lifts slightly.
+                        transition: dragging
+                          ? 'top 140ms var(--ease-spring), scale 140ms var(--ease)'
+                          : 'scale var(--dur-exit) var(--ease)',
                       }}
                     >
-                      <span className={`block truncate font-medium ${settled ? 'line-through' : ''}`}>
-                        {block.course}
+                      <span
+                        className={`block text-xs font-medium leading-4 ${
+                          settled ? 'text-[var(--muted)] line-through' : 'text-[var(--ink)]'
+                        } ${nameLines === 1 ? 'truncate' : 'line-clamp-2'}`}
+                      >
+                        {keepCodes(block.course)}
                       </span>
-                      {heightPct > 6 && (
-                        <span className="block truncate text-[var(--muted)]">
+                      {showTime && (
+                        <span className="block truncate text-xs leading-4 text-[var(--muted)]">
                           {dragging
                             ? fmtTime(zonedInstant(drag!.dateKey, drag!.minute, tz), tz)
                             : fmtTime(block.start, tz)}
@@ -524,9 +580,9 @@ export function WeekGrid({
                   );
                 })}
 
-                {/* Deadlines inside the drawn hours, at their time. Dashed and outlined,
-                    because a deadline is a moment, not time spent, and must never read
-                    as a block. */}
+                {/* Deadlines inside the drawn hours, at their time. Dashed and
+                    outlined, because a deadline is a moment, not time spent,
+                    and must never read as a block. */}
                 {(deadlineSplit.get(dateKey)?.inside ?? []).map((d) => (
                   <DeadlineFlag
                     key={`due-${d.id}`}
@@ -540,8 +596,10 @@ export function WeekGrid({
                 ))}
               </div>
 
+              {/* Deadlines outside the drawn hours, in a strip under the grid.
+                  Every column gets the same height, so the axis stays level. */}
               {footerRows > 0 && (
-                <div className="relative mt-1" style={{ height: footerRows * FLAG_PX + 2 }}>
+                <div className="relative mt-1" style={{ height: footerRows * FLAG_PX }}>
                   {(deadlineSplit.get(dateKey)?.after ?? []).map((d, i) => (
                     <DeadlineFlag
                       key={`due-${d.id}`}
@@ -566,11 +624,12 @@ export function WeekGrid({
           being cut off. Rendered always and faded with opacity rather than
           mounted and unmounted, so reaching the end of the scroll is a settle
           rather than a pop. `pointer-events-none` keeps them out of the drag,
-          which runs across this exact area.
+          which runs across this exact area. The left one starts after the
+          gutter, which stays put.
         */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-y-0 left-0 w-10 transition-opacity duration-200"
+          className="pointer-events-none absolute inset-y-0 left-14 w-8 transition-opacity duration-200"
           style={{
             opacity: edges.start ? 1 : 0,
             background: 'linear-gradient(to right, var(--bg), transparent)',
@@ -578,7 +637,7 @@ export function WeekGrid({
         />
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-y-0 right-0 w-10 transition-opacity duration-200"
+          className="pointer-events-none absolute inset-y-0 right-0 w-8 transition-opacity duration-200"
           style={{
             opacity: edges.end ? 1 : 0,
             background: 'linear-gradient(to left, var(--bg), transparent)',
@@ -589,7 +648,13 @@ export function WeekGrid({
   );
 }
 
-/** One deadline: a dashed marker in the course colour, with its status at a glance. */
+/**
+ * One deadline: a dashed marker in the course colour, with its status at a
+ * glance. It shows the course code and a mark, not the word "Due": at 12px
+ * both do not fit a 92px column, and cutting the code is the one thing a
+ * label here must never do. The dashed outline says deadline, and the label
+ * read aloud says the rest.
+ */
 function DeadlineFlag({
   d, tz, colour, focused, onSelect, style,
 }: {
@@ -601,26 +666,31 @@ function DeadlineFlag({
   style: React.CSSProperties;
 }) {
   const alarm = d.status === 'unplanned' || d.status === 'short';
+  const done = d.status === 'done';
   return (
     <button
       onClick={() => onSelect?.(d.id)}
       data-deadline-id={d.id}
-      className={`absolute inset-x-0.5 z-[5] flex h-[14px] items-center gap-1 overflow-hidden rounded-sm px-1 text-left text-[9px] font-medium leading-none ${
-        focused ? 'ring-2 ring-[var(--ink)]' : ''
-      } ${d.status === 'done' ? 'opacity-50' : ''}`}
+      className={`absolute inset-x-0.5 z-[5] flex h-4 items-center gap-1 overflow-hidden rounded-sm pl-1 pr-1 text-left text-xs font-medium leading-4 active:transform-none ${
+        focused ? 'outline-2 outline-offset-1 outline-[var(--ink)]' : ''
+      }`}
       style={{
         ...style,
         background: 'var(--surface)',
-        border: `1px dashed ${colour}`,
-        borderLeft: `3px solid ${colour}`,
+        border: `1px dashed ${done ? `color-mix(in oklab, ${colour} 40%, transparent)` : colour}`,
+        borderLeft: `3px solid ${done ? `color-mix(in oklab, ${colour} 40%, transparent)` : colour}`,
       }}
       title={`Due ${fmtTime(d.dueAt, tz)} · ${d.course} · ${d.title} · ${statusLabel(d)}`}
       aria-label={`${d.title}, ${d.course}, due ${fmtTime(d.dueAt, tz)}, ${statusLabel(d)}`}
     >
-      <span className={`shrink-0 ${alarm ? 'text-[var(--warn)]' : 'text-[var(--faint)]'}`}>
-        {d.status === 'done' ? '✓' : alarm ? '!' : 'Due'}
+      {(done || alarm) && (
+        <span className={`shrink-0 ${alarm ? 'text-[var(--warn)]' : 'text-[var(--muted)]'}`} aria-hidden>
+          {done ? '✓' : '!'}
+        </span>
+      )}
+      <span className={`truncate ${done ? 'text-[var(--muted)] line-through' : 'text-[var(--ink)]'}`}>
+        {keepCodes(d.course)}
       </span>
-      <span className={`truncate ${d.status === 'done' ? 'line-through' : ''}`}>{d.course}</span>
     </button>
   );
 }

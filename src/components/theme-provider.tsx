@@ -81,11 +81,9 @@ export function ThemePicker() {
             key={t.id}
             onClick={() => setTheme(t.id)}
             aria-pressed={active}
-            className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-colors ${
-              active ? 'border-[var(--accent)] bg-[var(--accent-soft)]' : 'border-[var(--border)] hover:bg-[var(--raised)]'
-            }`}
+            className="chip"
           >
-            <span className="h-3.5 w-3.5 rounded-full" style={{ background: t.swatch }} aria-hidden />
+            <span className="h-3 w-3 rounded-full" style={{ background: t.swatch }} aria-hidden />
             {t.name}
           </button>
         );
