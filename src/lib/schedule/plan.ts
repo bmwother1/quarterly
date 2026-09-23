@@ -333,6 +333,22 @@ function buildCommitmentSessions(c: Commitment, opts: Required<PlanOptions>): Pe
   const horizonEnd = new Date(opts.now.getTime() + opts.days * 86_400_000);
   const out: Pending[] = [];
 
+  // Sessions of this already on the calendar, by the Monday of their week:
+  // reported ones, and planned ones a replan kept because they were pinned.
+  const thisMonday = addDaysKey(today.dateKey, -today.weekday);
+  const weekFloorMs = zonedInstant(thisMonday, 0, opts.tz).getTime();
+  const onCalendar = new Map<string, { reported: number; planned: number }>();
+  for (const b of opts.existingBlocks) {
+    if (b.commitmentId !== c.id || b.status === 'skipped') continue;
+    if (new Date(b.start).getTime() < weekFloorMs) continue;
+    const p = localParts(new Date(b.start), opts.tz);
+    const monday = addDaysKey(p.dateKey, -p.weekday);
+    const week = onCalendar.get(monday) ?? { reported: 0, planned: 0 };
+    if (b.status === 'planned') week.planned += 1;
+    else week.reported += 1;
+    onCalendar.set(monday, week);
+  }
+
   // A quota resets weekly, so each week in the horizon gets its own set of
   // sessions with its own deadline. Planning only the current week leaves every
   // day past Sunday empty, which reads as a broken app rather than an unplanned
@@ -356,13 +372,24 @@ function buildCommitmentSessions(c: Commitment, opts: Required<PlanOptions>): Pe
     const weekEnd = zonedInstant(addDaysKey(weekStartKey, daysLeftInWeek - 1), 23 * 60 + 59, opts.tz);
     const placeBy = weekEnd < horizonEnd ? weekEnd : horizonEnd;
 
-    // Only the current week knows what's already been done. A later week that
-    // is only partly inside the horizon gets a proportional share rather than a
-    // full quota — otherwise a horizon ending on Monday morning generates a
-    // whole week of runs for a six-hour sliver.
+    // A later week that is only partly inside the horizon gets a proportional
+    // share rather than a full quota, or a horizon ending on Monday morning
+    // generates a whole week of runs for a six-hour sliver.
+    //
+    // Either way, sessions already on that week's calendar come off it. For the
+    // current week the tally and the calendar each miss something. The tally
+    // resets when the week's first replan comes after a session was already
+    // done, and never counts a pinned one. The calendar misses a session dropped
+    // with "I'm not doing this", which raises the tally and leaves no block.
+    // The larger of the two, plus what is pinned, misses neither.
+    const here = onCalendar.get(addDaysKey(thisMonday, weekOffset * 7)) ?? { reported: 0, planned: 0 };
+    const already = weekOffset === 0
+      ? Math.max(c.doneThisWeek, here.reported) + here.planned
+      : here.reported + here.planned;
+
     let remaining: number;
     if (weekOffset === 0) {
-      remaining = Math.max(0, c.sessionsPerWeek - c.doneThisWeek);
+      remaining = Math.max(0, c.sessionsPerWeek - already);
 
       // A once-a-day habit cannot happen more times than there are days left.
       // Signing up on a Friday and asking for four runs a week isn't a capacity
@@ -375,7 +402,10 @@ function buildCommitmentSessions(c: Commitment, opts: Required<PlanOptions>): Pe
         daysLeftInWeek,
         (horizonEnd.getTime() - weekStart.getTime()) / 86_400_000,
       );
-      remaining = Math.round(c.sessionsPerWeek * (daysInHorizon / 7));
+      remaining = Math.max(0, Math.min(
+        Math.round(c.sessionsPerWeek * (daysInHorizon / 7)),
+        c.sessionsPerWeek - already,
+      ));
     }
 
     if (remaining > 0) {
@@ -405,8 +435,7 @@ function buildCommitmentSessions(c: Commitment, opts: Required<PlanOptions>): Pe
           // The week this session is counted against. For the current week
           // this is just now, so nothing changes for work due imminently.
           notBefore: weekStart,
-          // Only the current week has sessions already behind it.
-          weekSession: (weekOffset === 0 ? c.doneThisWeek : 0) + i + 1,
+          weekSession: already + i + 1,
           weekDaysLeft: daysLeftInWeek,
           priority: decayed,
           separateDays: c.maxPerDay <= 1,
