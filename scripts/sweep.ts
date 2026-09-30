@@ -461,20 +461,17 @@ function check(input: PlanInput, result: PlanResult): Violation[] {
     else if (ms(b.end) > due) out.push({ inv: 'c', kind: 'ends after its deadline', detail: `${b.id} ends ${b.end}, due ${new Date(due).toISOString()}` });
   }
 
-  // c, continued. No more planned for an assignment than is left of it, counting
-  // sessions already on the calendar. Session lengths round: up to the
-  // 25-minute floor, or to five minutes, and either way the overshoot stays
-  // under 25.
+  // c, continued. One planned block per assignment at a time (2026-09-30: an
+  // hour each, and Partly books the next). A second would be the old splitting
+  // back, or a pinned block planned over.
   for (const a of input.assignments) {
     const fresh = added.filter((b) => b.assignmentId === a.id);
     if (fresh.length === 0) continue;
     const pinned = kept.filter((b) => b.assignmentId === a.id && b.status === 'planned');
-    const planned = [...fresh, ...pinned].reduce((t, b) => t + b.minutes, 0);
-    const left = Math.max(0, a.estimatedMinutes - a.actualMinutes);
-    if (planned >= left + 25) {
+    if (fresh.length + pinned.length > 1) {
       out.push({
-        inv: 'c', kind: 'plans more than the work left',
-        detail: `${a.id}: ${fresh.length} new and ${pinned.length} kept planned, ${planned} min for ${left} min left`,
+        inv: 'c', kind: 'plans more than one block for an assignment',
+        detail: `${a.id}: ${fresh.length} new and ${pinned.length} kept planned`,
       });
     }
   }
@@ -854,7 +851,7 @@ console.log(
   `planner p50 ${pct(0.5).toFixed(1)}ms, p99 ${pct(0.99).toFixed(1)}ms, max ${pct(1).toFixed(1)}ms ` +
   `(--only ${slowest.scenario} --plan ${slowest.step})`,
 );
-console.log('  promises: a ceiling · b no overlaps, inside the day · c deadlines, no more than the work left · d session length · ' +
+console.log('  promises: a ceiling · b no overlaps, inside the day · c deadlines, one block per assignment · d session length · ' +
   'e commitment quota, daily limit, window · f deterministic, input untouched · h under 100ms · i unique ids · j reasons read');
 
 if (findings.size === 0) {

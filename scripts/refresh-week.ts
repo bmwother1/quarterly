@@ -90,14 +90,24 @@ for (let w = 0; w < 3; w++) {
   const end = new Date(start.getTime() + 7 * DAY);
   state = replan(state, start);
 
-  // Does most of it. Every third session is skipped: nobody is perfect, a
-  // simulation where everyone is proves nothing about the skip path, and a
-  // student who finishes everything leaves no plan for the refresh to protect.
-  const due = state.blocks.filter((b) => b.status === 'planned' && Date.parse(b.end) <= end.getTime());
+  // Does most of it. Of every four sessions, two are done, one only partly
+  // and one skipped: nobody is perfect, a simulation where everyone is proves
+  // nothing about the skip path, and a student who finishes everything leaves
+  // no plan for the refresh to protect. Partly matters since Done finishes an
+  // assignment outright (2026-09-30): it is the only way to leave work that was
+  // started and is still open, which is what a deleted-after-work item needs.
+  // Only work due within the week gets answered. Since each assignment is one
+  // hour, the plan reaches a fortnight ahead, and a student who did all of it
+  // early would reach week 4 with nothing open for the refresh to test.
+  const soon = new Set(state.assignments
+    .filter((a) => Date.parse(a.due) <= end.getTime() + 7 * DAY).map((a) => a.id));
+  const due = state.blocks.filter((b) => b.status === 'planned' && Date.parse(b.end) <= end.getTime()
+    && (!b.assignmentId || soon.has(b.assignmentId)));
   due.forEach((b, i) => {
-    const outcome = i % 3 === 2 ? 'skipped' : 'done';
+    const outcome = i % 4 === 3 ? 'skipped' : i % 4 === 2 ? 'partial' : 'done';
     if (outcome === 'skipped') skipped += 1;
-    state = { ...state, ...applyCompletion(state, b.id, outcome, outcome === 'done' ? b.minutes : null, new Date(b.end)) };
+    const minutes = outcome === 'done' ? b.minutes : outcome === 'partial' ? Math.round(b.minutes / 2) : null;
+    state = { ...state, ...applyCompletion(state, b.id, outcome, minutes, new Date(b.end)) };
   });
 }
 

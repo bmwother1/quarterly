@@ -248,7 +248,8 @@ describe('a pinned session is work already planned', () => {
 
     const planned = [pinned, ...r.blocks.filter((b) => b.assignmentId === 'pset')].reduce((t, b) => t + b.minutes, 0);
     assert.ok(planned <= 120, `${planned} minutes planned for a 120-minute problem set`);
-    assert.ok(r.blocks.some((b) => b.assignmentId === 'pset'), 'the unpinned hour went unplanned');
+    // One block per assignment since 2026-09-30: the pinned one is it.
+    assert.equal(r.blocks.filter((b) => b.assignmentId === 'pset').length, 0, 'planned a second block on top of the pinned one');
   });
 });
 
@@ -267,8 +268,9 @@ describe('the daily ceiling counts what already happened', () => {
     const av = { ...defaultAvailability(), energy: 'steady' as const, maxDailyMinutes };
     // More due Wednesday than the days before it can hold, so the planner always
     // wants Monday and only the ceiling can stop it.
-    const work = ['MATH 124', 'CHEM 142', 'CSE 121'].map((course, i) => assignment({
-      id: `hw${i}`, course, estimatedMinutes: 300,
+    // One hour each since 2026-09-30, so it takes a dozen to overfill two days.
+    const work = Array.from({ length: 12 }, (_, i) => assignment({
+      id: `hw${i}`, course: ['MATH 124', 'CHEM 142', 'CSE 121'][i % 3], estimatedMinutes: 60,
       due: zonedInstant('2026-10-07', 23 * 60, TZ).toISOString(),
     }));
 

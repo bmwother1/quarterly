@@ -9,6 +9,29 @@ record of what was tried and abandoned is worth more than a tidy file.
 
 ---
 
+## 2026-09-30 · One hour per assignment; Done finishes it, Partly books a follow-up
+
+**Decided (Brydon):** every assignment gets one 60-minute block. Done marks the
+assignment done whatever the estimate. Partly logs the minutes and books one
+follow-up straight away, later that day or on another day before it is due: an
+hour if under half the first went on it, otherwise 30 minutes. A day's
+allowance can still trim it, as it can any session.
+
+**Why:** splitting by estimate (a quiz 90 minutes in three, an exam in eight)
+filled his first real week with slivers of one course and made it unreadable.
+One block per thing is legible, and the student's own Done and Partly carry
+the information the estimate was guessing at.
+
+**What it costs:** exams and projects get an hour up front and rely on Partly
+for the rest; spaced exam prep across days is gone for now. Estimates are still
+stored and still learned from, so returning to sized sessions is a planner
+change, not a data migration. The sweep's promise (c) is now "one planned block
+per assignment"; `npm run refresh` simulates Partly and answers only work due
+within the week, since a student finishing everything two weeks early left
+nothing open to test.
+
+---
+
 ## 2026-09-30 · Courses get their own hues; Canvas reminders are notifications
 
 From Brydon's first real week, on launch day.

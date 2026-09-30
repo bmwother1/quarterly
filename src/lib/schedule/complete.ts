@@ -74,7 +74,10 @@ export function applyCompletion(
       ...a,
       actualMinutes: logged,
       lastTouched: outcome === 'skipped' ? a.lastTouched : now.toISOString(),
-      status: logged >= a.estimatedMinutes && outcome !== 'skipped' ? ('done' as const) : a.status,
+      // Done means done: an assignment gets one block, and the student saying
+      // they finished it outranks any estimate. Partly leaves it open for the
+      // follow-up the planner books next.
+      status: outcome === 'done' ? ('done' as const) : a.status,
     };
   });
 

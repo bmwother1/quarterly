@@ -217,9 +217,10 @@ describe('the planner', () => {
     ];
     const result = planWeek(assignments, openWeek(), { now: MONDAY_8AM, tz: TZ });
 
-    assert.ok(result.blocks.length > 0);
+    // One hour-long block each, whatever the estimate (2026-09-30).
+    assert.equal(result.blocks.length, 2);
     assert.equal(result.unscheduled.length, 0);
-    assert.ok(result.stats.scheduledMinutes >= 250, `only scheduled ${result.stats.scheduledMinutes} of 300 minutes`);
+    assert.ok(result.blocks.every((b) => b.minutes === 60));
   });
 
   test('never schedules work after its deadline', () => {
@@ -314,7 +315,9 @@ describe('the planner', () => {
     }
   });
 
-  test('exam sessions land on separate days', () => {
+  test('an exam gets one hour-long block like everything else', () => {
+    // The trade Brydon chose on 2026-09-30: one hour per assignment, and
+    // Partly books more. An exam used to be spread over several days.
     const assignments = [
       makeAssignment({
         id: 'exam1', kind: 'exam', course: 'CHEM 142', title: 'Midterm 1',
@@ -323,10 +326,7 @@ describe('the planner', () => {
       }),
     ];
     const result = planWeek(assignments, openWeek(), { now: MONDAY_8AM, tz: TZ });
-
-    const days = result.blocks.map((b) => localParts(new Date(b.start), TZ).dateKey);
-    assert.equal(new Set(days).size, days.length, 'exam prep was crammed onto one day');
-    assert.ok(days.length >= 3, `expected the exam spread across several days, got ${days.length}`);
+    assert.deepEqual(result.blocks.map((b) => b.minutes), [60]);
   });
 
   test('sessions of one assignment run in order', () => {
@@ -400,16 +400,19 @@ describe('the planner', () => {
     assert.doesNotMatch(why, /1 hours/);
   });
 
-  test('the last few minutes of an assignment round up to a full session', () => {
-    // Found by `npm run sweep`: 13 to 24 minutes left became its own block,
-    // under the 25-minute floor every other session keeps. The common case is
-    // work nearly finished, so it is logged time that leaves the sliver.
+  test('Partly books one follow-up: an hour if little got done, half an hour to finish', () => {
     const due = zonedInstant('2026-10-08', 23 * 60, TZ).toISOString();
-    for (const left of [13, 18, 24]) {
-      const a = makeAssignment({ id: 'nearly', kind: 'problem set', due, estimatedMinutes: 120, actualMinutes: 120 - left });
-      const blocks = planWeek([a], openWeek(), { now: MONDAY_8AM, tz: TZ }).blocks.filter((b) => b.assignmentId === 'nearly');
-      assert.equal(blocks.length, 1, `${left} minutes left`);
-      assert.equal(blocks[0].minutes, 25, `${left} minutes left became a ${blocks[0].minutes}-minute block`);
+    const a = makeAssignment({ id: 'hw', kind: 'problem set', due, estimatedMinutes: 120 });
+    const partial = (spent: number) => ({
+      id: `p${spent}`, assignmentId: 'hw', commitmentId: null, course: 'TEST 101', title: 'Test item',
+      start: new Date(MONDAY_8AM.getTime() - 2 * 3_600_000).toISOString(),
+      end: new Date(MONDAY_8AM.getTime() - 3_600_000).toISOString(),
+      minutes: 60, method: 'practice' as const, why: '', sessionIndex: 1, sessionCount: 1,
+      status: 'partial' as const, actualMinutes: spent,
+    });
+    for (const [spent, next] of [[10, 60], [29, 60], [30, 30], [50, 30]]) {
+      const r = planWeek([a], openWeek(), { now: MONDAY_8AM, tz: TZ, existingBlocks: [partial(spent)] as never });
+      assert.deepEqual(r.blocks.filter((b) => b.assignmentId === 'hw').map((b) => b.minutes), [next], `${spent} minutes spent`);
     }
   });
 
@@ -445,19 +448,6 @@ describe('the planner', () => {
 
     assert.ok(!result.blocks.some((b) => b.assignmentId === 'done'));
     assert.ok(result.blocks.some((b) => b.assignmentId === 'todo'));
-  });
-
-  test('time already logged reduces what gets scheduled', () => {
-    const due = zonedInstant('2026-10-09', 23 * 60, TZ).toISOString();
-    const fresh = planWeek(
-      [makeAssignment({ id: 'x', kind: 'project', title: 'Project', due, estimatedMinutes: 240 })],
-      openWeek(), { now: MONDAY_8AM, tz: TZ },
-    );
-    const partly = planWeek(
-      [makeAssignment({ id: 'x', kind: 'project', title: 'Project', due, estimatedMinutes: 240, actualMinutes: 180 })],
-      openWeek(), { now: MONDAY_8AM, tz: TZ },
-    );
-    assert.ok(partly.stats.scheduledMinutes < fresh.stats.scheduledMinutes);
   });
 
   test('every block explains itself', () => {
@@ -505,7 +495,7 @@ describe('the planner', () => {
     ];
 
     const hourOfExam = (energy: 'morning' | 'evening') => {
-      const r = planWeek(assignments, openWeek({ energy }), { now: MONDAY_8AM, tz: TZ, maxConsecutiveCourseMinutes: 45 });
+      const r = planWeek(assignments, openWeek({ energy }), { now: MONDAY_8AM, tz: TZ, maxConsecutiveCourseMinutes: 60 });
       const block = r.blocks.find((b) => b.assignmentId === 'e');
       return block ? localParts(new Date(block.start), TZ).hour : null;
     };
@@ -535,8 +525,14 @@ describe('the planner', () => {
       makeAssignment({ id: 'd1', kind: 'problem set', course: 'MATH 124', title: 'Homework', due: zonedInstant('2026-10-31', 23 * 60 + 59, TZ).toISOString(), estimatedMinutes: 150 }),
       makeAssignment({ id: 'd2', kind: 'exam', course: 'CHEM 142', title: 'Midterm 2', due: zonedInstant('2026-11-03', 10 * 60, TZ).toISOString(), estimatedMinutes: 300, weight: 0.25 }),
       makeAssignment({ id: 'd3', kind: 'writing', course: 'ENGL 131', title: 'Essay 3', due: zonedInstant('2026-11-04', 23 * 60 + 59, TZ).toISOString(), estimatedMinutes: 200 }),
+      // One block each now, so enough of them to fill the week either side.
+      // and a two-hour day, so the week has to reach past Sunday.
+      ...Array.from({ length: 10 }, (_, i) => makeAssignment({
+        id: `r${i}`, kind: 'reading', course: 'HIST 111', title: `Reading ${i}`,
+        due: zonedInstant('2026-11-04', 23 * 60 + 59, TZ).toISOString(), estimatedMinutes: 60,
+      })),
     ];
-    const result = planWeek(assignments, openWeek(), { now: dstStart, tz: TZ });
+    const result = planWeek(assignments, openWeek({ maxDailyMinutes: 120 }), { now: dstStart, tz: TZ });
 
     assert.ok(result.blocks.length >= 6, `expected a full week of blocks, got ${result.blocks.length}`);
     const spansBoundary = result.blocks.some((b) => new Date(b.start) > zonedInstant('2026-11-01', 12 * 60, TZ));
@@ -582,13 +578,14 @@ describe('rescheduling', () => {
       [makeAssignment({ id: 'x', kind: 'problem set', title: 'Set 1', due, estimatedMinutes: 150 })],
       openWeek(), { now: MONDAY_8AM, tz: TZ },
     );
-    assert.ok(before.blocks.length >= 2);
+    assert.equal(before.blocks.length, 1);
 
     // The student finishes the first session and logs 60 minutes against it.
     const after = planWeek(
-      [makeAssignment({ id: 'x', kind: 'problem set', title: 'Set 1', due, estimatedMinutes: 150, actualMinutes: 60, lastTouched: MONDAY_8AM.toISOString() })],
+      // Done marks the assignment done (applyCompletion), whatever was logged.
+      [makeAssignment({ id: 'x', kind: 'problem set', title: 'Set 1', due, estimatedMinutes: 150, actualMinutes: 60, status: 'done', lastTouched: MONDAY_8AM.toISOString() })],
       openWeek(), { now: new Date(MONDAY_8AM.getTime() + 2 * 3_600_000), tz: TZ },
     );
-    assert.ok(after.stats.scheduledMinutes < before.stats.scheduledMinutes);
+    assert.equal(after.blocks.length, 0);
   });
 });

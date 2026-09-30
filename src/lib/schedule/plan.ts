@@ -40,7 +40,6 @@ import { effectiveEnergy } from './observed.ts';
 import {
   CATEGORY_METHOD,
   MIN_SESSION_MINUTES,
-  SESSION_MINUTES,
   DEMAND,
   commitmentPriority,
   confidenceFactor,
@@ -269,26 +268,38 @@ export function dueInstant(a: Assignment, tz: string): Date {
   return new Date(new Date(a.due).getTime() + (23 * 60 + 59 - p.minutesOfDay) * 60_000);
 }
 
-/** Break an assignment's remaining work into sessions of a sane length. */
-function buildSessions(a: Assignment, opts: Required<PlanOptions>): Pending[] {
-  // Time logged is spent, and a session the student pinned is already planned.
-  // Leaving the pinned one out planned it twice, and took the hour from
-  // whatever else needed it.
-  const pinned = opts.existingBlocks
-    .filter((b) => b.assignmentId === a.id && b.status === 'planned')
-    .reduce((t, b) => t + b.minutes, 0);
-  // A reminder is not work, whatever its estimate says. Checked here rather
-  // than trusted to the import, so a week imported before this rule loses the
-  // sessions on its next replan.
-  if (isReminder(a.title)) return [];
-  const remaining = Math.max(0, a.estimatedMinutes - a.actualMinutes - pinned);
-  if (remaining < MIN_SESSION_MINUTES / 2) return [];
+/** The one block an assignment gets. */
+export const CHUNK_MINUTES = 60;
 
-  const preferred = SESSION_MINUTES[a.kind];
-  const count = clamp(Math.ceil(remaining / preferred), 1, opts.maxSessionsPerAssignment);
-  // The floor holds even for the last few minutes: finishing early is fine, a
-  // 15-minute block is an interruption.
-  const per = clamp(Math.round(remaining / count / 5) * 5, MIN_SESSION_MINUTES, opts.maxSessionMinutes);
+/**
+ * After Partly: another hour if less than half the first went on it, otherwise
+ * half an hour to finish. Null when nothing was answered Partly yet.
+ */
+export function followUpMinutes(a: Assignment, blocks: StudyBlock[]): number | null {
+  const partial = blocks.filter((b) => b.assignmentId === a.id && b.status === 'partial');
+  if (partial.length === 0) return null;
+  const last = partial.sort((x, y) => x.start.localeCompare(y.start))[partial.length - 1];
+  return (last.actualMinutes ?? 0) < CHUNK_MINUTES / 2 ? CHUNK_MINUTES : CHUNK_MINUTES / 2;
+}
+
+/**
+ * One block per assignment, an hour long.
+ *
+ * It used to split the estimate into sessions (a quiz was 90 minutes in three,
+ * an exam eight), and a course with daily Canvas items filled every gap of the
+ * week with slivers of it. Brydon's call on launch day: one hour for each
+ * thing. Done finishes it. Partly books one follow-up (`followUpMinutes`).
+ * The estimate is still kept and still learned; it no longer sizes the plan.
+ */
+function buildSessions(a: Assignment, opts: Required<PlanOptions>): Pending[] {
+  // A reminder is not work, whatever its estimate says (`reminder.ts`).
+  if (isReminder(a.title)) return [];
+  if (a.estimatedMinutes <= 0) return [];
+  // Its block is already on the calendar, pinned or kept.
+  if (opts.existingBlocks.some((b) => b.assignmentId === a.id && b.status === 'planned')) return [];
+
+  const count = 1;
+  const per = followUpMinutes(a, opts.existingBlocks) ?? CHUNK_MINUTES;
 
   const dueAt = dueInstant(a, opts.tz);
   // Overdue work still deserves a slot — it just no longer has a real deadline

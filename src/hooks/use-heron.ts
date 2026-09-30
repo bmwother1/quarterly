@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useRef, useState, useSyncExternalStore } from 'react';
+import { fitNewWork } from '@/lib/schedule/fit-new';
 import type { Assignment, Availability, Commitment, FixedEvent, WorkKind } from '@/lib/types';
 import { heronStore, type HeronState } from '@/lib/store';
 import { planWeek } from '@/lib/schedule/plan';
@@ -160,14 +161,22 @@ export function useHeron(tz: string) {
   }, [mutateUndoable, replan]);
 
   const complete = useCallback((blockId: string, outcome: Completion, minutes: number | null) => {
-    mutate((prev) => ({ ...prev, ...applyCompletion(prev, blockId, outcome, minutes, new Date()) }));
+    mutate((prev) => {
+      const now = new Date();
+      const next = { ...prev, ...applyCompletion(prev, blockId, outcome, minutes, now) };
+      // Partly: book the follow-up straight away, later today or another day
+      // before it is due, without touching anything else in the week.
+      const assignmentId = prev.blocks.find((b) => b.id === blockId)?.assignmentId;
+      if (outcome !== 'partial' || !assignmentId) return next;
+      return fitNewWork(next, { addedIds: [assignmentId], movedIds: [] }, now, tz).next;
+    });
     // The single most informative thing a student does. Whether planned work
     // actually happens is the difference between a calendar and a scheduler.
     logEvent(outcome === 'skipped' ? 'block_skipped' : 'block_done', {
       minutes: minutes ?? 0,
       partial: outcome === 'partial',
     });
-  }, [mutate]);
+  }, [mutate, tz]);
 
   /**
    * Updater form, deliberately.
