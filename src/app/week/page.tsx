@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useHeron } from '@/hooks/use-heron';
 import { useNarrow } from '@/hooks/use-narrow';
@@ -36,6 +37,15 @@ const hours = (min: number) => `${(min / 60).toFixed(1)}h`;
 
 type ListRow = { kind: 'block'; at: string; block: StudyBlock } | { kind: 'due'; at: string; deadline: Deadline };
 
+
+/**
+ * The phone sheet renders on <body>. Inside the page it sits under the view's
+ * entrance animation, whose transform makes `fixed` mean "fixed to that box";
+ * `sheet.tsx` hit the same thing.
+ */
+function OutOfFlow({ when, children }: { when: boolean; children: ReactNode }) {
+  return when ? createPortal(children, document.body) : <>{children}</>;
+}
 
 /** The detail popover beside a tapped block, and its distance from it. */
 const POP_WIDTH = 340;
@@ -129,7 +139,7 @@ export default function WeekPage() {
     const place = () => {
       const wrap = gridWrapRef.current;
       const anchor = wrap?.querySelector<HTMLElement>(`[${attr}="${CSS.escape(openDetail)}"]`);
-      if (!wrap || !anchor || window.innerWidth < 720) { setPlaced(null); return; }
+      if (!wrap || !anchor || narrow) { setPlaced(null); return; }
       const w = wrap.getBoundingClientRect();
       const a = anchor.getBoundingClientRect();
       const right = a.right - w.left + POP_GAP;
@@ -154,19 +164,17 @@ export default function WeekPage() {
       window.removeEventListener('resize', place);
       window.removeEventListener('scroll', place, true);
     };
-  }, [openDetail, selectedId, selectedEventId]);
+  }, [openDetail, selectedId, selectedEventId, narrow]);
 
-  // Phone: under the grid, brought into view.
-  useEffect(() => {
-    if (!openDetail || pop || window.innerWidth >= 720) return;
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    detailRef.current?.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
-  }, [openDetail, pop]);
+  // Phone: no room beside anything, so the card is a sheet over the bottom of
+  // the screen, with the calendar still where the student left it.
+  const sheet = !!openDetail && narrow;
 
   // Escape or a tap anywhere else closes the popover. A tap on another block,
   // flag or event is left alone: that one opens instead.
+  const floating = !!pop || sheet;
   useEffect(() => {
-    if (!pop) return;
+    if (!floating) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeDetail(); };
     const onDown = (e: PointerEvent) => {
       const t = e.target as Element | null;
@@ -180,7 +188,7 @@ export default function WeekPage() {
       document.removeEventListener('keydown', onKey);
       document.removeEventListener('pointerdown', onDown);
     };
-  }, [pop]);
+  }, [floating]);
 
   const colourFor = useMemo(() => {
     // Resolves to a CSS variable, not a hex, so the same block follows the
@@ -548,12 +556,26 @@ export default function WeekPage() {
                 }}
               />
 
+              <OutOfFlow when={sheet}>
               <div
                 ref={detailRef}
-                data-popover={pop ? '' : undefined}
-                className={pop ? 'absolute z-30 shadow-float' : 'scroll-mb-4'}
+                data-popover={floating ? '' : undefined}
+                className={
+                  pop ? 'absolute z-30 shadow-float'
+                    : sheet ? 'fixed inset-x-0 bottom-0 z-[45] max-h-[75vh] overflow-y-auto px-3 pb-[max(12px,env(safe-area-inset-bottom))] shadow-float'
+                      : ''
+                }
                 style={pop ? { top: pop.top, left: pop.left, width: POP_WIDTH } : undefined}
               >
+              {floating && (
+                <button
+                  onClick={closeDetail}
+                  aria-label="Close"
+                  className={`absolute z-10 flex h-9 w-9 items-center justify-center rounded-full text-lg leading-none text-[var(--muted)] hover:text-[var(--ink)] ${sheet ? 'right-5 top-2' : 'right-2 top-2'}`}
+                >
+                  &times;
+                </button>
+              )}
               {selectedDeadline ? (
                 <div key={`due-${selectedDeadline.id}`} className="well enter">
                   <DeadlineCard
@@ -620,6 +642,7 @@ export default function WeekPage() {
                 </p>
               )}
               </div>
+              </OutOfFlow>
             </div>
           )}
 

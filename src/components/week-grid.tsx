@@ -39,6 +39,9 @@ const BAND_FILL = 'color-mix(in oklab, var(--ink) 5%, var(--surface))';
 /** Pixels per stacked deadline flag: a 16px flag and a 4px gap. */
 const FLAG_PX = 20;
 
+/** How far a pointer travels before a press becomes a drag. */
+const DRAG_SLOP_PX = 6;
+
 /** "9 AM", matching how every block's own time is written. */
 function hourLabel(min: number): string {
   const h = Math.floor(min / 60) % 24;
@@ -249,6 +252,12 @@ export function WeekGrid({
   // Distinguishes a tap (open the block) from a drag (move it). Without it,
   // every drop also fires a click and the detail panel opens on top.
   const moved = useRef(false);
+  // Where the pointer went down. A finger always jitters a pixel or two, and
+  // any move used to count as a drag, so on a phone a tap nudged the block
+  // instead of opening it. Nothing moves until the pointer has travelled.
+  const downAt = useRef<{ x: number; y: number } | null>(null);
+  // The block a pointerup just opened, so its trailing click is not a second tap.
+  const tapped = useRef<string | null>(null);
 
   /**
    * Which day and minute a screen point lands on.
@@ -298,6 +307,8 @@ export function WeekGrid({
           onPointerMove={(e) => {
             const cur = dragRef.current;
             if (!cur) return;
+            const start = downAt.current;
+            if (!moved.current && start && Math.hypot(e.clientX - start.x, e.clientY - start.y) < DRAG_SLOP_PX) return;
             const hit = locate(e.clientX, e.clientY);
             if (!hit) return;
             if (hit.dateKey !== cur.dateKey || hit.minute !== cur.minute) moved.current = true;
@@ -309,9 +320,10 @@ export function WeekGrid({
               onMove(cur.id, zonedInstant(cur.dateKey, cur.minute, tz).getTime());
             } else if (cur) {
               // A tap. It has to be handled here: pointer capture on the grid
-              // sends the click to the grid instead of the block, so the
+              // sends a mouse click to the grid instead of the block, so the
               // block's own onClick never fired and every tap did nothing.
               onSelect(cur.id);
+              tapped.current = cur.id;
             }
             setDragBoth(null);
           }}
@@ -534,11 +546,14 @@ export function WeekGrid({
                   return (
                     <button
                       key={block.id}
-                      // Keyboard (detail 0), and done blocks, which never start a
-                      // drag. Other pointer taps arrive through
-                      // the grid's onPointerUp; handling both would toggle the
-                      // card open and shut again wherever the click does land.
-                      onClick={(e) => { if (e.detail === 0 || settled) onSelect(block.id); }}
+                      onClick={() => {
+                        // A touch tap still delivers its click to the block,
+                        // after pointerup already opened it; a second select
+                        // would close it again. Keyboard and done blocks land
+                        // here alone.
+                        if (tapped.current === block.id) { tapped.current = null; return; }
+                        onSelect(block.id);
+                      }}
                       draggable={false}
                       onPointerDown={(e) => {
                         if (settled) return;
@@ -547,6 +562,8 @@ export function WeekGrid({
                         // block never moves and no pointerup reaches React.
                         e.preventDefault();
                         moved.current = false;
+                        tapped.current = null;
+                        downAt.current = { x: e.clientX, y: e.clientY };
                         // Capture keeps move events coming once the pointer
                         // leaves the block, which it does immediately. It can
                         // throw for a pointer id the browser isn't tracking, and

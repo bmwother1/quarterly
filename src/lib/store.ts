@@ -10,6 +10,7 @@
  * drop-off point in a product a classmate mentioned to them once.
  */
 
+import { withoutReminderSessions } from './canvas/reminder.ts';
 import type { Assignment, Availability, Commitment, Course, FixedEvent, StudyBlock } from './types.ts';
 import type { UnscheduledItem } from './schedule/plan.ts';
 import {
@@ -176,7 +177,7 @@ function read(): HeronState {
     const parsed = JSON.parse(raw) as Partial<HeronState>;
     // Merge over a fresh empty state so a blob written by an older build can
     // never leave a field undefined and crash a render.
-    return upgrade({ ...emptyState(), ...parsed });
+    return withoutReminderSessions(upgrade({ ...emptyState(), ...parsed }));
   } catch {
     return emptyState();
   }

@@ -8,6 +8,9 @@ import { deadlinesByDay } from '../src/lib/schedule/deadlines.ts';
 import { defaultAvailability } from '../src/lib/schedule/slots.ts';
 import { nextNotice } from '../src/lib/notify.ts';
 import { zonedInstant } from '../src/lib/time.ts';
+import { withoutReminderSessions } from '../src/lib/canvas/reminder.ts';
+import { afterPull } from '../src/lib/sync-rule.ts';
+import { emptyState } from '../src/lib/store.ts';
 
 /**
  * Canvas reminders are not work. Found on Brydon's first real import: "Final
@@ -93,5 +96,32 @@ describe('the reminder notification', () => {
   test('ordinary work never becomes a reminder', () => {
     const hw = item({ title: 'Homework 3', kind: 'problem set', estimatedMinutes: 120 });
     assert.equal(nextNotice({ ...base, assignments: [hw], now: at('2026-10-08', 9 * 60 + 1), lastSentAt: null }), null);
+  });
+});
+
+describe('a week planned before the reminder rule', () => {
+  const block = (id: string, assignmentId: string, status: 'planned' | 'done') => ({
+    id, assignmentId, commitmentId: null, course: 'MGMT 305', title: 'x',
+    start: '2026-10-02T17:00:00Z', end: '2026-10-02T17:50:00Z', minutes: 50,
+    method: 'retrieval', why: '', sessionIndex: 1, sessionCount: 8, status,
+  });
+  const stale = {
+    ...emptyState(),
+    assignments: [item({ kind: 'exam', estimatedMinutes: 450 }), item({ id: 'hw', title: 'Homework 3' })],
+    blocks: [block('b1', 'r1', 'planned'), block('b2', 'r1', 'done'), block('b3', 'hw', 'planned')],
+  } as unknown as ReturnType<typeof emptyState>;
+
+  test('loses the reminder\'s planned sessions without a replan, and keeps everything else', () => {
+    const clean = withoutReminderSessions(stale);
+    assert.deepEqual(clean.blocks.map((b) => b.id), ['b2', 'b3']);
+  });
+
+  test('the same happens to a copy pulled from the account', () => {
+    assert.deepEqual(afterPull(stale, '2026-10-01T00:00:00Z').blocks.map((b) => b.id), ['b2', 'b3']);
+  });
+
+  test('a clean week comes back as the same object', () => {
+    const clean = withoutReminderSessions(stale);
+    assert.equal(withoutReminderSessions(clean), clean);
   });
 });

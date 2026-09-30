@@ -1,3 +1,4 @@
+import { withoutReminderSessions } from './canvas/reminder.ts';
 import type { HeronState } from './store.ts';
 
 /**
@@ -111,7 +112,8 @@ export function afterPush(local: HeronState, at: string): HeronState {
  */
 export function afterPull(remote: HeronState, at: string): HeronState {
   return {
-    ...remote,
+    // The server copy may predate the reminder rule too.
+    ...withoutReminderSessions(remote),
     lastSyncedAt: at,
     lastModifiedAt: remote.lastModifiedAt ?? at,
   };
