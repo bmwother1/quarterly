@@ -1,62 +1,42 @@
 # Status
 
-**Updated: 2026-08-29** · 32 days to launch (September 30)
+**Updated: 2026-09-30** · launch day (private beta)
 
 This file describes the present. It gets rewritten, not appended to.
 
-Repo: `bmwother1/quarterly` (public). Live and current at
-**`heron.study`**, registered at Name.com on 2026-09-05 and attached to Vercel;
-`quarterly-alpha.vercel.app` still works and is the fallback. Pushes to `main`
-auto-deploy in about 20 seconds,
-confirmed working by watching a deploy land 27 seconds after a push. 276 tests.
-Supabase project `dxvekspnhqrcwqbqxleh` (West US Oregon); keys are in
-`.env.local` and in Vercel, along with `SUPABASE_SERVICE_ROLE_KEY` and
-`CRON_SECRET`. Custom SMTP runs through Resend on the shared
-`onboarding@resend.dev` sender, which only delivers to Brydon's own address.
-Node lives at `~/.local/node` and is on Brydon's PATH but not in a fresh agent
-shell — prefix `export PATH="$HOME/.local/node/bin:$PATH"`.
+Repo: `bmwother1/quarterly` (public). Live at **`heron.study`** (Vercel, DNS on
+Vercel's nameservers; `quarterly-alpha.vercel.app` 307s to it). Pushes to `main`
+deploy in about 20 seconds. 406 tests, passing under TZ=UTC, Pacific and Tokyo.
+Supabase project `dxvekspnhqrcwqbqxleh`. Sign-in codes come from
+`signin@heron.study` through Resend and reach any address. Node lives at
+`~/.local/node`; prefix `export PATH="$HOME/.local/node/bin:$PATH"` in a fresh
+agent shell.
 
 ---
 
 ## Right now
 
-The product is finished enough to hand to a student. Import any calendar, get a
-planned week, check things off, replan when it falls apart. It installs to a
-phone, works offline, and resolves conflicts on its own.
+Launch day, and Brydon used it on his own real week for the first time. The
+product works mechanically: Canvas imports, classes and weekly commitments are
+respected, nothing overlaps, the plan is deterministic, tapping anything opens
+its card beside it, and a class shows its room with a campus map link.
 
-The data layer landed on 2026-08-23 and the interface caught up on 2026-08-26:
-categories, a month view, a six-digit sign-in, and push notifications that can
-reach a phone.
+**It is not yet delivering its promise.** On his real week, 6 of 46.5 planned
+hours were coursework; the rest was what he typed himself. That is mostly the
+two planner rules set today: **one hour per assignment** (Done finishes it,
+Partly books a follow-up) and **a block lands in the five days before its
+deadline**. Both made the screen legible; together they switched off most of the
+planner's judgement about how much time things need. See decisions.md,
+2026-09-30.
 
-**Brydon has changed the plan.** No marketing until a full quarter of real use.
-He intends to pay a group of friends weekly for feedback and run them through
-autumn. That makes Sept 30 a private beta and moves the first honest retention
-read to winter quarter. Interviews are parked at his instruction.
+**The rule for the next two weeks: the planner rules are frozen.** Brydon uses
+it daily and answers Done, Partly or Skipped. Then one question is decided on
+his data: is one hour enough, or should blocks be sized from the estimate again
+(one a day, capped at two hours)? Repeated Partly on the same items says the
+latter.
 
-All three dashboard actions were done on 2026-08-27. `0002` ran, so account
-deletion works and the privacy page is accurate again.
-`SUPABASE_SERVICE_ROLE_KEY` was added in Vercel as a Secret and `0003` ran,
-returning job id 1, so the notification cron is scheduled every ten minutes.
-Custom SMTP went in the same night, through Resend, and **sign-in was run end to
-end for the first time: Brydon received a code and signed in.** Nothing is
-blocked on a dashboard action any more.
-
-The notification chain was then fixed end to end and **returns 200**: the cron
-fires, the app authenticates, and the sender reads its tables. It took three
-fixes, each hidden behind the one before it. The Vault secret did not match
-`CRON_SECRET` (401), and then `service_role` had no grant on the tables it
-reads, because `0001` granted only to `authenticated` (500). `0004` adds those
-grants.
-
-**Nothing has been delivered yet.** The endpoint reports `subscriptions: 0`,
-because the Settings toggle was subscribing into a broken pipeline for as long
-as it has existed and nobody has turned it on since. One phone needs to enable
-it before delivery is real.
-
-**Retention is measurable, not measured**, and now also unmeasurable by design
-until the paid-tester question is resolved: paying people to open the app buys
-the number rather than reading it. Tagging the cohort at signup is one column
-and has not been done.
+Class meeting times are not in Canvas for most courses; they are in MyUW. Until
+that is solved, students type classes into Setup, Classes.
 
 ## Shipped
 
@@ -136,45 +116,36 @@ and has not been done.
   "Welcome back", offers "Plan from today", and releases the unanswered blocks
   as skipped rather than making the student itemise last Tuesday
 
-## In progress, not finished
+## Blocked on Brydon
 
-- **Three doors into configuration.** `/start`, `/onboarding` and `/setup` all
-  configure the same state. `/start` is the default and `/onboarding` is the
-  guided alternative; `/setup` is now only reachable from the nav and from
-  individual setup prompts. Two of the three should survive to launch and it is
-  undecided which. **This one needs Brydon**, it is a product call.
-- **The name is Heron and the rename is done**, as of 2026-09-05. Code, copy,
-  metadata and manifest all say Heron. Four storage identifiers still say
-  `quarterly` on purpose and are commented as such.
-- **Confirm the sync loop** on two devices. The drag is confirmed.
-- **A decision on the three doors** into configuration.
-- **What the phone shows instead of a seven-day grid.** See Next, item 5.
-- **Sign-in from `heron.study` works for anyone, as of 2026-09-23.** Resend
-  verified the domain (records live in Vercel DNS, which holds the nameservers;
-  Name.com's DNS page is locked because of that). Supabase SMTP sends as
-  `signin@heron.study`, Site URL is `https://heron.study`, and a code reached
-  `bmwother1@icloud.com`, the first delivery to an address other than the Gmail.
-  `quarterly-alpha.vercel.app` now 307s to `heron.study`. The redirect allow-list
-  entry must read `https://heron.study/**` with the slash: without it, `**`
-  also matches `heron.study.attacker.com`.
-- **Two dashboard steps for synced calendar links (2026-09-23), both Brydon's.**
-  Until both are done the app behaves exactly as before, links on the device only.
-  1. Supabase SQL editor: run `supabase/migrations/0005_calendar_feed.sql`.
-  2. Vercel env var `FEED_LINK_KEY` (Production and Preview, Sensitive), value from
-     `openssl rand -base64 32`, then redeploy. Losing or changing it makes every
-     saved link unreadable; students would paste them again.
-  Then confirm: save Canvas on the laptop, open the phone, and it should be listed
-  in Settings, Calendar links.
-- **Whether paid testers are tagged separately.** Paying people to open the app
-  measures the payment, not the product, so they must not pollute the retention
-  cohort.
-- **Deployment Protection** is still on, set to
-  `all_except_custom_domains`. That means it never affected students and never
-  will: `heron.study` is public today, and so was the vercel.app URL before it
-  too. It only walls off raw deploy URLs from Brydon himself. Worth switching
-  off to stop wasting his own time, but it is not a launch item. Leave
-  `gitForkProtection` on, since it stops a forked PR building with the Supabase
-  keys once those exist.
+- **Notifications have never been seen arriving on a phone.** Install from the
+  home screen, sign in, Settings, turn them on, then wait for a "Next up" 15
+  minutes before a block. Reminders ("Final Reminder…" items) now arrive this
+  way too, at 9am on their due day, so this is load-bearing.
+- **Two-device sync has never been confirmed.** Plan on the laptop, open the
+  phone. Calendar links should appear in Settings on both. 0005 ran; confirm
+  `FEED_LINK_KEY` was saved with a fresh value (the first one was shown in a
+  screenshot) and the deployment redeployed after it.
+- **Fix his MGMT 305A class time** in Setup (typed as 10:30 to 12:50; MyUW says
+  roughly 10:30 to 11:20). The form now warns about the overlap with EE 454A.
+- **Paid testers: tag them before they sign up**, so the retention cohort is
+  not measuring the payment.
+- **Move the repo off the iCloud Desktop.**
+- **Three doors into configuration** (`/start`, `/onboarding`, `/setup`): a
+  product call, still open.
+
+## Known, not yet fixed
+
+- Sweep open items 2 (a commitment window too short for one session is
+  reported as "the week ran out") and 3 (sessions run in order). Items 4 and 5
+  were fixed on 2026-09-30.
+- `npm run refresh`: "the moved deadline kept its minutes" now passes vacuously
+  (0 minutes); rebuild the scenario when refresh code next changes.
+- A downloaded Canvas file imported as events has no refresh; only the link
+  refreshes.
+- Is the UW campus map link (`washington.edu/maps/?l=CODE`) actually opening
+  on the building? Unverified.
+- Deployment Protection is on for raw deploy URLs only; not a launch item.
 
 ## Owed to Brydon
 
@@ -205,32 +176,12 @@ and has not been done.
 
 ---
 
-## The plan to September 30
+## The next two weeks (Oct 1 to Oct 14)
 
-Sequencing note: **push notifications need a server-side subscription store and
-a scheduled job, so Supabase comes first** even though notifications are the
-higher-value feature.
-
-### Aug 24 → Aug 30 · the week the interviews have to happen
-- The data layer shipped a week early, on Aug 23. That bought this week back.
-- **Spend it on students, not code.** Twelve interviews by Sept 6, eight with
-  people who have no social reason to be nice about it.
-- Use it daily, with the real schedule. Still the closest proxy for retention.
-- Learned energy pattern. Shipped Aug 27.
-
-### Aug 31 → Sept 13 · the retention features
-- Push notifications. One a day, always carrying the block's reason.
-- Syllabus parsing, so a block names the topic rather than just the course.
-
-### Sept 14 → Sept 22 · feature freeze
-- Onboarding, empty states and bugs only. Anything added inside two weeks of
-  launch ships without a real student having touched it.
-
-### Sept 23 → Sept 30 · recruit
-- Thirty students before instruction begins.
-- Brydon is Sponsorship Lead of a 51-person solar vehicle team. That is more
-  people than the target, in one room, with authority already established.
-
-### The one number that decides everything
-Week-4 retention from Sept 30. Under 25% and nothing else matters. Over 40% and
-there is something real. Nothing measures it until Supabase ships.
+1. **Brydon uses it daily** on his real week and answers every block. No
+   planner rule changes; bugs only.
+2. **Prove the unproven**: a notification on his phone, sync across two
+   devices, and the first paid testers signed up and tagged.
+3. **Oct 14: decide block sizing** from his Done/Partly history.
+4. **Then class times**: whether MyUW offers a calendar export, or Setup stays
+   the way in.

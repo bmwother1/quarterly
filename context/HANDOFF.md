@@ -1,13 +1,12 @@
 # Heron — project brief
 
-*Generated 2026-09-05 from the project's `context/` files by `npm run handoff`.
+*Generated 2026-09-30 from the project's `context/` files by `npm run handoff`.
 Don't edit this by hand; edit the source files and regenerate.*
 
 This is the standing context for Heron. It covers the person building it,
 what's being built, where it stands, and what has already been decided — so a
 conversation can start from here instead of from scratch.
 
-**25 days to launch** (September 30 2026).
 
 ---
 
@@ -193,63 +192,43 @@ compound within a course.
 
 # Where things stand
 
-**Updated: 2026-08-29** · 32 days to launch (September 30)
+**Updated: 2026-09-30** · launch day (private beta)
 
 This file describes the present. It gets rewritten, not appended to.
 
-Repo: `bmwother1/quarterly` (public). Live and current at
-**`heron.study`**, registered at Name.com on 2026-09-05 and attached to Vercel;
-`quarterly-alpha.vercel.app` still works and is the fallback. Pushes to `main`
-auto-deploy in about 20 seconds,
-confirmed working by watching a deploy land 27 seconds after a push. 276 tests.
-Supabase project `dxvekspnhqrcwqbqxleh` (West US Oregon); keys are in
-`.env.local` and in Vercel, along with `SUPABASE_SERVICE_ROLE_KEY` and
-`CRON_SECRET`. Custom SMTP runs through Resend on the shared
-`onboarding@resend.dev` sender, which only delivers to Brydon's own address.
-Node lives at `~/.local/node` and is on Brydon's PATH but not in a fresh agent
-shell — prefix `export PATH="$HOME/.local/node/bin:$PATH"`.
+Repo: `bmwother1/quarterly` (public). Live at **`heron.study`** (Vercel, DNS on
+Vercel's nameservers; `quarterly-alpha.vercel.app` 307s to it). Pushes to `main`
+deploy in about 20 seconds. 406 tests, passing under TZ=UTC, Pacific and Tokyo.
+Supabase project `dxvekspnhqrcwqbqxleh`. Sign-in codes come from
+`signin@heron.study` through Resend and reach any address. Node lives at
+`~/.local/node`; prefix `export PATH="$HOME/.local/node/bin:$PATH"` in a fresh
+agent shell.
 
 ---
 
 ## Right now
 
-The product is finished enough to hand to a student. Import any calendar, get a
-planned week, check things off, replan when it falls apart. It installs to a
-phone, works offline, and resolves conflicts on its own.
+Launch day, and Brydon used it on his own real week for the first time. The
+product works mechanically: Canvas imports, classes and weekly commitments are
+respected, nothing overlaps, the plan is deterministic, tapping anything opens
+its card beside it, and a class shows its room with a campus map link.
 
-The data layer landed on 2026-08-23 and the interface caught up on 2026-08-26:
-categories, a month view, a six-digit sign-in, and push notifications that can
-reach a phone.
+**It is not yet delivering its promise.** On his real week, 6 of 46.5 planned
+hours were coursework; the rest was what he typed himself. That is mostly the
+two planner rules set today: **one hour per assignment** (Done finishes it,
+Partly books a follow-up) and **a block lands in the five days before its
+deadline**. Both made the screen legible; together they switched off most of the
+planner's judgement about how much time things need. See decisions.md,
+2026-09-30.
 
-**Brydon has changed the plan.** No marketing until a full quarter of real use.
-He intends to pay a group of friends weekly for feedback and run them through
-autumn. That makes Sept 30 a private beta and moves the first honest retention
-read to winter quarter. Interviews are parked at his instruction.
+**The rule for the next two weeks: the planner rules are frozen.** Brydon uses
+it daily and answers Done, Partly or Skipped. Then one question is decided on
+his data: is one hour enough, or should blocks be sized from the estimate again
+(one a day, capped at two hours)? Repeated Partly on the same items says the
+latter.
 
-All three dashboard actions were done on 2026-08-27. `0002` ran, so account
-deletion works and the privacy page is accurate again.
-`SUPABASE_SERVICE_ROLE_KEY` was added in Vercel as a Secret and `0003` ran,
-returning job id 1, so the notification cron is scheduled every ten minutes.
-Custom SMTP went in the same night, through Resend, and **sign-in was run end to
-end for the first time: Brydon received a code and signed in.** Nothing is
-blocked on a dashboard action any more.
-
-The notification chain was then fixed end to end and **returns 200**: the cron
-fires, the app authenticates, and the sender reads its tables. It took three
-fixes, each hidden behind the one before it. The Vault secret did not match
-`CRON_SECRET` (401), and then `service_role` had no grant on the tables it
-reads, because `0001` granted only to `authenticated` (500). `0004` adds those
-grants.
-
-**Nothing has been delivered yet.** The endpoint reports `subscriptions: 0`,
-because the Settings toggle was subscribing into a broken pipeline for as long
-as it has existed and nobody has turned it on since. One phone needs to enable
-it before delivery is real.
-
-**Retention is measurable, not measured**, and now also unmeasurable by design
-until the paid-tester question is resolved: paying people to open the app buys
-the number rather than reading it. Tagging the cohort at signup is one column
-and has not been done.
+Class meeting times are not in Canvas for most courses; they are in MyUW. Until
+that is solved, students type classes into Setup, Classes.
 
 ## Shipped
 
@@ -329,37 +308,18 @@ and has not been done.
   "Welcome back", offers "Plan from today", and releases the unanswered blocks
   as skipped rather than making the student itemise last Tuesday
 
-## In progress, not finished
+## Known, not yet fixed
 
-- **Three doors into configuration.** `/start`, `/onboarding` and `/setup` all
-  configure the same state. `/start` is the default and `/onboarding` is the
-  guided alternative; `/setup` is now only reachable from the nav and from
-  individual setup prompts. Two of the three should survive to launch and it is
-  undecided which. **This one needs Brydon**, it is a product call.
-- **The name is Heron and the rename is done**, as of 2026-09-05. Code, copy,
-  metadata and manifest all say Heron. Four storage identifiers still say
-  `quarterly` on purpose and are commented as such.
-- **Register `heron.study`, then verify it in Resend.** The
-  shared `onboarding@resend.dev` only delivers to Brydon's own address, so no
-  student can sign in until a real domain is verified. The name is no longer
-  what blocks this.
-- **Confirm the sync loop** on two devices. The drag is confirmed.
-- **A decision on the three doors** into configuration.
-- **What the phone shows instead of a seven-day grid.** See Next, item 5.
-- **DNS for `heron.study`.** Two records still to add, both Brydon's: Resend's
-  verification records so sign-in codes come from the domain rather than a
-  shared sender, and `https://heron.study/**` in Supabase's redirect allow-list.
-  Sign-in breaks the moment students use the new URL without the second one.
-- **Whether paid testers are tagged separately.** Paying people to open the app
-  measures the payment, not the product, so they must not pollute the retention
-  cohort.
-- **Deployment Protection** is still on, set to
-  `all_except_custom_domains`. That means it never affected students and never
-  will: `heron.study` is public today, and so was the vercel.app URL before it
-  too. It only walls off raw deploy URLs from Brydon himself. Worth switching
-  off to stop wasting his own time, but it is not a launch item. Leave
-  `gitForkProtection` on, since it stops a forked PR building with the Supabase
-  keys once those exist.
+- Sweep open items 2 (a commitment window too short for one session is
+  reported as "the week ran out") and 3 (sessions run in order). Items 4 and 5
+  were fixed on 2026-09-30.
+- `npm run refresh`: "the moved deadline kept its minutes" now passes vacuously
+  (0 minutes); rebuild the scenario when refresh code next changes.
+- A downloaded Canvas file imported as events has no refresh; only the link
+  refreshes.
+- Is the UW campus map link (`washington.edu/maps/?l=CODE`) actually opening
+  on the building? Unverified.
+- Deployment Protection is on for raw deploy URLs only; not a launch item.
 
 ## Owed to Brydon
 
@@ -390,39 +350,128 @@ and has not been done.
 
 ---
 
-## The plan to September 30
+## The next two weeks (Oct 1 to Oct 14)
 
-Sequencing note: **push notifications need a server-side subscription store and
-a scheduled job, so Supabase comes first** even though notifications are the
-higher-value feature.
-
-### Aug 24 → Aug 30 · the week the interviews have to happen
-- The data layer shipped a week early, on Aug 23. That bought this week back.
-- **Spend it on students, not code.** Twelve interviews by Sept 6, eight with
-  people who have no social reason to be nice about it.
-- Use it daily, with the real schedule. Still the closest proxy for retention.
-- Learned energy pattern. Shipped Aug 27.
-
-### Aug 31 → Sept 13 · the retention features
-- Push notifications. One a day, always carrying the block's reason.
-- Syllabus parsing, so a block names the topic rather than just the course.
-
-### Sept 14 → Sept 22 · feature freeze
-- Onboarding, empty states and bugs only. Anything added inside two weeks of
-  launch ships without a real student having touched it.
-
-### Sept 23 → Sept 30 · recruit
-- Thirty students before instruction begins.
-- Brydon is Sponsorship Lead of a 51-person solar vehicle team. That is more
-  people than the target, in one room, with authority already established.
-
-### The one number that decides everything
-Week-4 retention from Sept 30. Under 25% and nothing else matters. Over 40% and
-there is something real. Nothing measures it until Supabase ships.
+1. **Brydon uses it daily** on his real week and answers every block. No
+   planner rule changes; bugs only.
+2. **Prove the unproven**: a notification on his phone, sync across two
+   devices, and the first paid testers signed up and tagged.
+3. **Oct 14: decide block sizing** from his Done/Partly history.
+4. **Then class times**: whether MyUW offers a calendar export, or Setup stays
+   the way in.
 
 ---
 
 # Recent sessions
+
+## 2026-09-30 · Claude Code · Launch week on a real schedule: DNS, link sync, and a planner reshaped by one screen
+
+Spanned Sept 23 to launch day. Sign-in from `heron.study` now works for anyone
+(Resend records were already in Vercel DNS; the missing step was the SMTP
+sender). Calendar links sync to the account, AES-GCM encrypted with the key in
+Vercel only. Then Brydon used it on his real UW week for the first time and it
+fell apart visibly: taps did nothing (pointer capture swallowed the click, and on
+touch the trailing click closed the card again), "Final Reminder" items were
+read as exams with eight sessions, every course was red, a daily-items course
+filled every gap with slivers, and classes were not in Canvas at all. Each was
+fixed and shipped the same day, tested in a real browser.
+
+**What went badly:** four planner rule changes on launch day, each a reaction to
+how one screen looked. One hour per assignment and a five-day lead window made
+the week legible and left 6 of 46.5 hours as coursework; the planner is now
+mostly a display of what the student typed. Stopped there: rules frozen for two
+weeks while Brydon uses it, then decide block sizing on his data.
+
+## 2026-09-23 · Claude Code · The sweep, and nine promises no test was checking
+
+An unattended overnight run on `claude/practical-cori-81ddb0`. Built
+`npm run sweep`, which drives seeded simulated students through the app's own
+replan path and checks every plan against the planner's promises, then fixed
+what it found. Nothing pushed.
+
+**Read this before merging the feed branch.** A plain `git merge` with
+`elastic-hertz-fef8da` produces no conflict and a planner that charges
+`fitNewWork`'s blocks against the ceiling twice: tonight's charging is
+unconditional and theirs still runs behind `chargeExistingToCap`. Their 349
+tests, tonight's, and every `npm run refresh` check all pass with the double
+charge, because it only makes the plan emptier. On merge, delete the option, its
+default and the `if (opts.chargeExistingToCap)` loop in `plan.ts`, and the
+`chargeExistingToCap: true` line in `fit-new.ts`. Done that way in a scratch
+copy: 364 tests pass, typecheck is clean, and `refresh` prints byte-identically
+to their version.
+
+**What ran.** Seed 1, 5,000 scenarios, 29,647 plans in 293s; seeds 2 to 5 at
+1,500 to 3,000 while fixing. Promises: (a) no day over its ceiling, (b) nothing
+on a kept block, event, busy block or outside the day, (c) nothing past its
+deadline or over the work left, (d) no session under 25 minutes, (e) commitment
+quota, daily limit and window, (f) deterministic with input untouched, (h) under
+100ms, (i) unique ids, (j) reasons that read as English. Every fix below had a
+failing test first, then `npm run check`, and the three week scripts came out
+identical to the commit before it every time.
+
+| Found | How often | Reduced to | Fix |
+|---|---|---|---|
+| A moved block and the new session in its old hour share an id, so ticking one marks both | 2,792 in 1,893 plans | 1 commitment, 1 pinned block | `157e49f` |
+| Weekly quota ignores pinned sessions, and the tally is wiped by the week's first replan | 775 in 1,893 | 1 commitment, 1 pinned block | `2eb0d85` |
+| A daily limit above one was never enforced | 245 in 1,893 | 1 commitment | `a0d475a` |
+| A pinned coursework session is planned again on top of itself | 614 in 1,885 | 1 assignment, 1 pinned block | `46cc632` |
+| Work due exactly now is planned after its deadline | 25 in 32,643 | 1 assignment | `81e3143` |
+| "due in 1 hours"; the Sunday push said "About 1 hours" and "About 0 hours" | reading output | | `05a0ab6`, `a70d90c` |
+| "you haven't touched MATH 124 in 0 days" | 715 in 400 scenarios | 1 assignment | `b7008af` |
+| A window starting off the hour (4:15) can never be used | ~80% of warnings | 1 commitment | `6c9ec14` |
+| The Sunday quota push trusted the wiped tally | follows from the quota fix | | `fe4dba7` |
+
+Also: the planner is 8.5 times faster (`9445afd`). Every `localParts` call built
+a new `Intl.DateTimeFormat`, which was 84% of planner time: p50 went from 32ms
+to 3.3ms and `npm run week` from 45ms to 11ms, with byte-identical output. And
+two tests picked a day by UTC date prefix, so one never saw Monday after 5pm
+Pacific (`1967b92`).
+
+**Left for Brydon.**
+
+1. **Sessions under 25 minutes**, the one promise still broken (5,607 in 29,647
+   plans, all 15 to 22 minutes). `buildSessions` deliberately lets the last 13 to
+   24 minutes of an assignment be its own block, while `MIN_SESSION_MINUTES`
+   says never schedule a fragment below 25. Two rules disagree. Recommend
+   rounding the last bit up to 25: finishing early is pleasant, a 15-minute
+   block is an interruption. One line, and then `npm run sweep` exits 0.
+2. **A commitment whose window cannot hold one session** (2,290 reports). The
+   planner trims a session only to the day's allowance, never to fit a window or
+   a gap, so a 40-minute run with a 7 to 8am window and a day that starts at
+   7:30 is never placed, and every replan says "the week ran out before you hit
+   the target". The student has a settings conflict and is told their week is
+   full. Recommend trimming down to `minSessionMinutes` to fit, and a truthful
+   reason when even that fails.
+3. **Sessions run in order** (345 warnings left). Each session must follow the
+   one before, so when one takes a later, better-fitting hour the rest can run
+   out of days: a 7-a-week habit whose first session takes Tuesday loses Monday.
+   Paired on identical inputs, unchaining commitments cut their shortfalls 11%
+   (2,358 plans better, 102 worse) and left 3% more coursework unplanned (1,688
+   plans worse) as commitments won the room back. A trade-off, and "3 of 5 this
+   week" would need renumbering by date. Not changed.
+4. **Phantom shortfalls at the horizon's edge.** The last, partial week gets a
+   proportional share, such as one run in a Monday that ends at 5pm. If that
+   sliver cannot hold it, "Didn't fit" says "1 session short, the week ran out"
+   about a week that has barely started. Not measured. Recommend not reporting
+   shortfalls for a week the horizon cuts off.
+5. **`pushAside` uses the machine's time zone** (`getHours`, `toDateString`), not
+   the student's. Harmless while the browser's zone is the student's.
+6. **How a block's reason is chosen.** Only the false "0 days" case was fixed.
+   The general measure is in today's decisions entry.
+
+**To review:**
+
+```
+git log --reverse main..claude/practical-cori-81ddb0
+npm run check
+npm run sweep
+npm run sweep -- --only 1 --plan 0
+npm run sweep -- --scenarios 500 --dump e
+```
+
+The fourth prints a 15-minute block with its whole input. A fresh worktree
+needs `npx next typegen` once before `npm run check`, or typecheck fails on
+`LayoutProps`.
 
 ## 2026-08-29 · Claude Code · Every blocker cleared, and three checks that lied
 
@@ -462,63 +511,6 @@ the tab bar and a week grid showing three of fourteen columns. Fixed the first,
 and shipped the replan animation, whose first version passed 276 tests while
 animating nothing.
 
-## 2026-08-26 · Claude Code · Colour, a code, a month, and a drag that never worked
-
-Three specified pieces of work, in order, plus two bugs Brydon found by using it.
-
-Colour became a category system. Five separate hex arrays in five files were
-replaced by six categories owning hue families, with shades inside for
-individual courses. Nothing stores a hex any more, so dark mode stopped being a
-second palette to maintain. The palette is generated and validated by
-`npm run palette` rather than chosen: the first attempt failed 24 ways under
-colour vision deficiency and nobody would have seen it by eye.
-
-Sign-in became a six-digit code. Brydon spotted that this removes the need for a
-pending-signup table entirely rather than mitigating it, because a student who
-never leaves the tab still has their answers in hand when they type the code.
-That deleted a whole unauthenticated write path from the design.
-
-The month view landed, reusing `breakdownForDay` rather than deriving a second
-workload number, with a test asserting the two views cannot disagree.
-
-Then Brydon reported sleep hours that would not save, and dragging a block to
-another day making it vanish. Both were real, both had causes other than the
-obvious one, and both are in `learned.md`.
-
-A long stretch went on naming and produced no decision. Slate died to
-Technolutions, Tessel to a live TESSELL trademark, and four of five candidates
-were killed by collisions found only after they had been recommended. The
-process was backwards and is recorded as such.
-
-## 2026-08-23 · Claude Code · The data layer, and a bug a student would have found
-
-Supabase went in: schema, magic-link auth, plan sync, and the telemetry that
-week-4 retention is measured from. Nothing in the product requires an account
-and nothing does now; every path treats signed-out as "stay local", so the
-no-account product is exactly what it was.
-
-Two bugs in it were the interesting part. The Supabase client is created lazily,
-so when a magic link landed on `/week` and nothing on that page touched
-Supabase, no client existed, the code in the URL was never exchanged, and the
-sign-in silently did nothing while looking identical to success. And
-`lastSyncedAt` was doing double duty as "does this device have unsynced edits",
-which made a device that had never synced read as infinitely old, so a week
-built offline lost to any server copy without a word.
-
-Then Brydon looked at his own calendar and found the real one: a 5-a-week run
-and a 4-a-week project were both landing seven times, on every single day.
-Sessions carried a deadline and no floor, so the early-bias in slot value
-dragged later weeks forward. Fixing placement exposed a second bug underneath
-it, where the reason text said "6 of 5 this week" because it counted across the
-whole plan rather than within a week.
-
-Neither was found by a test. Both were found by reading real output, which is
-now four sessions running.
-
-Ended with 198 tests and a live product with accounts. The sync loop has still
-never been watched end to end by anyone, because the magic link goes to an inbox
-no agent can reach.
-
 ---
 
 # Recent decisions
@@ -527,226 +519,166 @@ no agent can reach.
 `context/decisions.md` and `context/learned.md`. Ask for them if a question
 turns on history this brief doesn't cover.*
 
-## 2026-08-28 · The name is Heron, and the search had to change shape first
+## 2026-09-30 · Work waits for the five days before it is due
 
-**Executed 2026-09-05.** Code, copy, metadata and manifest renamed in one pass.
-Four storage identifiers deliberately still say `quarterly` and are commented as
-such: the localStorage key, the Supabase auth storage key, and the two service
-worker cache names. Renaming those would read as tidying and would empty the
-calendar of, or sign out, everyone already using it.
+**Decided (Brydon):** an assignment's one block aims for the five days before
+its deadline (`LEAD_DAYS`), lands earlier only when those days are full, and is
+not planned at all while less than two days of that window fall inside the
+plan. Opening the week tops up (`topUp`): open work with no block gets one,
+nothing already planned moves, and nothing is written when nothing changed.
 
-**Decided:** the product is renamed **Heron**, on `heron.study`. `Quarterly`
-encoded the quarter system for a product that stopped being quarter-shaped in
-August.
+**Why:** with one hour per assignment and a free week, everything fitted into
+the first day or two, and the first block on his calendar was a 30-minute item
+due in two weeks. On a synthetic 150-item term the longest block-to-deadline
+gap went from 17.8 days to 5.0, at one to five blocks a day.
 
-**Why the two previous attempts produced nothing.** Both searched for a name
-that was short, had a free `.com`, and was clear of software trademarks. That
-set is empty, and it is worth stating as a fact rather than a feeling: 213
-candidates were checked against the registry, real words and coined ones, and
-**213 were registered.** Three were confirmed by hand against whois rather than
-trusted from one source. `horalis.com` had been taken in December 2025.
-Domainers sweep anything pronounceable within weeks, so the `.com` constraint
-was doing all the killing and none of the choosing.
+**Cost:** `npm run refresh`'s "moved deadline kept its minutes" now checks an
+item with nothing logged, because started-and-open work due after week 4 no
+longer happens in the simulation. It passes without testing anything; worth
+rebuilding the scenario when the refresh code next changes.
 
-Dropping `.com` rather than dropping "short" is what made it tractable, because
-the thing being sold is a name people say, and the domain is plumbing. Resend
-verifies any domain, and students have only ever seen a `vercel.app` URL.
+## 2026-09-30 · One hour per assignment; Done finishes it, Partly books a follow-up
 
-**What was rejected, and on what evidence.** Trellis: an LMS in education plus a
-registered TRELLIS mark. Kestrel: registered mark #6015386 in software products,
-plus Kestrel Software LLC. Kiln: registered mark plus an apps company filing for
-downloadable software. Crest: CREST Technologies in education and Raise Crest
-Education, on top of a famous consumer mark. Cadence, Lattice, Tempo, Stride and
-Lumen are large software or education companies outright. Lantern survived
-availability but carries three live software marks. Vesper was the runner-up and
-was set aside only because Samsung holds a VESPER mark whose class could not be
-established.
+**Decided (Brydon):** every assignment gets one 60-minute block. Done marks the
+assignment done whatever the estimate. Partly logs the minutes and books one
+follow-up straight away, later that day or on another day before it is due: an
+hour if under half the first went on it, otherwise 30 minutes. A day's
+allowance can still trim it, as it can any session.
 
-**Why Heron specifically.** Two syllables, spells itself, unmistakable out loud.
-The only trademark hits are Blue Heron Scientific, HEREON with a different
-spelling, and a Shenzhen camera company; no bare HERON mark in productivity or
-education software surfaced. It also means something here: a heron stands still
-for a long time and moves exactly once, at the right moment, which is the
-product's whole thesis.
+**Why:** splitting by estimate (a quiz 90 minutes in three, an exam in eight)
+filled his first real week with slivers of one course and made it unreadable.
+One block per thing is legible, and the student's own Done and Partly carry
+the information the estimate was guessing at.
 
-**On the domain, and a correction.** `.study` names what a student uses it for
-and reads correctly to them. It also narrows the product to studying, which
-`product.md` already says it outgrew, so an escape hatch on a neutral TLD was
-the plan. There isn't one: `heron.co` has been registered since 2017 and
-`heron.so` since 2021. `heron.study` is $55 a year.
+**What it costs:** exams and projects get an hour up front and rely on Partly
+for the rest; spaced exam prep across days is gone for now. Estimates are still
+stored and still learned from, so returning to sized sessions is a planner
+change, not a data migration. The sweep's promise (c) is now "one planned block
+per assignment"; `npm run refresh` simulates Partly and answers only work due
+within the week, since a student finishing everything two weeks early left
+nothing open to test.
 
-**The availability check for non-`.com` TLDs was wrong and should not be reused.**
-`.com` went to Verisign's RDAP directly and three results were confirmed against
-whois, so those 213 hold. `.co`, `.so` and `.study` went through `rdap.org`,
-where a 404 can mean the registry has no RDAP endpoint rather than the domain
-being free, and every 404 was read as available. Vercel's registrar search
-caught it. **Check a domain at a registrar before believing it is available**,
-whatever a script says.
+## 2026-09-30 · Courses get their own hues; Canvas reminders are notifications
 
-**Worth revisiting if:** a clearance search turns up a live HERON mark in class 9
-or 41, or the product's audience stops being students. Note that none of the
-above is a clearance search. It is web research, and a lawyer's twenty minutes
-should precede any money or launch behind the name.
+From Brydon's first real week, on launch day.
 
-## 2026-08-26 · Two colour axes, and a code instead of a link
+**Course hues.** Coursework shades were a four-step red ladder, so a week of
+study blocks was one colour: "everything is red, I can't tell anything apart".
+Shade 0 stays the canonical red (the only one the month view uses); shades 1 to
+5 are now separate hues with their own lightness, and there are six of them.
+`npm run palette` validates them like everything else, including under all
+three CVD simulations; one candidate violet collided with the class blue under
+deuteranopia and was moved darker until it passed. Rejected: colour by kind of
+work, which is what produced the problem.
 
-**Decided:** colour carries two independent things. Category owns the hue family
-and answers "what kind of hour is this". Shade steps within the family and
-answers "which course". The month view reads category only; week and day views
-read both.
+**Reminders.** Instructors post "Final Reminder to Complete Peer Feedback" as a
+Canvas assignment. "Final" made it an exam: eight sessions, billed as 40% of the
+grade. Any title with "reminder" now gets no study time, no deadline flag, and a
+push at 9am on its due day (8pm the day before if due earlier). Checked by title
+in the planner, not just at import, so weeks imported before this lose the
+sessions on their next replan.
 
-**Why not category alone, which is what was asked for:** with one colour per
-category, five courses render identically in the week grid, and the same request
-also said course distinction should survive there. Both cannot come from one
-field.
+**One notification per moment, without state.** The sender runs every ten
+minutes and reads a plan the device overwrites on its next push, so nothing
+stored can dedupe a send. A time-bound notice is eligible for exactly one
+ten-minute window instead. That also fixed "Next up", which could fire twice
+(15 and 5 minutes before).
 
-**Why not per-course alone, which is what existed:** the same red was a lecture
-one week and a gym session the next, so colour meant nothing and was decoration.
+## 2026-09-23 · Calendar links sync to the account, encrypted
 
-**What it cost to get right.** The first palette gave every family the same
-lightness ladder and differed them only by hue. It failed 24 ways, because hue
-is precisely what colour vision deficiency destroys. Families now own lightness
-bands and no two are neighbours on both axes at once. `npm run palette` runs
-OKLCH generation, Viénot simulation for all three deficiencies and CIEDE2000, in
-both modes, with an exit code.
+**Supersedes** the "device and not the server" half of 2026-09-22, "Remember
+the Canvas link on the device, never on the server". Remembering stays opt-in
+and ticked by default; what changes is where a remembered link lives when the
+student is signed in.
 
-**The limit, recorded rather than hidden:** the week grid paints blocks as a 26%
-tint, and at that strength two shades of one family sit about 1.5 ΔE apart.
-Within-family distinction there rests on the label and the 3px full-strength
-border, not on the fill. Category separation, which is what the month view
-needs, is 10.9.
+**Decided:** signed in, a remembered link is also saved to the account in
+`calendar_feed` (`0005`), AES-256-GCM encrypted by `/api/feeds` with
+`FEED_LINK_KEY`, which lives in Vercel and never in Supabase. Rows are found by
+an HMAC of the URL, and the user id is the associated data, so a row moved to
+another account does not open. The route talks to Supabase with the student's
+own token, so RLS decides access; there is no service-role key in it. Signed
+out, nothing changes: the link stays in the browser. Forget deletes the row on
+every device; Delete my data cascades.
 
----
+**Why:** Brydon hit it on his own phone on day one. Device-only meant a link
+pasted on a laptop could never refresh the phone, and the phone is both where a
+student uses Heron and where getting the link is hardest. That is the week-4
+stale-deadline problem the 2026-09-22 decision existed to fix, back again for
+anyone with two devices.
 
-**Decided:** sign-in is a six-digit code typed into the tab, not a magic link.
+**The sync rule, and why it needs a flag.** A link missing from the account is
+either forgotten on another device or saved here before signing in. They look
+the same and need opposite answers, so each entry carries `synced`: missing and
+synced goes, missing and never synced is uploaded (`feed-sync-rule.ts`). A fetch
+is sent as a touch that only updates an existing row, never an upsert, so a
+device that has not heard about a forget cannot revive the link. A forget that
+fails on the network is kept on the device and sent before anything is read at
+the next sign-in. Each of those has a test that fails when the rule is flipped.
 
-**Why:** a link can only be completed in the browser that requested it, because
-that browser holds the PKCE verifier. A student who onboards in Safari and opens
-the link from the mail app lands in a different context and gets an error about
-a code verifier. The code never leaves the tab, so the failure cannot happen
-rather than being handled.
+**What it costs, stated.** The claim is no longer "never on our server". It is
+"only if you ask, encrypted, with the key outside the database". A database
+dump or backup alone reveals no link. Someone holding both the database and
+Vercel's environment could decrypt them, and that includes Brydon. The privacy
+page, the import page and `growth.md`'s "never holds a credential" line now say
+so; the pitch is "never your Canvas login".
 
-**What it removed.** The original plan was to persist onboarding answers
-server-side against a pending signup record. Brydon spotted that the code flow
-deletes the need for it: the student still has their answers when they verify,
-so the write happens as a normal authenticated user. No pending table, no anon
-INSERT, no claim token, no security-definer claiming function, and no
-unauthenticated write path to carry forever.
+**Rejected:** plaintext behind RLS (a dump is a list of live passwords);
+Supabase Vault or pgsodium (puts the key next to the data it protects);
+syncing the link inside `plan_state` (it would also land in every backup file);
+keeping device-only and just improving the iPhone instructions (the phone still
+could not refresh a link saved on the laptop).
 
-**The stated cost was a 60-second window where a tab crash loses the answers.**
-It does not exist: `/onboarding` writes through the store at every step, so
-everything is in localStorage before the code screen.
+**Revisit when:** a server-side daily refresh is built. The link is now
+reachable server-side, which is what that needs, and the 2026-09-22 reasoning
+about "fetching data vs changing the plan" still governs what it may do.
 
-**Rejected: implicit flow.** It would make links work anywhere, and it puts
-access tokens in browser history on an app holding a person's whole schedule.
+## 2026-09-23 · Whatever is on the calendar counts, everywhere
 
-**What would make it worth revisiting:** if code delivery turns out to be the
-thing students fail at, which depends entirely on email deliverability rather
-than on the flow.
+**Decided:** a session already on the calendar, reported or pinned, counts
+against every limit it belongs to: the day's ceiling (2026-09-22), the
+commitment's weekly quota and daily limit, and the assignment's remaining work.
+For the current week's quota the planner takes the larger of the stored tally
+and the sessions reported this week, then adds the pinned ones. The Sunday quota
+notice uses the same count.
 
-## 2026-08-27 · A dragged block pushes, and never merges
+**Why:** `npm run sweep` found the same mistake three times. A pinned run was not
+in the weekly quota (a 5-a-week habit got 6), a pinned hour of a problem set was
+not in its remaining work (it was planned twice), and a limit of two a day was
+never enforced at all. Each is the planner counting only what was reported and
+ignoring what the student had already put on the calendar.
 
-**Decided:** dropping a block on top of another displaces the other one
-downward into the next free gap, and says so. The dragged block never moves.
+**Why the larger of two counts, not either one.** The tally is wiped when the
+week's first replan comes after a session was already done (plan Sunday night,
+run Monday morning, replan at noon), so it can read low. The blocks miss a
+session dropped with "I'm not doing this", which raises the tally and leaves no
+block, so they can read low too. Neither is ever high by mistake.
 
-**Why the dragged one wins:** it is the only thing on screen the student has
-just made an explicit decision about. Everything else is the scheduler's
-opinion, and an opinion yields to an instruction. Same reasoning as an
-appointment beating a plan, one level down.
+**Rejected:**
+- Fixing `resetWeeklyTallies` to recount from blocks. It does not receive the
+  blocks, the hook calls it, and the tally would still miss drops.
+- Deriving the quota from blocks alone and deleting `doneThisWeek`. Drops need
+  somewhere to live, and the notification engine reads it.
 
-**Why settled blocks are obstructions rather than things to shove:** a finished
-block is a record of what happened. Shifting it to tidy the present is
-rewriting the past, so a displaced block goes around it.
-
-**Why a push past the end of the day is refused:** a visible overlap the student
-can see and fix beats work silently relocated to 2am.
-
-**Rejected: merging two sessions of the same commitment into one longer block.**
-Two 30-minute runs are not one 60-minute run, and for study it is worse: the
-entire premise of spacing is that separate sessions beat one double session.
-`maxPerDay` and `separateDays` exist to prevent exactly this, so an automatic
-merge would silently undo what the scheduler is for.
-
-**What would make it worth revisiting:** an explicit version, where dragging one
-session onto another merges them *and says what it costs*. That is a real
-feature with real copy, not a side effect of dragging, and it should wait until
-a student asks for it.
-
-## 2026-08-23 · Magic links, no server session, and a sync that refuses to guess
-
-**Decided:** three things, all from putting Supabase in.
-
-**Magic link, no passwords anywhere.** A password is one more thing to invent at
-9pm, and the most common reason someone never returns to an app is that they
-cannot get back into it. The cost is a hard dependency on email delivery, which
-makes custom SMTP a launch blocker with a lead time rather than a launch-day
-task: Supabase's built-in sender is documented as testing-only and rate limited
-to a handful an hour, and thirty students onboarding during welcome week would
-hit that wall and see what looks like a broken app.
-
-**Known limitation, accepted:** PKCE stores a verifier in the browser that asked
-for the link, so a student who requests it on their phone and opens the email on
-a laptop cannot sign in. Implicit flow would fix it and puts access tokens in
-browser history instead. For an app holding a real person's whole schedule that
-is the worse trade, so the flow stays and the copy tells people to open it on
-the same device.
-
-**No `proxy.ts` and no `@supabase/ssr`.** Next 16 renamed Middleware to Proxy
-and every Supabase-with-Next guide still says `middleware.ts`, but it does not
-matter here: every page is a client component reading localStorage and no
-server-rendered content depends on who you are. Cookie-based session refresh
-would be machinery serving no request.
-
-**Sync picks a winner, or refuses to.** The plan syncs as a single JSON blob
-mirroring the local store, so syncing is "write the same object somewhere else"
-rather than a schema translation kept in step forever. There is no merge. When
-both sides changed since they were last level, any automatic choice discards a
-real week, so `decideDirection` returns `conflict` and nothing happens. A sync
-that does not run is far better than one that eats a week.
-
-**What would make it worth revisiting:** a student actually hitting the conflict
-state, which needs two devices and is not the realistic case yet. The `revision`
-column is already in the schema for when it is.
-
-## 2026-08-22 · The account step goes last, and setup is a phase you leave
-
-**Decided:** two things, from the same session.
-
-**First, an account is asked for at the end of onboarding, never at the front.**
-The mock at step five of `/onboarding` comes after there is a planned week on
-screen, and the ask is "keep this if you lose your phone" rather than "sign up
-to continue". Email link, no password field.
-
-**Why, given this reverses what was asked for:** the input was a signup flow
-followed by a calendar flow. The evidence points the other way. Time-to-value
-should land inside 60–90 seconds and abandonment roughly triples past thirty
-minutes; `/start` currently gets a student to a real week in three seconds. An
-identity wall in front of that trades the single best-measured advantage this
-product has for an email address that nothing can use until Supabase lands.
-Asked at the end, the same question has a reason a student can evaluate.
-
-**What would make it worth revisiting:** if sync turns out to be the thing
-students actually want, or if week-4 retention among account-holders is
-dramatically higher than among device-only users, the ask has earned a more
-prominent place. Not before there is data.
-
-**Second, being live is permanent.** Once `wentLiveAt` is stamped, setup prompts
-never render again, even for a student who later deletes every commitment and
-falls back below the bar that `isLive` tests for.
-
-**Why not just derive it:** because the honest answer to "do you have classes?"
-is sometimes "no". A model that recomputes readiness on every render nags that
-student forever, which was the original defect. Setup is a phase you leave, not
-a score you can drop below. `liveNoticeSeen` is tracked separately from
-`wentLiveAt` for the same reason: deriving "have we told them" from "are they
-live" re-shows the confirmation on every reload.
-
-**What it costs:** a student who genuinely wants to redo setup needs a route
-back in. `unskipStep` exists and clears `wentLiveAt`; nothing in the UI calls it
-yet. That is a real gap, and it is the deliberate kind.
+**Revisit when:** drops get a block of their own (a skipped block marked
+"dropped" would do), at which point the tally can go and the blocks are the
+whole truth.
 
 ---
 
 # Currently waiting on Brydon
 
-_Nothing blocked._
+- **Notifications have never been seen arriving on a phone.** Install from the
+  home screen, sign in, Settings, turn them on, then wait for a "Next up" 15
+  minutes before a block. Reminders ("Final Reminder…" items) now arrive this
+  way too, at 9am on their due day, so this is load-bearing.
+- **Two-device sync has never been confirmed.** Plan on the laptop, open the
+  phone. Calendar links should appear in Settings on both. 0005 ran; confirm
+  `FEED_LINK_KEY` was saved with a fresh value (the first one was shown in a
+  screenshot) and the deployment redeployed after it.
+- **Fix his MGMT 305A class time** in Setup (typed as 10:30 to 12:50; MyUW says
+  roughly 10:30 to 11:20). The form now warns about the overlap with EE 454A.
+- **Paid testers: tag them before they sign up**, so the retention cohort is
+  not measuring the payment.
+- **Move the repo off the iCloud Desktop.**
+- **Three doors into configuration** (`/start`, `/onboarding`, `/setup`): a
+  product call, still open.

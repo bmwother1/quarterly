@@ -9,6 +9,24 @@ delete them.
 
 ---
 
+## 2026-09-30 · Claude Code · Launch week on a real schedule: DNS, link sync, and a planner reshaped by one screen
+
+Spanned Sept 23 to launch day. Sign-in from `heron.study` now works for anyone
+(Resend records were already in Vercel DNS; the missing step was the SMTP
+sender). Calendar links sync to the account, AES-GCM encrypted with the key in
+Vercel only. Then Brydon used it on his real UW week for the first time and it
+fell apart visibly: taps did nothing (pointer capture swallowed the click, and on
+touch the trailing click closed the card again), "Final Reminder" items were
+read as exams with eight sessions, every course was red, a daily-items course
+filled every gap with slivers, and classes were not in Canvas at all. Each was
+fixed and shipped the same day, tested in a real browser.
+
+**What went badly:** four planner rule changes on launch day, each a reaction to
+how one screen looked. One hour per assignment and a five-day lead window made
+the week legible and left 6 of 46.5 hours as coursework; the planner is now
+mostly a display of what the student typed. Stopped there: rules frozen for two
+weeks while Brydon uses it, then decide block sizing on his data.
+
 ## 2026-09-23 · Claude Code · The sweep, and nine promises no test was checking
 
 An unattended overnight run on `claude/practical-cori-81ddb0`. Built

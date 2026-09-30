@@ -51,6 +51,21 @@ gets a polite yes from everyone and teaches nothing. "Walk me through last Sunda
 
 ## From building
 
+### Fixing what the screen looked like quietly removed what the product does (2026-09-30)
+
+This didn't work. On launch day each complaint about Brydon's first real week
+got a correct, tested fix: too cluttered became one hour per assignment, work
+too early became a five-day lead window, and so on. Every change made the screen
+better. Together they left 6 of 46.5 planned hours as coursework, which is the
+one thing the product exists to plan. No test caught it because every test was
+checking the rule it was written for.
+
+**The habit:** before changing a planner rule because of how a week looks,
+write down what the product promises and check the new week against that, not
+against the complaint. And never change more than one scheduling rule on the
+strength of one person's single week.
+
+
 ### A block id contains its start time, so a moved block is a different block (2026-08-29)
 
 The week grid replaced one set of block positions with another between frames
