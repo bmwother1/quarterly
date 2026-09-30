@@ -79,12 +79,12 @@ function minuteOfDay(iso: string, tz: string): number {
  * Expand a weekly busy pattern into the bands for one weekday, splitting
  * anything that wraps past midnight onto the following day.
  */
-function busyFor(busy: BusyBlock[], weekday: number): Array<{ startMin: number; endMin: number; label: string; kind: string }> {
+function busyFor(busy: BusyBlock[], weekday: number): Array<{ id: string; startMin: number; endMin: number; label: string; kind: string }> {
   const out = [];
   for (const b of busy) {
     const wraps = b.endMin <= b.startMin;
-    if (b.day === weekday) out.push({ startMin: b.startMin, endMin: wraps ? 1440 : b.endMin, label: b.label, kind: b.kind });
-    if (wraps && (b.day + 1) % 7 === weekday) out.push({ startMin: 0, endMin: b.endMin, label: b.label, kind: b.kind });
+    if (b.day === weekday) out.push({ id: b.id, startMin: b.startMin, endMin: wraps ? 1440 : b.endMin, label: b.label, kind: b.kind });
+    if (wraps && (b.day + 1) % 7 === weekday) out.push({ id: b.id, startMin: 0, endMin: b.endMin, label: b.label, kind: b.kind });
   }
   return out;
 }
@@ -92,7 +92,11 @@ function busyFor(busy: BusyBlock[], weekday: number): Array<{ startMin: number; 
 export function WeekGrid({
   days, blocks, events, availability, tz, colourFor, selectedId, onSelect, onMove,
   onSelectEvent, selectedEventId, todayKey, deadlines, focusAssignmentId, onSelectDeadline,
+  onSelectBusy, selectedBusyId,
 }: {
+  /** A class entered in Setup was tapped. Other busy bands are not tappable. */
+  onSelectBusy?: (id: string) => void;
+  selectedBusyId?: string | null;
   days: string[];
   blocks: StudyBlock[];
   /** One-off fixed commitments, drawn alongside the recurring ones. */
@@ -455,10 +459,20 @@ export function WeekGrid({
                   const height = ((Math.min(b.endMin, rangeEnd) - Math.max(b.startMin, rangeStart)) / span) * 100;
                   if (height <= 0) return null;
                   const edge = colorVar(categoryForBusyKind(b.kind as BusyBlock['kind']), 0);
+                  // Classes open a card (where it is, edit it). Sleep and work
+                  // are context and stay inert, so a tap there does nothing.
+                  const Band = b.kind === 'class' && onSelectBusy ? 'button' : 'div';
                   return (
-                    <div
+                    <Band
                       key={`${b.label}-${i}`}
-                      className="absolute inset-x-0 overflow-hidden py-1 pl-2 pr-1"
+                      {...(Band === 'button' ? {
+                        onClick: () => onSelectBusy?.(b.id),
+                        'data-busy-id': b.id,
+                        'aria-label': `${b.label}, class`,
+                      } : {})}
+                      className={`absolute inset-x-0 overflow-hidden py-1 pl-2 pr-1 text-left ${
+                        Band === 'button' && selectedBusyId === b.id ? 'z-10 outline-2 outline-offset-1 outline-[var(--ink)]' : ''
+                      }`}
                       style={{
                         top: `${top}%`,
                         height: `${height}%`,
@@ -472,7 +486,7 @@ export function WeekGrid({
                           {b.label}
                         </span>
                       )}
-                    </div>
+                    </Band>
                   );
                 })}
 

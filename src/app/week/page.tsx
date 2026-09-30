@@ -22,6 +22,8 @@ import { SetupPrompt } from '@/components/setup-prompt';
 import { RescueNotice } from '@/components/rescue-notice';
 import { FeedFreshness } from '@/components/feed-freshness';
 import { DeadlineCard } from '@/components/deadline-card';
+import { ClassCard } from '@/components/class-card';
+import { classesOf, classGroup } from '@/lib/classes';
 import { DeadlineRow } from '@/components/deadline-row';
 import { deadlinesByDay, type Deadline } from '@/lib/schedule/deadlines';
 import { dueInstant } from '@/lib/schedule/plan';
@@ -57,7 +59,7 @@ export default function WeekPage() {
   const {
     state, hydrated, replan, complete, drop, moveBlock,
     addEvent, updateEvent, removeEvent, addTask, undo, undoLabel, dismissUndo,
-    skipStep, confirmSleep, markLiveIfReady, ackLive, startFresh, topUpWork,
+    skipStep, confirmSleep, markLiveIfReady, ackLive, startFresh, topUpWork, updateAvailability,
   } = useHeron(TZ);
   // Fixed at mount so every render agrees on "now" — reading the clock during
   // render is impure and drifts between the server and client passes. Anything
@@ -99,6 +101,7 @@ export default function WeekPage() {
   }
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedDeadlineId, setSelectedDeadlineId] = useState<string | null>(null);
+  const [selectedBusyId, setSelectedBusyId] = useState<string | null>(null);
   const [allUnfit, setAllUnfit] = useState(false);
   // The block at the top when the page first showed. A different one arriving
   // there later (because the first was answered) is worth an entrance; the
@@ -124,7 +127,7 @@ export default function WeekPage() {
    */
   const detailRef = useRef<HTMLDivElement>(null);
   const gridWrapRef = useRef<HTMLDivElement>(null);
-  const openDetail = selectedId ?? selectedEventId ?? selectedDeadlineId;
+  const openDetail = selectedId ?? selectedEventId ?? selectedDeadlineId ?? selectedBusyId;
   const [placed, setPlaced] = useState<{ id: string; top: number; left: number } | null>(null);
   // Only for what is open now, so a stale position never flashes for a new tap.
   const pop = placed && placed.id === openDetail ? placed : null;
@@ -133,11 +136,12 @@ export default function WeekPage() {
     setSelectedId(null);
     setSelectedEventId(null);
     setSelectedDeadlineId(null);
+    setSelectedBusyId(null);
   }
 
   useEffect(() => {
     if (!openDetail) return;
-    const attr = selectedId ? 'data-block-id' : selectedEventId ? 'data-event-id' : 'data-deadline-id';
+    const attr = selectedId ? 'data-block-id' : selectedEventId ? 'data-event-id' : selectedDeadlineId ? 'data-deadline-id' : 'data-busy-id';
     const place = () => {
       const wrap = gridWrapRef.current;
       const anchor = wrap?.querySelector<HTMLElement>(`[${attr}="${CSS.escape(openDetail)}"]`);
@@ -166,7 +170,7 @@ export default function WeekPage() {
       window.removeEventListener('resize', place);
       window.removeEventListener('scroll', place, true);
     };
-  }, [openDetail, selectedId, selectedEventId, narrow]);
+  }, [openDetail, selectedId, selectedEventId, selectedDeadlineId, narrow]);
 
   // Phone: no room beside anything, so the card is a sheet over the bottom of
   // the screen, with the calendar still where the student left it.
@@ -181,7 +185,7 @@ export default function WeekPage() {
     const onDown = (e: PointerEvent) => {
       const t = e.target as Element | null;
       if (!t || detailRef.current?.contains(t)) return;
-      if (t.closest('[data-block-id],[data-deadline-id],[data-event-id],[role="dialog"]')) return;
+      if (t.closest('[data-block-id],[data-deadline-id],[data-event-id],[data-busy-id],[role="dialog"]')) return;
       closeDetail();
     };
     document.addEventListener('keydown', onKey);
@@ -246,9 +250,12 @@ export default function WeekPage() {
     () => deadlinesByDay(state.assignments, state.blocks, state.unscheduled, days, now, TZ),
     [state.assignments, state.blocks, state.unscheduled, days, now],
   );
+  const selectedClass = selectedBusyId
+    ? classesOf(state.availability.busy).find((c) => c.group === classGroup(selectedBusyId)) ?? null
+    : null;
   const dueById = useMemo(() => {
-    const map = new Map<string, { at: string; allDay: boolean }>();
-    for (const a of state.assignments) map.set(a.id, { at: dueInstant(a, TZ).toISOString(), allDay: a.allDay });
+    const map = new Map<string, { at: string; allDay: boolean; url: string | null }>();
+    for (const a of state.assignments) map.set(a.id, { at: dueInstant(a, TZ).toISOString(), allDay: a.allDay, url: a.url });
     return map;
   }, [state.assignments]);
   // Every assignment, not just the fourteen days above: the month view pages
@@ -539,6 +546,7 @@ export default function WeekPage() {
                   setSelectedId((cur) => (cur === id ? null : id));
                   setSelectedEventId(null);
                   setSelectedDeadlineId(null);
+                  setSelectedBusyId(null);
                 }}
                 // Says what it shifted. Silent reshuffling is how a plan becomes fiction.
                 onMove={(id, startMs) => announce(moveBlock(id, startMs))}
@@ -546,6 +554,7 @@ export default function WeekPage() {
                   setSelectedEventId((cur) => (cur === id ? null : id));
                   setSelectedId(null);
                   setSelectedDeadlineId(null);
+                  setSelectedBusyId(null);
                 }}
                 selectedEventId={selectedEventId}
                 todayKey={todayKey}
@@ -555,6 +564,14 @@ export default function WeekPage() {
                   setSelectedDeadlineId((cur) => (cur === id ? null : id));
                   setSelectedId(null);
                   setSelectedEventId(null);
+                  setSelectedBusyId(null);
+                }}
+                selectedBusyId={selectedBusyId}
+                onSelectBusy={(id) => {
+                  setSelectedBusyId((cur) => (cur === id ? null : id));
+                  setSelectedId(null);
+                  setSelectedEventId(null);
+                  setSelectedDeadlineId(null);
                 }}
               />
 
@@ -563,8 +580,8 @@ export default function WeekPage() {
                 ref={detailRef}
                 data-popover={floating ? '' : undefined}
                 className={
-                  pop ? 'absolute z-30 shadow-float'
-                    : sheet ? 'fixed inset-x-0 bottom-0 z-[45] max-h-[75vh] overflow-y-auto px-3 pb-[max(12px,env(safe-area-inset-bottom))] shadow-float'
+                  pop ? 'absolute z-30 shadow-float [&>.well]:pr-10'
+                    : sheet ? '[&>.well]:pr-10 fixed inset-x-0 bottom-0 z-[45] max-h-[75vh] overflow-y-auto px-3 pb-[max(12px,env(safe-area-inset-bottom))] shadow-float'
                       : ''
                 }
                 style={pop ? { top: pop.top, left: pop.left, width: POP_WIDTH } : undefined}
@@ -578,7 +595,18 @@ export default function WeekPage() {
                   &times;
                 </button>
               )}
-              {selectedDeadline ? (
+              {selectedClass ? (
+                <div key={`class-${selectedClass.group}`} className="well enter">
+                  <ClassCard
+                    entry={selectedClass}
+                    onRemove={() => {
+                      const g = selectedClass.group;
+                      updateAvailability((prev) => ({ ...prev, busy: prev.busy.filter((b) => classGroup(b.id) !== g) }));
+                      setSelectedBusyId(null);
+                    }}
+                  />
+                </div>
+              ) : selectedDeadline ? (
                 <div key={`due-${selectedDeadline.id}`} className="well enter">
                   <DeadlineCard
                     deadline={selectedDeadline}

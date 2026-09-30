@@ -1,11 +1,12 @@
 'use client';
 import { categoryForCommitment, colorVar, nextShade, takenShades } from '@/lib/categories';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useHeron } from '@/hooks/use-heron';
 import { DEFAULT_TZ } from '@/lib/time';
 import type { BusyBlock, Commitment, CommitmentCategory, EnergyPattern } from '@/lib/types';
+import { classClashes, classesOf, classGroup, type ClassEntry } from '@/lib/classes';
 import { CATEGORY_DEMAND } from '@/lib/schedule/score';
 import { UndoBar } from '@/components/undo-bar';
 import { Toast } from '@/components/toast';
@@ -56,16 +57,20 @@ export default function SetupPage() {
    * can be listed and removed as one thing. Weekly by construction: busy
    * blocks repeat every week, which is what a class schedule is.
    */
-  function addClass(name: string, days: number[], startMin: number, endMin: number) {
-    const group = `class-${Date.now()}`;
+  function saveClass(group: string | null, c: { name: string; days: number[]; startMin: number; endMin: number; location: string }) {
+    const id = group ?? `class-${Date.now()}`;
     updateAvailability((prev) => ({
       ...prev,
       busy: [
-        ...prev.busy,
-        ...days.map((day) => ({ id: `${group}-${day}`, day, startMin, endMin, label: name, kind: 'class' as const })),
+        // Editing replaces every day of the class, so dropping a day works too.
+        ...prev.busy.filter((b) => classGroup(b.id) !== id),
+        ...c.days.map((day) => ({
+          id: `${id}-${day}`, day, startMin: c.startMin, endMin: c.endMin,
+          label: c.name, kind: 'class' as const, location: c.location || null,
+        })),
       ],
     }));
-    flash(`${name} saved`);
+    flash(`${c.name} saved`);
   }
 
   function removeClass(group: string) {
@@ -160,8 +165,8 @@ export default function SetupPage() {
       />
 
       <ClassesSection
-        classes={av.busy.filter((b) => b.kind === 'class')}
-        onAdd={addClass}
+        busy={av.busy}
+        onSave={saveClass}
         onRemove={removeClass}
       />
 
@@ -318,56 +323,92 @@ function WorkSection({
   );
 }
 
-/** `class-1727712345-2` → `class-1727712345`: the class a day's block belongs to. */
-function classGroup(id: string): string {
-  return id.replace(/-\d+$/, '');
-}
-
 function ClassesSection({
-  classes, onAdd, onRemove,
+  busy, onSave, onRemove,
 }: {
-  classes: BusyBlock[];
-  onAdd: (name: string, days: number[], startMin: number, endMin: number) => void;
+  busy: BusyBlock[];
+  onSave: (group: string | null, c: { name: string; days: number[]; startMin: number; endMin: number; location: string }) => void;
   onRemove: (group: string) => void;
 }) {
+  const [editing, setEditing] = useState<string | null>(null);
   const [name, setName] = useState('');
+  const [location, setLocation] = useState('');
   const [start, setStart] = useState('10:30');
   const [end, setEnd] = useState('11:20');
   const [days, setDays] = useState<number[]>([]);
-  const valid = name.trim() !== '' && days.length > 0 && toMin(end) > toMin(start);
+  const formRef = useRef<HTMLDivElement>(null);
+  const classes = classesOf(busy);
 
-  const groups = new Map<string, BusyBlock[]>();
-  for (const c of classes) {
-    const g = classGroup(c.id);
-    groups.set(g, [...(groups.get(g) ?? []), c]);
+  const valid = name.trim() !== '' && days.length > 0 && toMin(end) > toMin(start);
+  const clashes = valid ? classClashes(busy, { days, startMin: toMin(start), endMin: toMin(end) }, editing ?? undefined) : [];
+
+  function edit(c: ClassEntry) {
+    setEditing(c.group);
+    setName(c.label);
+    setLocation(c.location ?? '');
+    setStart(toHHMM(c.startMin));
+    setEnd(toHHMM(c.endMin));
+    setDays(c.days);
+    formRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }
+
+  function clear() {
+    setEditing(null);
+    setName('');
+    setLocation('');
+    setDays([]);
+  }
+
+  // Arriving from a class tapped on the calendar: /setup?class=<group>.
+  useEffect(() => {
+    const group = new URLSearchParams(window.location.search).get('class');
+    const c = group ? classesOf(busy).find((x) => x.group === group) : null;
+    // Deferred a frame so the page has laid out before scrolling to the form.
+    if (c) requestAnimationFrame(() => edit(c));
+    // Once, on arrival. Re-running on every edit would keep reopening it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <Section
       title="Classes"
-      hint="Lectures, sections, labs. Each one repeats every week, and nothing gets planned over it."
+      hint="Lectures, sections, labs. Each one repeats every week, and nothing gets planned over it. Tap a class on your calendar to see where it is."
     >
-      {groups.size > 0 && (
+      {classes.length > 0 && (
         <ul className="mb-4 divide-y divide-[var(--border)] border-y border-[var(--border)]">
-          {[...groups].map(([g, list]) => (
-            <li key={g} className="flex items-center gap-3 py-2 text-sm">
-              <span className="min-w-0 flex-1 truncate text-base">{list[0].label}</span>
-              <span className="shrink-0 text-[var(--muted)]">
-                {list.map((b) => DAYS[b.day]).join(' ')} · {toHHMM(list[0].startMin)} to {toHHMM(list[0].endMin)}
+          {classes.map((c) => (
+            <li key={c.group} className="flex items-center gap-3 py-2 text-sm">
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-base">{c.label}</span>
+                {c.location && <span className="block truncate text-[var(--muted)]">{c.location}</span>}
               </span>
-              <button onClick={() => onRemove(g)} className="shrink-0 text-[var(--muted)] underline underline-offset-4">
+              <span className="shrink-0 text-[var(--muted)]">
+                {c.days.map((d) => DAYS[d]).join(' ')} · {toHHMM(c.startMin)} to {toHHMM(c.endMin)}
+              </span>
+              <button onClick={() => edit(c)} className="shrink-0 text-[var(--ink)] underline underline-offset-4">
+                Edit
+              </button>
+              <button onClick={() => { onRemove(c.group); if (editing === c.group) clear(); }} className="shrink-0 text-[var(--muted)] underline underline-offset-4">
                 Remove
               </button>
             </li>
           ))}
         </ul>
       )}
-      <div className="space-y-4">
+      <div ref={formRef} className="space-y-4">
+        {editing && <p className="text-sm font-medium">Editing {classesOf(busy).find((c) => c.group === editing)?.label}</p>}
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           aria-label="Class name"
           placeholder="MGMT 305 lecture"
+          className="field w-full"
+        />
+        <input
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+          aria-label="Building and room"
+          placeholder="Building and room, like LOW 201"
           className="field w-full"
         />
         <div className="grid max-w-sm grid-cols-2 gap-3">
@@ -390,17 +431,27 @@ function ClassesSection({
             </button>
           ))}
         </div>
-        <button
-          disabled={!valid}
-          onClick={() => {
-            onAdd(name.trim(), days, toMin(start), toMin(end));
-            setName('');
-            setDays([]);
-          }}
-          className="btn-secondary"
-        >
-          Add class
-        </button>
+        {/* Warned, not refused: an online class that overlaps on paper is real. */}
+        {clashes.length > 0 && (
+          <p className="border-l-3 border-[var(--warn)] pl-3 text-sm text-[var(--warn)]" role="status">
+            Overlaps {clashes.join(' and ')}. Check the times against MyUW.
+          </p>
+        )}
+        <div className="flex flex-wrap gap-2">
+          <button
+            disabled={!valid}
+            onClick={() => {
+              onSave(editing, { name: name.trim(), days, startMin: toMin(start), endMin: toMin(end), location: location.trim() });
+              clear();
+            }}
+            className="btn-secondary"
+          >
+            {editing ? 'Save class' : 'Add class'}
+          </button>
+          {editing && (
+            <button onClick={clear} className="btn-quiet">Cancel</button>
+          )}
+        </div>
       </div>
     </Section>
   );

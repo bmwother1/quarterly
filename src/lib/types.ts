@@ -74,6 +74,8 @@ export interface BusyBlock {
   endMin: number;
   label: string;
   kind: 'class' | 'sleep' | 'work' | 'commitment';
+  /** Building and room, for a class: "LOW 201". */
+  location?: string | null;
 }
 
 export interface Availability {

@@ -35,7 +35,7 @@ interface BlockProps {
    * the day before its deadline than a fortnight ahead of it, and the block was
    * the one place on screen that did not say.
    */
-  due?: { at: string; allDay: boolean } | null;
+  due?: { at: string; allDay: boolean; url?: string | null } | null;
   /** Jump from the session to its deadline, the way the deadline lists its sessions. */
   onShowDeadline?: () => void;
 }
@@ -245,6 +245,17 @@ export function BlockCard({
         due={due} onShowDeadline={onShowDeadline} className="mt-1"
       />
       <p className="mt-2 max-w-prose text-base text-[var(--ink)]">{block.why}</p>
+      {/* The assignment itself: instructions, rubric, where to submit. */}
+      {due?.url && (
+        <a
+          href={due.url}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-2 inline-block text-sm text-[var(--ink)] underline decoration-[var(--border-strong)] underline-offset-4 hover:decoration-[var(--ink)]"
+        >
+          Open in Canvas
+        </a>
+      )}
 
       {settled ? (
         <p className="mt-3 flex items-center gap-1 text-sm text-[var(--muted)]">
