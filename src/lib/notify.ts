@@ -20,8 +20,10 @@
 import type { Assignment, Commitment, StudyBlock } from './types.ts';
 import { addDays, fmtTime, localParts, zonedInstant } from './time.ts';
 import { durationBias } from './schedule/observed.ts';
+import { isReminder } from './canvas/reminder.ts';
+import { dueInstant } from './schedule/plan.ts';
 
-export type NoticeKind = 'next-up' | 'recovery' | 'look-ahead' | 'duration-bias' | 'quota-strain';
+export type NoticeKind = 'next-up' | 'reminder' | 'recovery' | 'look-ahead' | 'duration-bias' | 'quota-strain';
 
 export interface Notice {
   kind: NoticeKind;
@@ -55,6 +57,7 @@ const LEAD_MINUTES = 15;
 export function nextNotice(input: NotifyInput): Notice | null {
   const candidates = [
     nextUp(input),
+    reminder(input),
     recovery(input),
     lookAhead(input),
     durationNotice(input),
@@ -65,9 +68,9 @@ export function nextNotice(input: NotifyInput): Notice | null {
 
   const best = candidates.sort((a, b) => b.priority - a.priority)[0];
 
-  // The imminent nudge is time-critical and exempt from the daily cap; it is the
-  // one message that is worthless if it arrives late. Everything else waits.
-  if (best.kind !== 'next-up' && sentToday(input)) return null;
+  // The imminent nudge and an instructor's reminder are tied to a time and
+  // exempt from the daily cap; each is worthless late. Everything else waits.
+  if (best.kind !== 'next-up' && best.kind !== 'reminder' && sentToday(input)) return null;
 
   return best;
 }
@@ -77,12 +80,50 @@ function sentToday({ lastSentAt, now, tz }: NotifyInput): boolean {
   return localParts(new Date(lastSentAt), tz).dateKey === localParts(now, tz).dateKey;
 }
 
+/**
+ * How long each run of the sender covers. It runs every ten minutes, so a
+ * notice keyed to a moment is eligible only in the ten minutes after it, and
+ * exactly one run sends it. Anything wider sends it twice; nothing is stored to
+ * stop that, because the plan the sender reads is overwritten by the next push
+ * from the student's device.
+ */
+const TICK_MINUTES = 10;
+
+/** When a reminder is sent: 9am on the day it is due, or 8pm the evening before if it is due earlier than that. */
+export function reminderAt(a: Assignment, tz: string): Date {
+  const due = dueInstant(a, tz);
+  const day = localParts(due, tz).dateKey;
+  const morning = zonedInstant(day, 9 * 60, tz);
+  return due.getTime() > morning.getTime() + TICK_MINUTES * 60_000
+    ? morning
+    : zonedInstant(addDays(day, -1), 20 * 60, tz);
+}
+
+/** An instructor's Canvas reminder, as the push it was meant to be. */
+function reminder({ assignments, now, tz }: NotifyInput): Notice | null {
+  const hit = assignments.find((a) => {
+    if (a.status !== 'todo' || !isReminder(a.title)) return false;
+    const since = (now.getTime() - reminderAt(a, tz).getTime()) / 60_000;
+    return since >= 0 && since < TICK_MINUTES;
+  });
+  if (!hit) return null;
+  const due = dueInstant(hit, tz);
+  const today = localParts(due, tz).dateKey === localParts(now, tz).dateKey;
+  return {
+    kind: 'reminder',
+    title: `${hit.course}: ${hit.title}`,
+    body: `Due ${today ? 'today' : 'tomorrow'} at ${fmtTime(due.toISOString(), tz)}.`,
+    href: '/week',
+    priority: 90,
+  };
+}
+
 /** "Next up", 15 minutes before a block, carrying its own reason. */
 function nextUp({ blocks, now }: NotifyInput): Notice | null {
   const soon = blocks
     .filter((b) => b.status === 'planned')
     .map((b) => ({ b, minutesAway: (new Date(b.start).getTime() - now.getTime()) / 60_000 }))
-    .filter(({ minutesAway }) => minutesAway > 0 && minutesAway <= LEAD_MINUTES)
+    .filter(({ minutesAway }) => minutesAway > LEAD_MINUTES - TICK_MINUTES && minutesAway <= LEAD_MINUTES)
     .sort((x, y) => x.minutesAway - y.minutesAway)[0];
 
   if (!soon) return null;

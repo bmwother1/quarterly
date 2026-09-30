@@ -21,7 +21,7 @@ const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
  * deadlines then looked like forty identical chips.
  */
 const MIN_GRID_PX = 640;
-const HOUR_PX = 72;
+const HOUR_PX = 52;
 
 /**
  * Commitments you can't move are drawn as solid bands rather than hatched
@@ -480,6 +480,7 @@ export function WeekGrid({
                       <button
                         key={e.id}
                         onClick={() => onSelectEvent(e.id)}
+                        data-event-id={e.id}
                         className={`absolute inset-x-0.5 overflow-hidden rounded-sm py-1 pl-2 pr-1 text-left active:transform-none ${
                           chosen ? 'z-10 outline-2 outline-offset-1 outline-[var(--ink)]' : ''
                         }`}

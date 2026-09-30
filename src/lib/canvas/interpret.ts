@@ -13,6 +13,7 @@
 import { categoryForAssignment, nextShade } from '../categories.ts';
 import type { Assignment, Course, WorkKind } from '../types.ts';
 import { parseICS } from './ics.ts';
+import { isReminder } from './reminder.ts';
 import { DEFAULT_TZ, mondayOf } from '../time.ts';
 
 export { mondayOf };
@@ -23,6 +24,8 @@ export { mondayOf };
  */
 export function classifyWork(title: string): WorkKind {
   const t = title.toLowerCase();
+  // Before "final" and "exam" get a look: "Final Reminder" is neither.
+  if (isReminder(title)) return 'other';
   if (/\b(essay|paper|draft|memo|thesis)\b/.test(t)) return 'writing';
   if (/\b(lab|prelab|post-?lab)\b/.test(t)) return 'lab';
   if (/\b(quiz)\b/.test(t)) return 'quiz';
@@ -66,6 +69,7 @@ const BASE_WEIGHT: Record<WorkKind, number> = {
 };
 
 export function estimateMinutes(kind: WorkKind, title: string): number {
+  if (isReminder(title)) return 0;
   let minutes = BASE_MINUTES[kind];
   const t = title.toLowerCase();
   // A "final" of anything is bigger than the mid-quarter version of the same thing.

@@ -37,6 +37,10 @@ const hours = (min: number) => `${(min / 60).toFixed(1)}h`;
 type ListRow = { kind: 'block'; at: string; block: StudyBlock } | { kind: 'due'; at: string; deadline: Deadline };
 
 
+/** The detail popover beside a tapped block, and its distance from it. */
+const POP_WIDTH = 340;
+const POP_GAP = 8;
+
 /** Rows of "Didn't fit" shown before the rest fold away. */
 const UNFIT_SHOWN = 3;
 export default function WeekPage() {
@@ -98,17 +102,85 @@ export default function WeekPage() {
   usePlanMotion(flowRef, true, { shifts: true });
 
   /**
-   * The detail card opens under the calendar, and a tall week puts that below
-   * the screen: a tap looked like it did nothing. Bring it into view, and only
-   * as far as needed, so a card already on screen does not move the page.
+   * The detail card opens beside what was tapped, floating over the calendar,
+   * so the student keeps their place in the week. It used to open under the
+   * grid, which on a tall week meant a tap either did nothing visible or
+   * scrolled the page away from where they were looking.
+   *
+   * On a phone there is no room beside anything, so it stays under the grid
+   * and is scrolled into view, only as far as needed.
    */
   const detailRef = useRef<HTMLDivElement>(null);
+  const gridWrapRef = useRef<HTMLDivElement>(null);
   const openDetail = selectedId ?? selectedEventId ?? selectedDeadlineId;
+  const [placed, setPlaced] = useState<{ id: string; top: number; left: number } | null>(null);
+  // Only for what is open now, so a stale position never flashes for a new tap.
+  const pop = placed && placed.id === openDetail ? placed : null;
+
+  function closeDetail() {
+    setSelectedId(null);
+    setSelectedEventId(null);
+    setSelectedDeadlineId(null);
+  }
+
   useEffect(() => {
     if (!openDetail) return;
+    const attr = selectedId ? 'data-block-id' : selectedEventId ? 'data-event-id' : 'data-deadline-id';
+    const place = () => {
+      const wrap = gridWrapRef.current;
+      const anchor = wrap?.querySelector<HTMLElement>(`[${attr}="${CSS.escape(openDetail)}"]`);
+      if (!wrap || !anchor || window.innerWidth < 720) { setPlaced(null); return; }
+      const w = wrap.getBoundingClientRect();
+      const a = anchor.getBoundingClientRect();
+      const right = a.right - w.left + POP_GAP;
+      const left = right + POP_WIDTH <= w.width ? right : Math.max(0, a.left - w.left - POP_WIDTH - POP_GAP);
+      // Level with the block, pulled up if it would run off the bottom.
+      const h = detailRef.current?.offsetHeight ?? 280;
+      const lowest = window.innerHeight - w.top - h - 12;
+      // Never above the sticky header, which is 56px.
+      const highest = 64 - w.top;
+      setPlaced({ id: openDetail, top: Math.max(highest, Math.min(a.top - w.top, lowest)), left });
+    };
+    place();
+    // Again whenever its height changes: it renders at popover width, with
+    // its real height, only after the first placement.
+    const observer = new ResizeObserver(place);
+    if (detailRef.current) observer.observe(detailRef.current);
+    window.addEventListener('resize', place);
+    // Capture, so the calendar's own sideways scroll moves it too.
+    window.addEventListener('scroll', place, true);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+    };
+  }, [openDetail, selectedId, selectedEventId]);
+
+  // Phone: under the grid, brought into view.
+  useEffect(() => {
+    if (!openDetail || pop || window.innerWidth >= 720) return;
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     detailRef.current?.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
-  }, [openDetail]);
+  }, [openDetail, pop]);
+
+  // Escape or a tap anywhere else closes the popover. A tap on another block,
+  // flag or event is left alone: that one opens instead.
+  useEffect(() => {
+    if (!pop) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeDetail(); };
+    const onDown = (e: PointerEvent) => {
+      const t = e.target as Element | null;
+      if (!t || detailRef.current?.contains(t)) return;
+      if (t.closest('[data-block-id],[data-deadline-id],[data-event-id],[role="dialog"]')) return;
+      closeDetail();
+    };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('pointerdown', onDown);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('pointerdown', onDown);
+    };
+  }, [pop]);
 
   const colourFor = useMemo(() => {
     // Resolves to a CSS variable, not a hex, so the same block follows the
@@ -444,7 +516,7 @@ export default function WeekPage() {
         */}
         <div key={view} className="rise mt-4">
           {view === 'grid' && (
-            <div className="space-y-4">
+            <div ref={gridWrapRef} className="relative space-y-4">
               <WeekGrid
                 days={days}
                 blocks={state.blocks}
@@ -476,7 +548,12 @@ export default function WeekPage() {
                 }}
               />
 
-              <div ref={detailRef} className="scroll-mb-4">
+              <div
+                ref={detailRef}
+                data-popover={pop ? '' : undefined}
+                className={pop ? 'absolute z-30 shadow-float' : 'scroll-mb-4'}
+                style={pop ? { top: pop.top, left: pop.left, width: POP_WIDTH } : undefined}
+              >
               {selectedDeadline ? (
                 <div key={`due-${selectedDeadline.id}`} className="well enter">
                   <DeadlineCard

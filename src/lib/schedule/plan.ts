@@ -32,6 +32,7 @@
  *      decoration.
  */
 
+import { isReminder } from '../canvas/reminder.ts';
 import type { Assignment, Availability, Commitment, FixedEvent, StudyBlock, WorkKind } from '../types.ts';
 import { DEFAULT_TZ, localParts, weekdayOf, zonedInstant } from '../time.ts';
 import { freeMinutesByDay, freeSlots, type FreeSlot } from './slots.ts';
@@ -276,6 +277,10 @@ function buildSessions(a: Assignment, opts: Required<PlanOptions>): Pending[] {
   const pinned = opts.existingBlocks
     .filter((b) => b.assignmentId === a.id && b.status === 'planned')
     .reduce((t, b) => t + b.minutes, 0);
+  // A reminder is not work, whatever its estimate says. Checked here rather
+  // than trusted to the import, so a week imported before this rule loses the
+  // sessions on its next replan.
+  if (isReminder(a.title)) return [];
   const remaining = Math.max(0, a.estimatedMinutes - a.actualMinutes - pinned);
   if (remaining < MIN_SESSION_MINUTES / 2) return [];
 

@@ -53,7 +53,7 @@ export interface CategoryMeta {
 }
 
 export const CATEGORY_META: Record<Category, CategoryMeta> = {
-  deadline: { label: 'Coursework', hint: 'Assignments, problem sets, exams', shades: 4, chosen: true },
+  deadline: { label: 'Coursework', hint: 'Assignments, problem sets, exams', shades: 6, chosen: true },
   class:    { label: 'Classes',    hint: 'Lectures, labs, sections',         shades: 4, chosen: false },
   work:     { label: 'Work',       hint: 'Shifts and anything you are paid for', shades: 2, chosen: false },
   focus:    { label: 'Focus',      hint: 'Projects and study you set yourself',  shades: 2, chosen: true },

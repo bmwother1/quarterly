@@ -173,7 +173,12 @@ describe('sealing a link for the database', () => {
 
   test('a tampered row or the wrong key does not open', () => {
     const sealed = seal(keys, ALICE, CANVAS);
-    const flipped = sealed.slice(0, -2) + (sealed.endsWith('A') ? 'B' : 'A') + sealed.slice(-1);
+    // Flip a real byte of the ciphertext. Swapping the last base64 character
+    // can land on padding bits, decode to the same bytes, and pass by luck.
+    const parts = sealed.split('.');
+    const body = Buffer.from(parts[3], 'base64url');
+    body[0] ^= 1;
+    const flipped = [...parts.slice(0, 3), body.toString('base64url')].join('.');
     assert.equal(unseal(keys, ALICE, flipped), null);
     assert.equal(unseal(other, ALICE, sealed), null);
     assert.equal(unseal(keys, ALICE, 'garbage'), null);

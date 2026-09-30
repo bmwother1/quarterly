@@ -9,6 +9,34 @@ record of what was tried and abandoned is worth more than a tidy file.
 
 ---
 
+## 2026-09-30 · Courses get their own hues; Canvas reminders are notifications
+
+From Brydon's first real week, on launch day.
+
+**Course hues.** Coursework shades were a four-step red ladder, so a week of
+study blocks was one colour: "everything is red, I can't tell anything apart".
+Shade 0 stays the canonical red (the only one the month view uses); shades 1 to
+5 are now separate hues with their own lightness, and there are six of them.
+`npm run palette` validates them like everything else, including under all
+three CVD simulations; one candidate violet collided with the class blue under
+deuteranopia and was moved darker until it passed. Rejected: colour by kind of
+work, which is what produced the problem.
+
+**Reminders.** Instructors post "Final Reminder to Complete Peer Feedback" as a
+Canvas assignment. "Final" made it an exam: eight sessions, billed as 40% of the
+grade. Any title with "reminder" now gets no study time, no deadline flag, and a
+push at 9am on its due day (8pm the day before if due earlier). Checked by title
+in the planner, not just at import, so weeks imported before this lose the
+sessions on their next replan.
+
+**One notification per moment, without state.** The sender runs every ten
+minutes and reads a plan the device overwrites on its next push, so nothing
+stored can dedupe a send. A time-bound notice is eligible for exactly one
+ten-minute window instead. That also fixed "Next up", which could fire twice
+(15 and 5 minutes before).
+
+---
+
 ## 2026-09-23 · Calendar links sync to the account, encrypted
 
 **Supersedes** the "device and not the server" half of 2026-09-22, "Remember

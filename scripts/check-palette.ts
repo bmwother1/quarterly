@@ -151,6 +151,19 @@ function contrast(a: RGB, b: RGB): number {
 // ── the palette under test ──────────────────────────────────────────
 
 /**
+ * Coursework shades are separate hues, not a lightness ladder of red.
+ *
+ * Every study block is coursework, so a four-step red ladder made a whole week
+ * one colour: Brydon's first real Canvas import was "everything is red, I can't
+ * tell anything apart". Shade 0 stays the canonical red, which is all the month
+ * view ever shows. The rest are [hue, lightness] pairs chosen to differ on both
+ * axes, so a course pair that CVD folds on hue still differs in lightness.
+ */
+const COURSE_SHADES: Array<[number, number]> = [
+  [25, 0.44], [85, 0.66], [215, 0.46], [300, 0.38], [140, 0.40], [355, 0.64],
+];
+
+/**
  * Hue families, separated by lightness as much as by hue.
  *
  * The first attempt gave every family the same lightness ladder and differed
@@ -179,14 +192,14 @@ function contrast(a: RGB, b: RGB): number {
  * and chroma survives every CVD, which is the right property for the one
  * category that is pure context.
  */
-const FAMILIES = {
-  deadline: { hue: 25,  chroma: 0.16,  L: 0.44, shades: 4 },
+const FAMILIES: Record<string, { hue: number; chroma: number; L: number; shades: number; courses?: Array<[number, number]> }> = {
+  deadline: { hue: 25,  chroma: 0.16,  L: 0.44, shades: 6, courses: COURSE_SHADES },
   class:    { hue: 255, chroma: 0.13,  L: 0.53, shades: 4 },
   personal: { hue: 145, chroma: 0.12,  L: 0.62, shades: 2 },
   sleep:    { hue: 250, chroma: 0.008, L: 0.66, shades: 1 },
   focus:    { hue: 315, chroma: 0.13,  L: 0.71, shades: 2 },
   work:     { hue: 185, chroma: 0.13,  L: 0.77, shades: 2 },
-} as const;
+};
 
 /**
  * Shades step away from the family's own lightness, in whichever direction has
@@ -211,8 +224,9 @@ function build(mode: Mode) {
     for (let i = 0; i < spec.shades; i++) {
       // Away from whichever end is closer, so four shades always fit.
       const dir = spec.L < 0.60 ? 1 : -1;
-      const L = Math.min(0.90, Math.max(0.32, spec.L + lift + dir * SHADE_STEP[i]));
-      const rgb = oklchToRgb(L, spec.chroma, spec.hue);
+      const [hue, baseL] = spec.courses ? spec.courses[i] : [spec.hue, spec.L + dir * SHADE_STEP[i]];
+      const L = Math.min(0.90, Math.max(0.32, baseL + lift));
+      const rgb = oklchToRgb(L, spec.chroma, hue);
       out.push({ name: `${family}.${i}`, family, shade: i, rgb, hex: hex(rgb) });
     }
   }

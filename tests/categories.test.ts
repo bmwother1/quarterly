@@ -83,10 +83,10 @@ describe('shades', () => {
   });
 
   test('past the family limit it reuses slot zero, never another family', () => {
-    // A fifth course looking like the first is resolved by its label. A modulo
+    // A seventh course looking like the first is resolved by its label. A modulo
     // wrapping into the next family's variable would render a lecture in the
     // coursework colour, and nothing resolves that.
-    assert.equal(nextShade('deadline', [0, 1, 2, 3]), 0);
+    assert.equal(nextShade('deadline', [0, 1, 2, 3, 4, 5]), 0);
     assert.equal(nextShade('sleep', [0]), 0);
     assert.equal(nextShade('work', [0, 1]), 0);
   });

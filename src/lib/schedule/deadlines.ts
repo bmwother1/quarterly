@@ -11,6 +11,7 @@
  * Pure, so the status rules can be tested without rendering anything.
  */
 
+import { isReminder } from '../canvas/reminder.ts';
 import type { Assignment, StudyBlock } from '../types.ts';
 import type { UnscheduledItem } from './plan.ts';
 import { dueInstant } from './plan.ts';
@@ -96,6 +97,8 @@ export function deadlinesByDay(
   for (const a of assignments) {
     // Dropped work is the student saying it no longer exists for them.
     if (a.status === 'dropped') continue;
+    // A reminder arrives as a notification, not a flag (`reminder.ts`).
+    if (isReminder(a.title)) continue;
     const d = deadlineFor(a, blocks, unscheduled, now, tz);
     const key = localParts(new Date(d.dueAt), tz).dateKey;
     if (!wanted.has(key)) continue;
