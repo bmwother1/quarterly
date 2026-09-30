@@ -44,12 +44,33 @@ export default function SetupPage() {
 
   const sleepStart = av.busy.find((b) => b.kind === 'sleep')?.endMin ?? 7 * 60;
   const bedMin = av.busy.find((b) => b.kind === 'sleep')?.startMin ?? 0;
-  const commitBlock = av.busy.find((b) => b.kind === 'work' || b.kind === 'class');
+  const commitBlock = av.busy.find((b) => b.kind === 'work');
 
   // Every one of these reads `prev`, never the render-time `av`.
   // Sleep goes through the hook so the hours and `sleepConfirmed` cannot come
   // apart: writing one without the other left the /week prompt asking forever.
   const setSleep = setSleepHours;
+
+  /**
+   * A class is one busy block per day it meets, all sharing a group id so it
+   * can be listed and removed as one thing. Weekly by construction: busy
+   * blocks repeat every week, which is what a class schedule is.
+   */
+  function addClass(name: string, days: number[], startMin: number, endMin: number) {
+    const group = `class-${Date.now()}`;
+    updateAvailability((prev) => ({
+      ...prev,
+      busy: [
+        ...prev.busy,
+        ...days.map((day) => ({ id: `${group}-${day}`, day, startMin, endMin, label: name, kind: 'class' as const })),
+      ],
+    }));
+    flash(`${name} saved`);
+  }
+
+  function removeClass(group: string) {
+    updateAvailability((prev) => ({ ...prev, busy: prev.busy.filter((b) => classGroup(b.id) !== group) }));
+  }
 
   function setWorkShift(days: number[], startMin: number, endMin: number, label: string) {
     updateAvailability((prev) => {
@@ -136,6 +157,12 @@ export default function SetupPage() {
         current={commitBlock}
         days={av.busy.filter((b) => b.kind === 'work').map((b) => b.day)}
         onSave={setWorkShift}
+      />
+
+      <ClassesSection
+        classes={av.busy.filter((b) => b.kind === 'class')}
+        onAdd={addClass}
+        onRemove={removeClass}
       />
 
       <Section title="When you focus best">
@@ -242,7 +269,7 @@ function WorkSection({
   const [selected, setSelected] = useState<number[]>(days.length ? days : [0, 1, 2, 3, 4]);
 
   return (
-    <Section title="Work, class or anything fixed" hint="Include your commute.">
+    <Section title="Work or anything else fixed" hint="The same hours on the days you pick. Include your commute.">
       {current && days.length > 0 && (
         <p className="mb-4 text-sm">
           <span className="font-medium">{current.label}</span>
@@ -285,6 +312,94 @@ function WorkSection({
           className="btn-secondary"
         >
           Save these hours
+        </button>
+      </div>
+    </Section>
+  );
+}
+
+/** `class-1727712345-2` → `class-1727712345`: the class a day's block belongs to. */
+function classGroup(id: string): string {
+  return id.replace(/-\d+$/, '');
+}
+
+function ClassesSection({
+  classes, onAdd, onRemove,
+}: {
+  classes: BusyBlock[];
+  onAdd: (name: string, days: number[], startMin: number, endMin: number) => void;
+  onRemove: (group: string) => void;
+}) {
+  const [name, setName] = useState('');
+  const [start, setStart] = useState('10:30');
+  const [end, setEnd] = useState('11:20');
+  const [days, setDays] = useState<number[]>([]);
+  const valid = name.trim() !== '' && days.length > 0 && toMin(end) > toMin(start);
+
+  const groups = new Map<string, BusyBlock[]>();
+  for (const c of classes) {
+    const g = classGroup(c.id);
+    groups.set(g, [...(groups.get(g) ?? []), c]);
+  }
+
+  return (
+    <Section
+      title="Classes"
+      hint="Lectures, sections, labs. Each one repeats every week, and nothing gets planned over it."
+    >
+      {groups.size > 0 && (
+        <ul className="mb-4 divide-y divide-[var(--border)] border-y border-[var(--border)]">
+          {[...groups].map(([g, list]) => (
+            <li key={g} className="flex items-center gap-3 py-2 text-sm">
+              <span className="min-w-0 flex-1 truncate text-base">{list[0].label}</span>
+              <span className="shrink-0 text-[var(--muted)]">
+                {list.map((b) => DAYS[b.day]).join(' ')} · {toHHMM(list[0].startMin)} to {toHHMM(list[0].endMin)}
+              </span>
+              <button onClick={() => onRemove(g)} className="shrink-0 text-[var(--muted)] underline underline-offset-4">
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="space-y-4">
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          aria-label="Class name"
+          placeholder="MGMT 305 lecture"
+          className="field w-full"
+        />
+        <div className="grid max-w-sm grid-cols-2 gap-3">
+          <Field label="From">
+            <input type="time" value={start} onChange={(e) => setStart(e.target.value)} className="field w-full" />
+          </Field>
+          <Field label="To">
+            <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} className="field w-full" />
+          </Field>
+        </div>
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Days it meets">
+          {DAYS.map((d, i) => (
+            <button
+              key={d}
+              onClick={() => setDays((s) => (s.includes(i) ? s.filter((x) => x !== i) : [...s, i].sort()))}
+              aria-pressed={days.includes(i)}
+              className="chip"
+            >
+              {d}
+            </button>
+          ))}
+        </div>
+        <button
+          disabled={!valid}
+          onClick={() => {
+            onAdd(name.trim(), days, toMin(start), toMin(end));
+            setName('');
+            setDays([]);
+          }}
+          className="btn-secondary"
+        >
+          Add class
         </button>
       </div>
     </Section>

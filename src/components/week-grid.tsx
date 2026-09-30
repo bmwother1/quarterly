@@ -13,7 +13,15 @@ import { isCourseCode, keepCodes } from './course-name';
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 /** The grid is this tall whatever the range, so a pixel height is a percent of it. */
-const GRID_PX = 640;
+/**
+ * Grid height: at least this many pixels an hour, and never shorter than the
+ * old fixed 640. It was a fixed 640 whatever the span, so a student whose day
+ * runs 6:30am to 10:30pm got 40px an hour and every 30-minute session was one
+ * 20px line reading only its course code. A week of one course's sessions and
+ * deadlines then looked like forty identical chips.
+ */
+const MIN_GRID_PX = 640;
+const HOUR_PX = 72;
 
 /**
  * Commitments you can't move are drawn as solid bands rather than hatched
@@ -209,6 +217,7 @@ export function WeekGrid({
   const rangeStart = Math.max(0, Math.min(availability.dayStartMin, ...(starts.length ? starts : [availability.dayStartMin])) - 30);
   const rangeEnd = Math.min(1440, Math.max(availability.dayEndMin, ...(ends.length ? ends : [availability.dayEndMin])) + 30);
   const span = Math.max(60, rangeEnd - rangeStart);
+  const gridPx = Math.max(MIN_GRID_PX, Math.round((span / 60) * HOUR_PX));
 
   const hourMarks: number[] = [];
   for (let m = Math.ceil(rangeStart / 60) * 60; m < rangeEnd; m += 60) hourMarks.push(m);
@@ -267,7 +276,7 @@ export function WeekGrid({
     return null;
   }
 
-  const px = (pctValue: number) => (pctValue / 100) * GRID_PX;
+  const px = (pctValue: number) => (pctValue / 100) * gridPx;
 
   return (
     <div>
@@ -298,6 +307,11 @@ export function WeekGrid({
             const cur = dragRef.current;
             if (cur && moved.current) {
               onMove(cur.id, zonedInstant(cur.dateKey, cur.minute, tz).getTime());
+            } else if (cur) {
+              // A tap. It has to be handled here: pointer capture on the grid
+              // sends the click to the grid instead of the block, so the
+              // block's own onClick never fired and every tap did nothing.
+              onSelect(cur.id);
             }
             setDragBoth(null);
           }}
@@ -312,7 +326,7 @@ export function WeekGrid({
         */}
         <div className="sticky left-0 z-20 w-14 shrink-0 bg-[var(--bg)]">
           <div className="h-12" />
-          <div className="relative" style={{ height: GRID_PX }}>
+          <div className="relative" style={{ height: gridPx }}>
             {hourMarks.map((m) => (
               <div
                 key={m}
@@ -388,7 +402,7 @@ export function WeekGrid({
                   first ? 'rounded-l-sm border-l' : ''
                 } ${last ? 'rounded-r-sm' : ''}`}
                 style={{
-                  height: GRID_PX,
+                  height: gridPx,
                   background: isToday
                     ? 'color-mix(in oklab, var(--accent) 5%, var(--surface))'
                     : 'var(--surface)',
@@ -501,13 +515,29 @@ export function WeekGrid({
                   // for the time sooner than a name does.
                   const lines = Math.floor((px(heightPct) - 4) / 16);
                   const code = isCourseCode(block.course);
+                  // One line and a course code: the assignment is the line.
+                  // The colour already says the course, and forty one-line
+                  // sessions all reading "MGMT 305" say nothing.
+                  const titleOnly = code && lines < 2 && !dragging && block.title && block.title !== block.course;
                   const nameLines = code ? 1 : Math.min(2, Math.max(1, lines));
                   const showTime = dragging || lines > nameLines;
+                  // Under a course code, the assignment is worth more than the
+                  // time: one course's sessions otherwise all read "MGMT 305"
+                  // and only the axis tells them apart.
+                  const subtitle = dragging
+                    ? fmtTime(zonedInstant(drag!.dateKey, drag!.minute, tz), tz)
+                    : code && block.title && block.title !== block.course
+                      ? block.title
+                      : fmtTime(block.start, tz);
 
                   return (
                     <button
                       key={block.id}
-                      onClick={() => { if (!moved.current) onSelect(block.id); }}
+                      // Keyboard (detail 0), and done blocks, which never start a
+                      // drag. Other pointer taps arrive through
+                      // the grid's onPointerUp; handling both would toggle the
+                      // card open and shut again wherever the click does land.
+                      onClick={(e) => { if (e.detail === 0 || settled) onSelect(block.id); }}
                       draggable={false}
                       onPointerDown={(e) => {
                         if (settled) return;
@@ -532,7 +562,7 @@ export function WeekGrid({
                         }
                         setDragBoth({ id: block.id, dateKey, minute: minuteOfDay(block.start, tz) });
                       }}
-                      title={`${block.course} · ${fmtTime(block.start, tz)}`}
+                      title={`${block.course} · ${block.title} · ${fmtTime(block.start, tz)}`}
                       data-block-id={block.id}
                       data-block-start={block.start}
                       data-status={block.status}
@@ -567,13 +597,11 @@ export function WeekGrid({
                           settled ? 'text-[var(--muted)] line-through' : 'text-[var(--ink)]'
                         } ${nameLines === 1 ? 'truncate' : 'line-clamp-2'}`}
                       >
-                        {keepCodes(block.course)}
+                        {titleOnly ? block.title : keepCodes(block.course)}
                       </span>
-                      {showTime && (
+                      {showTime && !titleOnly && (
                         <span className="block truncate text-xs leading-4 text-[var(--muted)]">
-                          {dragging
-                            ? fmtTime(zonedInstant(drag!.dateKey, drag!.minute, tz), tz)
-                            : fmtTime(block.start, tz)}
+                          {subtitle}
                         </span>
                       )}
                     </button>

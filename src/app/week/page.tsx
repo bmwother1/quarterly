@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useHeron } from '@/hooks/use-heron';
 import { useNarrow } from '@/hooks/use-narrow';
@@ -36,6 +36,9 @@ const hours = (min: number) => `${(min / 60).toFixed(1)}h`;
 
 type ListRow = { kind: 'block'; at: string; block: StudyBlock } | { kind: 'due'; at: string; deadline: Deadline };
 
+
+/** Rows of "Didn't fit" shown before the rest fold away. */
+const UNFIT_SHOWN = 3;
 export default function WeekPage() {
   const {
     state, hydrated, replan, complete, drop, moveBlock,
@@ -80,6 +83,7 @@ export default function WeekPage() {
   }
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedDeadlineId, setSelectedDeadlineId] = useState<string | null>(null);
+  const [allUnfit, setAllUnfit] = useState(false);
   // The block at the top when the page first showed. A different one arriving
   // there later (because the first was answered) is worth an entrance; the
   // same one on every visit is not.
@@ -92,6 +96,19 @@ export default function WeekPage() {
    */
   const flowRef = useRef<HTMLDivElement>(null);
   usePlanMotion(flowRef, true, { shifts: true });
+
+  /**
+   * The detail card opens under the calendar, and a tall week puts that below
+   * the screen: a tap looked like it did nothing. Bring it into view, and only
+   * as far as needed, so a card already on screen does not move the page.
+   */
+  const detailRef = useRef<HTMLDivElement>(null);
+  const openDetail = selectedId ?? selectedEventId ?? selectedDeadlineId;
+  useEffect(() => {
+    if (!openDetail) return;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    detailRef.current?.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
+  }, [openDetail]);
 
   const colourFor = useMemo(() => {
     // Resolves to a CSS variable, not a hex, so the same block follows the
@@ -380,7 +397,9 @@ export default function WeekPage() {
               Your week is smaller than your list. Better to know now than on Thursday.
             </p>
             <ul className="mt-2 divide-y divide-[var(--border)] border-y border-[var(--border)]">
-              {state.unscheduled.map((u) => (
+              {/* A course with daily Canvas items can put sixty rows here,
+                  which pushed the calendar a screen down. Three say it. */}
+              {(allUnfit ? state.unscheduled : state.unscheduled.slice(0, UNFIT_SHOWN)).map((u) => (
                 <li key={u.assignmentId ?? u.commitmentId ?? u.title} className="py-2 text-sm">
                   <span className="font-medium">{keepCodes(u.course)}</span>
                   {u.title !== u.course && <span className="text-[var(--muted)]"> · {u.title}</span>}
@@ -393,6 +412,11 @@ export default function WeekPage() {
                 </li>
               ))}
             </ul>
+            {state.unscheduled.length > UNFIT_SHOWN && (
+              <button onClick={() => setAllUnfit((v) => !v)} className="btn-secondary mt-2">
+                {allUnfit ? 'Show fewer' : `Show all ${state.unscheduled.length}`}
+              </button>
+            )}
           </section>
         )}
 
@@ -452,6 +476,7 @@ export default function WeekPage() {
                 }}
               />
 
+              <div ref={detailRef} className="scroll-mb-4">
               {selectedDeadline ? (
                 <div key={`due-${selectedDeadline.id}`} className="well enter">
                   <DeadlineCard
@@ -517,6 +542,7 @@ export default function WeekPage() {
                     : 'Study blocks appear here, fitted around the hours you already gave away.'}
                 </p>
               )}
+              </div>
             </div>
           )}
 
