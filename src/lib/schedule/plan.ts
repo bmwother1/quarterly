@@ -272,6 +272,16 @@ export function dueInstant(a: Assignment, tz: string): Date {
 export const CHUNK_MINUTES = 60;
 
 /**
+ * How far ahead of its deadline an assignment's block aims to land.
+ *
+ * With one hour per assignment and a mostly free week, every block fitted into
+ * the first day or two, so the first thing on Brydon's calendar was a
+ * 30-minute item due in two weeks. Work now sits in the five days before it is
+ * due, and only lands earlier when nothing in that window fits.
+ */
+export const LEAD_DAYS = 5;
+
+/**
  * After Partly: another hour if less than half the first went on it, otherwise
  * half an hour to finish. Null when nothing was answered Partly yet.
  */
@@ -300,6 +310,12 @@ function buildSessions(a: Assignment, opts: Required<PlanOptions>): Pending[] {
 
   const count = 1;
   const per = followUpMinutes(a, opts.existingBlocks) ?? CHUNK_MINUTES;
+
+  // Not yet: less than two days of its lead window fall inside this plan. The
+  // next replan or daily refresh places it. Planning it now, with a window a
+  // few hours wide, dragged it to the first free slot, two weeks early.
+  const horizonEnd = opts.now.getTime() + opts.days * 86_400_000;
+  if (dueInstant(a, opts.tz).getTime() - LEAD_DAYS * 86_400_000 > horizonEnd - 2 * 86_400_000) return [];
 
   const dueAt = dueInstant(a, opts.tz);
   // Overdue work still deserves a slot — it just no longer has a real deadline
@@ -752,6 +768,8 @@ export function planWeek(
 
     const spans = spansByCourse.get(p.group) ?? [];
     const placeByMs = p.placeBy.getTime();
+    // Coursework only; commitments have no deadline to lead up to.
+    const leadStartMs = p.assignment ? p.dueAt.getTime() - LEAD_DAYS * 86_400_000 : -Infinity;
 
     let best: { openingIndex: number; startMs: number; hour: number; minutes: number; value: number } | null = null;
 
@@ -817,7 +835,10 @@ export function planWeek(
         // Three pulls, balanced: the right hour, sooner rather than later, and
         // a day that isn't already full. Without the third, everything stacks
         // onto the next two days and a wide-open Saturday sits empty.
-        const value = fit * (0.45 + 0.55 * openness) / (1 + daysOut * opts.earlyBiasPerDay);
+        // Before its lead window a slot still counts, far behind any inside it,
+        // so work lands early only when the days before the deadline are full.
+        const early = c.ms < leadStartMs ? 0.05 : 1;
+        const value = early * fit * (0.45 + 0.55 * openness) / (1 + daysOut * opts.earlyBiasPerDay);
 
         if (!best || value > best.value + 1e-9) {
           best = { openingIndex: i, startMs: c.ms, hour: c.hour, minutes, value };

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useRef, useState, useSyncExternalStore } from 'react';
-import { fitNewWork } from '@/lib/schedule/fit-new';
+import { fitNewWork, topUp } from '@/lib/schedule/fit-new';
 import type { Assignment, Availability, Commitment, FixedEvent, WorkKind } from '@/lib/types';
 import { heronStore, type HeronState } from '@/lib/store';
 import { planWeek } from '@/lib/schedule/plan';
@@ -409,11 +409,22 @@ export function useHeron(tz: string) {
 
   const reset = useCallback(() => heronStore.clear(), []);
 
+  /** Give open work whose window has arrived a block, moving nothing (`topUp`). */
+  const topUpWork = useCallback(() => {
+    const prev = heronStore.getSnapshot();
+    // Only a week that was ever planned; setup has not finished otherwise.
+    if (!prev.lastPlannedAt) return;
+    const { next } = topUp(prev, new Date(), tz);
+    // Written only when something was placed. Every write marks the week
+    // edited and pushes it, and this runs on every visit.
+    if (next !== prev) heronStore.set(next);
+  }, [tz]);
+
   return {
     state, hydrated, mutate, replan, complete, drop, moveBlock, replaceAll,
     undo, undoLabel, dismissUndo, removeCommitment,
     addEvent, updateEvent, removeEvent, addTask, removeTask,
     updateAvailability, updateCommitments, reset,
-    skipStep, reopenSetup, confirmSleep, setSleepHours, markLiveIfReady, ackLive, startFresh,
+    skipStep, reopenSetup, confirmSleep, setSleepHours, markLiveIfReady, ackLive, startFresh, topUpWork,
   };
 }

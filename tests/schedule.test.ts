@@ -223,6 +223,34 @@ describe('the planner', () => {
     assert.ok(result.blocks.every((b) => b.minutes === 60));
   });
 
+  test('work due in two weeks waits for the days before it, not today', () => {
+    // Brydon's first week: a 30-minute item due in two weeks was the first
+    // thing on his calendar, ahead of work due in three days.
+    const soon = makeAssignment({ id: 'soon', title: 'Soon', kind: 'problem set', due: zonedInstant('2026-10-08', 23 * 60 + 59, TZ).toISOString() });
+    const later = makeAssignment({ id: 'later', title: 'Later', kind: 'discussion', due: zonedInstant('2026-10-16', 23 * 60 + 59, TZ).toISOString() });
+    const r = planWeek([later, soon], openWeek(), { now: MONDAY_8AM, tz: TZ });
+    const at = (id: string) => Date.parse(r.blocks.find((b) => b.assignmentId === id)!.start);
+    assert.ok(at('soon') < at('later'), 'the item due in three days should come first');
+    const leadStart = zonedInstant('2026-10-16', 23 * 60 + 59, TZ).getTime() - 5 * 86_400_000;
+    assert.ok(at('later') >= leadStart, `the item due Oct 16 landed ${new Date(at('later')).toISOString()}, before its five-day window`);
+  });
+
+  test('when the days before a deadline are full, it lands earlier rather than not at all', () => {
+    const due = zonedInstant('2026-10-16', 23 * 60 + 59, TZ).toISOString();
+    // Every day from Oct 11 on fully booked.
+    const busy = [6, 0, 1, 2, 3, 4].map((day) => ({ id: `b${day}`, day, startMin: 0, endMin: 1439, label: 'Booked', kind: 'commitment' as const }));
+    const r = planWeek([makeAssignment({ id: 'x', kind: 'reading', due })], openWeek({ busy }), { now: MONDAY_8AM, tz: TZ });
+    assert.equal(r.blocks.length, 1);
+    assert.ok(Date.parse(r.blocks[0].start) < zonedInstant('2026-10-11', 0, TZ).getTime());
+  });
+
+  test('work whose window starts after this plan ends is left for a later one, not reported short', () => {
+    const r = planWeek([makeAssignment({ id: 'far', kind: 'reading', due: zonedInstant('2026-11-20', 23 * 60, TZ).toISOString() })],
+      openWeek(), { now: MONDAY_8AM, tz: TZ });
+    assert.equal(r.blocks.length, 0);
+    assert.equal(r.unscheduled.length, 0);
+  });
+
   test('never schedules work after its deadline', () => {
     const assignments = fixtureWork(25);
     const result = planWeek(assignments, openWeek(), { now: FIXTURE_MONDAY, tz: TZ });
@@ -587,5 +615,24 @@ describe('rescheduling', () => {
       openWeek(), { now: new Date(MONDAY_8AM.getTime() + 2 * 3_600_000), tz: TZ },
     );
     assert.equal(after.blocks.length, 0);
+  });
+});
+
+describe('topping up work whose window has arrived', () => {
+  test('places what has no block, moves nothing, and is a no-op the second time', async () => {
+    const { topUp } = await import('../src/lib/schedule/fit-new.ts');
+    const { emptyState } = await import('../src/lib/store.ts');
+    const due = (d: string) => zonedInstant(d, 23 * 60 + 59, TZ).toISOString();
+    const planned = makeAssignment({ id: 'p', kind: 'reading', due: due('2026-10-08') });
+    const waiting = makeAssignment({ id: 'w', kind: 'reading', due: due('2026-10-09') });
+    const first = planWeek([planned], openWeek(), { now: MONDAY_8AM, tz: TZ });
+    const state = {
+      ...emptyState(), availability: openWeek(), assignments: [planned, waiting],
+      blocks: first.blocks, lastPlannedAt: MONDAY_8AM.toISOString(),
+    };
+    const once = topUp(state, MONDAY_8AM, TZ);
+    assert.deepEqual(once.placed.map((a) => a.id), ['w']);
+    assert.deepEqual(once.next.blocks.find((b) => b.assignmentId === 'p'), first.blocks[0], 'the planned block moved');
+    assert.equal(topUp(once.next, MONDAY_8AM, TZ).next, once.next, 'a second visit changed the week');
   });
 });

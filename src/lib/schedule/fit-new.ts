@@ -84,3 +84,25 @@ export function fitNewWork(
     short: targets.filter((a) => shortIds.has(a.id)),
   };
 }
+
+/**
+ * Place open work that has no block yet, without moving anything that has one.
+ *
+ * Since each assignment waits for the five days before it is due (`LEAD_DAYS`),
+ * a plan made today leaves work due in three weeks for later. Nothing replans
+ * on its own, so without this that work would sit unplanned until the student
+ * thought to tap Replan. Run when the week opens; work it cannot place yet is
+ * left alone, and work already reported as not fitting is not retried.
+ */
+export function topUp(prev: HeronState, now: Date, tz: string): FitResult {
+  const hasBlock = new Set(prev.blocks.filter((b) => b.status === 'planned').map((b) => b.assignmentId));
+  const reported = new Set(prev.unscheduled.map((u) => u.assignmentId));
+  const ids = prev.assignments
+    .filter((a) => a.status === 'todo' && !hasBlock.has(a.id) && !reported.has(a.id)
+      && dueInstant(a, tz).getTime() > now.getTime())
+    .map((a) => a.id);
+  if (ids.length === 0) return { next: prev, placed: [], short: [] };
+  const fit = fitNewWork(prev, { addedIds: ids, movedIds: [] }, now, tz);
+  // Work whose window has not opened yet comes back neither placed nor short.
+  return fit.placed.length || fit.short.length ? fit : { next: prev, placed: [], short: [] };
+}

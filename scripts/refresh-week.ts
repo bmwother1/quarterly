@@ -146,7 +146,11 @@ const prefer = <T extends Assignment>(list: T[], ok: (a: T) => boolean) =>
 
 const deleted = prefer(everything.filter((a) => heldIds.has(a.id)).reverse(), (a) =>
   held(a.id).status === 'todo' && held(a.id).actualMinutes === 0 && held(a.id).lastTouched === null);
-const deletedTouched = prefer(upcoming, (a) => held(a.id).actualMinutes > 0);
+// Work gets its block in the five days before it is due (2026-09-30), so
+// something started and still open is rarely due after week 4. Any started,
+// open item tests the same thing: its logged minutes must survive deletion.
+const deletedTouched = prefer(upcoming, (a) => held(a.id).actualMinutes > 0)
+  ?? prefer(everything.filter((a) => heldIds.has(a.id)), (a) => held(a.id).status === 'todo' && held(a.id).actualMinutes > 0);
 const moved = prefer(upcoming, (a) => a !== deleted && a !== deletedTouched && held(a.id).actualMinutes > 0)
   ?? prefer(upcoming, (a) => a !== deleted && a !== deletedTouched);
 

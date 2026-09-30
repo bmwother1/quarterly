@@ -307,8 +307,8 @@ export default function ImportPage() {
                   {result.kind === 'assignments'
                     ? 'Heron then checks Canvas once a day and fits new assignments into your week, so work posted the week it is due still shows up.'
                     : `Heron then checks ${result.source} once a day, so a changed ${result.sourceKind === 'work' ? 'shift' : 'event'} shows up without you pasting again.`}{' '}
-                  It stays in this browser: never on our server, never in your account, never
-                  in a backup. Forget it any time, here or in Settings.
+                  Signed in, it is saved to your account encrypted, so your other devices have it
+                  too. Never in a backup. Forget it any time, here or in Settings.
                 </span>
               </span>
             </label>

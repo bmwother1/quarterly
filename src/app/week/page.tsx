@@ -57,12 +57,14 @@ export default function WeekPage() {
   const {
     state, hydrated, replan, complete, drop, moveBlock,
     addEvent, updateEvent, removeEvent, addTask, undo, undoLabel, dismissUndo,
-    skipStep, confirmSleep, markLiveIfReady, ackLive, startFresh,
+    skipStep, confirmSleep, markLiveIfReady, ackLive, startFresh, topUpWork,
   } = useHeron(TZ);
   // Fixed at mount so every render agrees on "now" — reading the clock during
   // render is impure and drifts between the server and client passes. Anything
   // that decides something reads this one.
   const [now] = useState(() => new Date());
+  // Once per visit: work whose five-day window has arrived gets its block.
+  useEffect(() => { if (hydrated) topUpWork(); }, [hydrated, topUpWork]);
   // Kept current, for labels only: "in 20 min" should not stay "in 20 min".
   const liveNow = useNow();
   const firstVisit = useFirstVisit('heron.week.entered');

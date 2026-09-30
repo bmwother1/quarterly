@@ -9,6 +9,26 @@ record of what was tried and abandoned is worth more than a tidy file.
 
 ---
 
+## 2026-09-30 · Work waits for the five days before it is due
+
+**Decided (Brydon):** an assignment's one block aims for the five days before
+its deadline (`LEAD_DAYS`), lands earlier only when those days are full, and is
+not planned at all while less than two days of that window fall inside the
+plan. Opening the week tops up (`topUp`): open work with no block gets one,
+nothing already planned moves, and nothing is written when nothing changed.
+
+**Why:** with one hour per assignment and a free week, everything fitted into
+the first day or two, and the first block on his calendar was a 30-minute item
+due in two weeks. On a synthetic 150-item term the longest block-to-deadline
+gap went from 17.8 days to 5.0, at one to five blocks a day.
+
+**Cost:** `npm run refresh`'s "moved deadline kept its minutes" now checks an
+item with nothing logged, because started-and-open work due after week 4 no
+longer happens in the simulation. It passes without testing anything; worth
+rebuilding the scenario when the refresh code next changes.
+
+---
+
 ## 2026-09-30 · One hour per assignment; Done finishes it, Partly books a follow-up
 
 **Decided (Brydon):** every assignment gets one 60-minute block. Done marks the
