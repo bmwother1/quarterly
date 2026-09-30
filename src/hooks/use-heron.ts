@@ -228,6 +228,7 @@ export function useHeron(tz: string) {
 
       const { blocks, displaced } = pushAside(moved, blockId, {
         dayEndMin: prev.availability.dayEndMin,
+        tz,
       });
       notice = describeDisplaced(displaced);
 
@@ -237,7 +238,7 @@ export function useHeron(tz: string) {
     // a student correcting it constantly means the scoring function is off.
     logEvent('block_moved');
     return notice;
-  }, [mutate]);
+  }, [mutate, tz]);
 
   /**
    * Add a one-off, and resolve whatever it lands on.

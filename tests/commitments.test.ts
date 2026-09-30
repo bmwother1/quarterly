@@ -573,3 +573,25 @@ describe('weekly quotas are weekly', () => {
     for (const [day, n] of perDay) assert.ok(n <= 2, `${n} sessions on ${day} against a limit of 2`);
   });
 });
+
+describe('the week the plan ends partway through', () => {
+  test('a daily habit is not reported short because the plan stopped, not the week', () => {
+    // Brydon's launch-day week: 7 FE study sessions a week, planned on a
+    // Wednesday, a session on every day shown, and a banner saying "3 sessions
+    // short, the week ran out before you hit the target".
+    const wednesday = zonedInstant('2026-09-30', 12 * 60 + 48, TZ);
+    const fe = commitment({ id: 'fe', title: 'Study for FE Exam', sessionsPerWeek: 7, minutesPerSession: 90 });
+    const r = planWeek([], defaultAvailability(), { now: wednesday, tz: TZ, commitments: [fe] });
+    assert.ok(r.blocks.length >= 12, `only ${r.blocks.length} sessions placed`);
+    assert.deepEqual(r.unscheduled, []);
+  });
+
+  test('a genuinely full week is still reported', () => {
+    const wednesday = zonedInstant('2026-09-30', 12 * 60 + 48, TZ);
+    const fe = commitment({ id: 'fe', title: 'Study for FE Exam', sessionsPerWeek: 7, minutesPerSession: 90 });
+    // Every waking hour booked Monday to Saturday next week.
+    const busy = [0, 1, 2, 3, 4, 5].map((day) => ({ id: `x${day}`, day, startMin: 0, endMin: 1439, label: 'Booked', kind: 'work' as const }));
+    const r = planWeek([], { ...defaultAvailability(), busy }, { now: wednesday, tz: TZ, commitments: [fe] });
+    assert.ok(r.unscheduled.some((u) => u.commitmentId === 'fe'), 'a week with one free day should report the shortfall');
+  });
+});

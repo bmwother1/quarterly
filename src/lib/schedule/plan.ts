@@ -916,8 +916,15 @@ export function planWeek(
 
   // Report what didn't fit, and why, rather than pretending the week is fine.
   const leftovers = new Map<string, UnscheduledItem>();
+  const horizonEndMs = now.getTime() + opts.days * 86_400_000;
   for (const p of pending) {
     if (p.placed) continue;
+    // A week the plan only reaches the start of gets a proportional share, and
+    // that share falling short is the plan ending, not the week filling up.
+    // The next plan covers it. Reported, it read "3 sessions short, the week
+    // ran out" beside a calendar with a session every day.
+    if (p.commitment && p.notBefore && p.notBefore.getTime() > now.getTime()
+      && p.notBefore.getTime() + 7 * 86_400_000 > horizonEndMs) continue;
     const reason: UnscheduledItem['reason'] = p.commitment
       ? 'the week ran out before you hit the target'
       : p.placeBy.getTime() < now.getTime() + opts.days * 86_400_000

@@ -14,6 +14,7 @@
  */
 
 import type { FixedEvent, StudyBlock } from '../types.ts';
+import { DEFAULT_TZ, localParts } from '../time.ts';
 
 export interface Collision {
   block: StudyBlock;
@@ -100,7 +101,7 @@ export function describeCollisions(collisions: Collision[]): string | null {
 export function pushAside(
   blocks: StudyBlock[],
   movedId: string,
-  opts: { dayEndMin?: number } = {},
+  opts: { dayEndMin?: number; tz?: string } = {},
 ): { blocks: StudyBlock[]; displaced: StudyBlock[] } {
   const moved = blocks.find((b) => b.id === movedId);
   if (!moved) return { blocks, displaced: [] };
@@ -146,9 +147,13 @@ export function pushAside(
       // Past the end of the usable day it is not a move any more, it is a
       // block at 2am. Left where it was and reported instead: an honest
       // overlap the student can see beats a silent impossibility.
-      const endMinute = new Date(candidate.end).getHours() * 60 + new Date(candidate.end).getMinutes();
-      const wrapped = new Date(candidate.start).toDateString() !== new Date(b.start).toDateString();
-      if (wrapped || endMinute > dayEnd) {
+      // In the student's zone, not the machine's: on a server or a laptop set
+      // to UTC, "past the end of the day" was measured on the wrong clock.
+      const tz = opts.tz ?? DEFAULT_TZ;
+      const end = localParts(new Date(candidate.end), tz);
+      const startKey = localParts(new Date(candidate.start), tz).dateKey;
+      const wrapped = startKey !== localParts(new Date(b.start), tz).dateKey || end.dateKey !== startKey;
+      if (wrapped || end.minutesOfDay > dayEnd) {
         continue;
       }
       displaced.push(candidate);
