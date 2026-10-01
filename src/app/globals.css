@@ -510,3 +510,17 @@
     opacity: 0.7;
   }
 }
+
+/* ── Today (2026-10-01 redesign) ─────────────────────────────────── */
+.font-display { font-family: var(--font-display), var(--font-geist-sans), system-ui, sans-serif; letter-spacing: -0.02em; }
+@keyframes today-pulse { 0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent) 55%, transparent); } 70% { box-shadow: 0 0 0 12px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+@keyframes today-rise { from { opacity: 0; transform: translateY(16px) scale(.985); } to { opacity: 1; transform: none; } }
+@keyframes today-spark { from { opacity: 1; transform: translate(0, 0) scale(1); } to { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(.4); } }
+@keyframes today-fill { from { width: 0; } }
+.today-pulse { animation: today-pulse 1.8s infinite; }
+.today-rise { animation: today-rise .5s cubic-bezier(.2,.8,.2,1) both; }
+.today-spark { position: absolute; width: 8px; height: 8px; border-radius: 4px; animation: today-spark .9s ease-out both; pointer-events: none; }
+.today-fill { animation: today-fill 1s cubic-bezier(.2,.8,.2,1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .today-pulse, .today-rise, .today-spark, .today-fill { animation: none; }
+}

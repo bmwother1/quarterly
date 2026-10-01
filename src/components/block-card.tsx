@@ -108,7 +108,7 @@ function CheckIcon() {
  * button on the page. Everywhere else Done is outlined, so a list of twenty
  * blocks is not twenty competing calls to action.
  */
-function BlockActions({
+export function BlockActions({
   block, onComplete, onDrop, primary,
 }: Pick<BlockProps, 'block' | 'onComplete' | 'onDrop'> & { primary: boolean }) {
   const [askingPartial, setAskingPartial] = useState(false);

@@ -6,9 +6,11 @@ import Link from 'next/link';
 import { useHeron } from '@/hooks/use-heron';
 import { useNarrow } from '@/hooks/use-narrow';
 import { useNow } from '@/hooks/use-now';
-import { useFirstVisit } from '@/hooks/use-first-visit';
 import { usePlanMotion } from '@/hooks/use-plan-motion';
 import { BlockCard } from '@/components/block-card';
+import { NowCard, DoneBurst } from '@/components/now-card';
+import { DayTimeline } from '@/components/day-timeline';
+import { ComingUp, WeeklyGoals } from '@/components/today-extras';
 import { WeekGrid } from '@/components/week-grid';
 import { MonthGrid } from '@/components/month-grid';
 import { Sheet, AddButton } from '@/components/sheet';
@@ -70,7 +72,6 @@ export default function WeekPage() {
   useEffect(() => { if (hydrated) topUpWork(); }, [hydrated, topUpWork]);
   // Kept current, for labels only: "in 20 min" should not stay "in 20 min".
   const liveNow = useNow();
-  const firstVisit = useFirstVisit('heron.week.entered');
   /**
    * Which lens the week is shown through.
    *
@@ -108,11 +109,8 @@ export default function WeekPage() {
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedDeadlineId, setSelectedDeadlineId] = useState<string | null>(null);
   const [selectedBusyId, setSelectedBusyId] = useState<string | null>(null);
+  const [burst, setBurst] = useState<{ n: number; colour: string } | null>(null);
   const [allUnfit, setAllUnfit] = useState(false);
-  // The block at the top when the page first showed. A different one arriving
-  // there later (because the first was answered) is worth an entrance; the
-  // same one on every visit is not.
-  const [firstFocusId, setFirstFocusId] = useState<string | null>(null);
 
   /**
    * The next block and the list travel together: answering the block at the
@@ -336,28 +334,23 @@ export default function WeekPage() {
   // with nothing planned it is planning; otherwise it is the next block's Done.
   const away = gap.kind === 'away';
   const replanIsPrimary = hasInputs && !focus && !away;
-  const focusIsPrimary = !away;
 
   const focusPast = focus ? new Date(focus.end) < now : false;
   const label = focus ? focusLabel(focus, focusPast, liveNow, todayKey, TZ) : null;
+  const greeting = (() => {
+    const h = localParts(liveNow, TZ).hour;
+    return h < 12 ? 'Good morning.' : h < 18 ? 'Good afternoon.' : 'Good evening.';
+  })();
+  const todayStudy = (() => {
+    const mine = state.blocks.filter((b) => localParts(new Date(b.start), TZ).dateKey === todayKey);
+    return { total: mine.length, done: mine.filter((b) => b.status !== 'planned').length };
+  })();
 
-  if (focus && firstFocusId === null) setFirstFocusId(focus.id);
-  const heroEnters = firstVisit || (firstFocusId !== null && focus?.id !== firstFocusId);
-
-  let order = 0;
-  const stagger = () => (firstVisit ? order++ : undefined);
-  const heroOrder = stagger() ?? 0;
 
   return (
     <main
-      // The calendar needs roughly twice the width of the prose views. Both
-      // widths are written out in full because Tailwind reads source text: a
-      // class name stitched together at runtime is a string it never sees, so
-      // the utility is never generated. That is what broke here before, not the
-      // `max-w-*` utilities themselves, which work everywhere else in the app.
-      className={`rise mx-auto w-full px-5 pb-12 pt-6 sm:pt-10 ${
-        view === 'week' || view === 'two' ? 'max-w-[1080px]' : 'max-w-2xl'
-      }`}
+      // Today's two columns and the calendar both want the full width.
+      className="rise mx-auto w-full max-w-[1080px] px-5 pb-12 pt-6 sm:pt-10"
     >
       <header>
         <div className="flex items-center justify-between gap-4">
@@ -462,29 +455,71 @@ export default function WeekPage() {
       )}
 
       <div ref={flowRef} className="mt-6">
-        {focus && label && (
-          <BlockCard
-            key={focus.id}
-            as="section"
-            tracked
-            block={focus}
-            tz={TZ}
-            colour={colourFor(focus.course)}
-            isPast={focusPast}
-            primary={focusIsPrimary}
-            label={
-              <>
-                <span className="font-semibold text-[var(--accent)]">{label.lead}</span>
-                <span className="text-[var(--muted)]"> · {label.rest}</span>
-              </>
-            }
-            due={dueOf(focus)}
-            onComplete={(outcome, minutes) => announce(complete(focus.id, outcome, minutes))}
-            onDrop={() => drop(focus.id)}
-            className={heroEnters ? 'enter' : ''}
-            style={heroEnters ? ({ '--i': heroOrder } as React.CSSProperties) : undefined}
-          />
-        )}
+        {/*
+          Today, from the 2026-10-01 redesign: the one block that matters,
+          big, with the day as a timeline beside it and goals under that.
+        */}
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="relative flex min-w-0 flex-col gap-6">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <h2 className="font-display text-display font-extrabold">{greeting}</h2>
+              {todayStudy.total > 0 && (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-semibold">{todayStudy.done} of {todayStudy.total} done today</span>
+                  <span className="h-2 w-32 overflow-hidden rounded-full bg-[var(--border)]">
+                    <span
+                      className="block h-2 rounded-full"
+                      style={{
+                        width: `${Math.round((todayStudy.done / todayStudy.total) * 100)}%`,
+                        background: 'var(--accent)',
+                        transition: 'width .6s cubic-bezier(.2,.8,.2,1)',
+                      }}
+                    />
+                  </span>
+                </div>
+              )}
+            </div>
+            {focus && label && (
+              <NowCard
+                key={focus.id}
+                block={focus}
+                colour={colourFor(focus.course)}
+                tz={TZ}
+                lead={label.lead}
+                rest={label.rest}
+                due={dueOf(focus)}
+                isPast={focusPast}
+                onComplete={(outcome, minutes) => {
+                  if (outcome === 'done') setBurst({ n: Date.now(), colour: colourFor(focus.course) });
+                  announce(complete(focus.id, outcome, minutes));
+                }}
+                onDrop={() => drop(focus.id)}
+              />
+            )}
+            {burst && <DoneBurst key={burst.n} colour={burst.colour} />}
+            <ComingUp assignments={state.assignments} blocks={state.blocks} tz={TZ} now={liveNow} colourFor={colourFor} />
+          </div>
+          <aside>
+            <DayTimeline
+              todayKey={todayKey}
+              blocks={state.blocks}
+              events={state.events}
+              availability={state.availability}
+              tz={TZ}
+              colourFor={colourFor}
+              now={liveNow}
+              onComplete={(id, outcome, minutes) => {
+                if (outcome === 'done') {
+                  const b = state.blocks.find((x) => x.id === id);
+                  if (b) setBurst({ n: Date.now(), colour: colourFor(b.course) });
+                }
+                announce(complete(id, outcome, minutes));
+              }}
+              onDrop={(id) => drop(id)}
+            />
+            <WeeklyGoals commitments={state.commitments} blocks={state.blocks} tz={TZ} now={liveNow} />
+          </aside>
+        </div>
 
         {/*
           The notification preview used to live here and told students
