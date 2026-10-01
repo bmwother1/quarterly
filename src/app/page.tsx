@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { EntryRouter } from '@/components/entry-router';
+import { LandingDemo } from '@/components/landing-demo';
 
 export const metadata = {
   title: 'Heron',
@@ -19,32 +20,39 @@ export const metadata = {
 export default function Landing() {
   return (
     <EntryRouter>
-    <main className="mx-auto max-w-2xl px-5 pb-16 pt-12 sm:pt-20">
-      <h1 className="enter text-display font-semibold">
-        A plan that survives you{' '}
-        <span className="text-[var(--accent)]">falling behind</span>.
-      </h1>
-      <p className="enter mt-4 text-title font-normal text-[var(--muted)]" style={{ '--i': 1 } as React.CSSProperties}>
-        Every planner works until the week goes wrong. Heron is built for the Wednesday when
-        it does: mark what you actually did, and it rebuilds the rest around what&rsquo;s left.
-        Free for students.
-      </p>
+    <main className="mx-auto max-w-2xl px-5 pb-16 pt-12 sm:pt-20 lg:max-w-[1120px]">
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,520px)] lg:items-center lg:gap-14">
+        <div>
+          <h1 className="enter font-display text-display font-extrabold sm:text-[3.5rem] sm:leading-[1.02]">
+            Open it at 9pm.{' '}
+            <span className="text-[var(--accent)]">Know exactly</span> what to do.
+          </h1>
+          <p className="enter mt-5 text-title font-normal text-[var(--muted)]" style={{ '--i': 1 } as React.CSSProperties}>
+            Paste your Canvas link once. Heron plans every assignment into the hours you actually
+            have, around your classes, tells you why each one is where it is, and rebuilds the
+            rest when a day goes wrong. Free for students.
+          </p>
 
-      <div className="enter mt-8 flex flex-col gap-3 sm:flex-row" style={{ '--i': 2 } as React.CSSProperties}>
-        <Link href="/start" className="btn-primary btn-lg">
-          Plan my week
-        </Link>
-        <Link href="/import" className="btn-secondary btn-lg">
-          Import my calendar
-        </Link>
+          <div className="enter mt-8 flex flex-col gap-3 sm:flex-row" style={{ '--i': 2 } as React.CSSProperties}>
+            <Link href="/start" className="btn-primary btn-lg">
+              Plan my week
+            </Link>
+            <Link href="/import" className="btn-secondary btn-lg">
+              Import my calendar
+            </Link>
+          </div>
+
+          <p className="enter mt-4 text-sm text-[var(--muted)]" style={{ '--i': 3 } as React.CSSProperties}>
+            No account needed. Nothing to install. Takes about 30 seconds.{' '}
+            <Link href="/welcome" className="whitespace-nowrap text-[var(--ink)] underline decoration-[var(--border-strong)] underline-offset-4 hover:decoration-[var(--ink)]">
+              See how it works first
+            </Link>
+          </p>
+        </div>
+        <div className="enter mt-12 lg:mt-0" style={{ '--i': 2 } as React.CSSProperties}>
+          <LandingDemo />
+        </div>
       </div>
-
-      <p className="enter mt-4 text-sm text-[var(--muted)]" style={{ '--i': 3 } as React.CSSProperties}>
-        No account needed. Nothing to install. Takes about 30 seconds.{' '}
-        <Link href="/welcome" className="whitespace-nowrap text-[var(--ink)] underline decoration-[var(--border-strong)] underline-offset-4 hover:decoration-[var(--ink)]">
-          See how it works first
-        </Link>
-      </p>
 
       <section className="mt-16 grid gap-x-10 gap-y-8 border-t border-[var(--border)] pt-8 sm:grid-cols-2">
         <Item title="Fall behind and it rebuilds around you">

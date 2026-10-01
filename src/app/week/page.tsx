@@ -10,7 +10,8 @@ import { usePlanMotion } from '@/hooks/use-plan-motion';
 import { BlockCard } from '@/components/block-card';
 import { NowCard, DoneBurst } from '@/components/now-card';
 import { DayTimeline } from '@/components/day-timeline';
-import { ComingUp, WeeklyGoals } from '@/components/today-extras';
+import { CanvasStatus, ComingUp, CourseList, WeekProgress } from '@/components/today-extras';
+import { useFeed, describeRefresh } from '@/hooks/use-feed';
 import { WeekGrid } from '@/components/week-grid';
 import { MonthGrid } from '@/components/month-grid';
 import { Sheet, AddButton } from '@/components/sheet';
@@ -72,6 +73,7 @@ export default function WeekPage() {
   useEffect(() => { if (hydrated) topUpWork(); }, [hydrated, topUpWork]);
   // Kept current, for labels only: "in 20 min" should not stay "in 20 min".
   const liveNow = useNow();
+  const feed = useFeed(TZ);
   /**
    * Which lens the week is shown through.
    *
@@ -337,6 +339,21 @@ export default function WeekPage() {
 
   const focusPast = focus ? new Date(focus.end) < now : false;
   const label = focus ? focusLabel(focus, focusPast, liveNow, todayKey, TZ) : null;
+  const sidebar = (
+    <>
+      <CourseList assignments={state.assignments} tz={TZ} now={liveNow} colourFor={colourFor} />
+      <WeekProgress
+        assignments={state.assignments} commitments={state.commitments} blocks={state.blocks}
+        tz={TZ} now={liveNow} colourFor={colourFor}
+      />
+      <CanvasStatus
+        syncedAt={feed.canvasSyncedAt}
+        now={liveNow}
+        busy={feed.busy}
+        onCheck={feed.canvasRemembered ? () => { void feed.refresh('tap').then((r) => announce(describeRefresh(r))); } : null}
+      />
+    </>
+  );
   const greeting = (() => {
     const h = localParts(liveNow, TZ).hour;
     return h < 12 ? 'Good morning.' : h < 18 ? 'Good afternoon.' : 'Good evening.';
@@ -350,7 +367,7 @@ export default function WeekPage() {
   return (
     <main
       // Today's two columns and the calendar both want the full width.
-      className="rise mx-auto w-full max-w-[1080px] px-5 pb-12 pt-6 sm:pt-10"
+      className="rise mx-auto w-full max-w-[1080px] px-5 pb-12 pt-6 sm:pt-10 xl:max-w-[1320px]"
     >
       <header>
         <div className="flex items-center justify-between gap-4">
@@ -459,7 +476,10 @@ export default function WeekPage() {
           Today, from the 2026-10-01 redesign: the one block that matters,
           big, with the day as a timeline beside it and goals under that.
         */}
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[210px_minmax(0,1fr)_320px]">
+          {/* Notion's order: courses, the week's scoreboard, Canvas. Its own
+              column on wide screens; under the timeline below that. */}
+          <aside className="hidden xl:block" aria-label="Overview">{sidebar}</aside>
           <div className="relative flex min-w-0 flex-col gap-6">
             <div className="flex flex-wrap items-end justify-between gap-4">
               <h2 className="font-display text-display font-extrabold">{greeting}</h2>
@@ -517,7 +537,7 @@ export default function WeekPage() {
               }}
               onDrop={(id) => drop(id)}
             />
-            <WeeklyGoals commitments={state.commitments} blocks={state.blocks} tz={TZ} now={liveNow} />
+            <div className="xl:hidden">{sidebar}</div>
           </aside>
         </div>
 

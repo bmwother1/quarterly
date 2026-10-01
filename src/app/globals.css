@@ -524,3 +524,16 @@
 @media (prefers-reduced-motion: reduce) {
   .today-pulse, .today-rise, .today-spark, .today-fill { animation: none; }
 }
+@keyframes landing-drop { 0%, 6% { opacity: 0; transform: translateY(-14px) scale(.96); } 12%, 88% { opacity: 1; transform: none; } 96%, 100% { opacity: 0; } }
+@keyframes landing-sweep { 0%, 20% { transform: translateY(0); opacity: 0; } 24% { opacity: 1; } 70% { transform: translateY(380px); opacity: 1; } 76%, 100% { opacity: 0; transform: translateY(380px); } }
+@keyframes landing-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes landing-show { 0%, 30% { opacity: 0; transform: translateY(8px); } 36%, 90% { opacity: 1; transform: none; } 98%, 100% { opacity: 0; } }
+.landing-blk { opacity: 0; animation: landing-drop 10s cubic-bezier(.2,.8,.2,1) infinite; }
+.landing-sweep { animation: landing-sweep 10s ease-in-out infinite; }
+.landing-float { animation: landing-float 5s ease-in-out infinite; }
+.landing-show { opacity: 0; animation: landing-show 10s ease infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .landing-blk, .landing-show { opacity: 1; animation: none; }
+  .landing-sweep, .landing-float { animation: none; }
+  .landing-sweep { display: none; }
+}
