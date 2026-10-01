@@ -464,7 +464,7 @@ export default function WeekPage() {
               </>
             }
             due={dueOf(focus)}
-            onComplete={(outcome, minutes) => complete(focus.id, outcome, minutes)}
+            onComplete={(outcome, minutes) => announce(complete(focus.id, outcome, minutes))}
             onDrop={() => drop(focus.id)}
             className={heroEnters ? 'enter' : ''}
             style={heroEnters ? ({ '--i': heroOrder } as React.CSSProperties) : undefined}
@@ -660,7 +660,7 @@ export default function WeekPage() {
                       setSelectedDeadlineId(selected.assignmentId);
                       setSelectedId(null);
                     } : undefined}
-                    onComplete={(outcome, minutes) => complete(selected.id, outcome, minutes)}
+                    onComplete={(outcome, minutes) => announce(complete(selected.id, outcome, minutes))}
                     onDrop={() => { drop(selected.id); setSelectedId(null); }}
                   />
                 </div>
@@ -747,7 +747,7 @@ export default function WeekPage() {
                             isPast={new Date(r.block.end) < now}
                             due={dueOf(r.block)}
                             stagger={dateKey === todayKey || dateKey === addDays(todayKey, 1) ? stagger() : undefined}
-                            onComplete={(outcome, minutes) => complete(r.block.id, outcome, minutes)}
+                            onComplete={(outcome, minutes) => announce(complete(r.block.id, outcome, minutes))}
                             onDrop={() => drop(r.block.id)}
                           />
                         ))}

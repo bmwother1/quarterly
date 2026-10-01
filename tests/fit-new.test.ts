@@ -142,3 +142,30 @@ describe('fitting new Canvas work into a planned week', () => {
     assert.equal(fitNewWork(before, { addedIds: [], movedIds: [] }, now, TZ).next, before);
   });
 });
+
+describe('Find another time after a skip', () => {
+  test('books the work again, never back on the skipped slot', async () => {
+    const { fitNewWork } = await import('../src/lib/schedule/fit-new.ts');
+    const { planWeek } = await import('../src/lib/schedule/plan.ts');
+    const { applyCompletion } = await import('../src/lib/schedule/complete.ts');
+    const { emptyState } = await import('../src/lib/store.ts');
+    const { defaultAvailability } = await import('../src/lib/schedule/slots.ts');
+    const { zonedInstant } = await import('../src/lib/time.ts');
+    const TZ = 'America/Los_Angeles';
+    const now = zonedInstant('2026-10-05', 8 * 60, TZ);
+    const hw = {
+      id: 'hw', title: 'Homework 3', course: 'MATH 124', courseFull: 'MATH 124 A', kind: 'problem set' as const,
+      due: zonedInstant('2026-10-08', 23 * 60, TZ).toISOString(), allDay: false, url: null, estimatedMinutes: 120,
+      actualMinutes: 0, status: 'todo' as const, weight: 0.03, confidence: 0.5, lastTouched: null,
+    };
+    const av = defaultAvailability();
+    const first = planWeek([hw], av, { now, tz: TZ }).blocks[0];
+    const state = { ...emptyState(), availability: av, assignments: [hw], blocks: [first], lastPlannedAt: now.toISOString() };
+    const skipped = { ...state, ...applyCompletion(state, first.id, 'skipped', null, now) };
+    const again = fitNewWork(skipped, { addedIds: ['hw'], movedIds: [] }, now, TZ).next.blocks
+      .filter((b) => b.assignmentId === 'hw' && b.status === 'planned');
+    assert.equal(again.length, 1, 'it was not booked again');
+    assert.ok(Date.parse(again[0].start) >= Date.parse(first.end) || Date.parse(again[0].end) <= Date.parse(first.start),
+      `booked back on the skipped slot: ${again[0].start}`);
+  });
+});

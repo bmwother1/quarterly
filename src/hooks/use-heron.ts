@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState, useSyncExternalStore } from 'react';
 import { fitNewWork, topUp } from '@/lib/schedule/fit-new';
+import { fmtDay, fmtTime } from '@/lib/time';
 import type { Assignment, Availability, Commitment, FixedEvent, WorkKind } from '@/lib/types';
 import { heronStore, type HeronState } from '@/lib/store';
 import { planWeek } from '@/lib/schedule/plan';
@@ -160,15 +161,25 @@ export function useHeron(tz: string) {
     replan(from);
   }, [mutateUndoable, replan]);
 
-  const complete = useCallback((blockId: string, outcome: Completion, minutes: number | null) => {
+  /** Returns what to tell the student when it booked the work again, or null. */
+  const complete = useCallback((blockId: string, outcome: Completion, minutes: number | null): string | null => {
+    let notice: string | null = null;
     mutate((prev) => {
       const now = new Date();
       const next = { ...prev, ...applyCompletion(prev, blockId, outcome, minutes, now) };
-      // Partly: book the follow-up straight away, later today or another day
-      // before it is due, without touching anything else in the week.
+      // Partly, or Skipped with "Find another time": book the next block
+      // straight away, later today or another day before it is due, without
+      // touching anything else in the week. Skipped used to wait for a replan,
+      // and nothing on screen said so, so it looked like the button did nothing.
+      // The skipped slot stays occupied, so the new one never lands back on it.
       const assignmentId = prev.blocks.find((b) => b.id === blockId)?.assignmentId;
-      if (outcome !== 'partial' || !assignmentId) return next;
-      return fitNewWork(next, { addedIds: [assignmentId], movedIds: [] }, now, tz).next;
+      if (outcome === 'done' || !assignmentId) return next;
+      const fit = fitNewWork(next, { addedIds: [assignmentId], movedIds: [] }, now, tz);
+      const again = fit.next.blocks.find((b) => b.assignmentId === assignmentId && b.status === 'planned');
+      notice = again
+        ? `Booked again ${fmtDay(again.start, tz)}, ${fmtTime(again.start, tz)}.`
+        : 'No time left before it is due, so it was not booked again.';
+      return fit.next;
     });
     // The single most informative thing a student does. Whether planned work
     // actually happens is the difference between a calendar and a scheduler.
@@ -176,6 +187,7 @@ export function useHeron(tz: string) {
       minutes: minutes ?? 0,
       partial: outcome === 'partial',
     });
+    return notice;
   }, [mutate, tz]);
 
   /**

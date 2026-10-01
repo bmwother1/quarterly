@@ -137,8 +137,8 @@ function BlockActions({
           </button>
         </div>
         <p className="mt-2 text-sm text-[var(--muted)]">
-          Find another time keeps it in the queue, and it moves when you replan. Drop it stops it
-          taking up your week.
+          Find another time books it again before it is due. Drop it stops it taking up your
+          week.
         </p>
       </div>
     );

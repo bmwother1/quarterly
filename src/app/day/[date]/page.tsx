@@ -15,6 +15,7 @@ import { DEFAULT_TZ, addDays, fmtTime, localParts } from '@/lib/time';
 import type { FixedEvent, StudyBlock } from '@/lib/types';
 import { deadlinesByDay, type Deadline } from '@/lib/schedule/deadlines';
 import { DeadlineRow } from '@/components/deadline-row';
+import { Toast } from '@/components/toast';
 import { dueInstant } from '@/lib/schedule/plan';
 
 const TZ = DEFAULT_TZ;
@@ -39,6 +40,16 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
   const { date } = use(params);
   const { state, hydrated, complete, drop } = useHeron(TZ);
   const [now] = useState(() => new Date());
+  // Where Partly or Find another time booked the work again.
+  const [notice, setNotice] = useState<string | null>(null);
+  function answer(id: string, outcome: Parameters<typeof complete>[1], minutes: number | null) {
+    const said = complete(id, outcome, minutes);
+    if (said) {
+      setNotice(said);
+      setTimeout(() => setNotice((cur) => (cur === said ? null : cur)), 6000);
+    }
+    return said;
+  }
   const liveNow = useNow();
 
   const flowRef = useRef<HTMLDivElement>(null);
@@ -144,7 +155,7 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
               </>
             }
             due={dueOf(focus)}
-            onComplete={(outcome, minutes) => complete(focus.id, outcome, minutes)}
+            onComplete={(outcome, minutes) => answer(focus.id, outcome, minutes)}
             onDrop={() => drop(focus.id)}
           />
         )}
@@ -169,7 +180,7 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
                   colorFor={colorFor}
                   dueOf={dueOf}
                   now={now}
-                  complete={complete}
+                  complete={answer}
                   drop={drop}
                 />
               ))}
@@ -188,6 +199,7 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
           <DayStats day={day} />
         </div>
       </section>
+      <Toast message={notice} />
     </main>
   );
 }
