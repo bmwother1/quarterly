@@ -8,7 +8,7 @@ import { useNarrow } from '@/hooks/use-narrow';
 import { useNow } from '@/hooks/use-now';
 import { useFirstVisit } from '@/hooks/use-first-visit';
 import { usePlanMotion } from '@/hooks/use-plan-motion';
-import { BlockCard, BlockRow } from '@/components/block-card';
+import { BlockCard } from '@/components/block-card';
 import { WeekGrid } from '@/components/week-grid';
 import { MonthGrid } from '@/components/month-grid';
 import { Sheet, AddButton } from '@/components/sheet';
@@ -16,7 +16,7 @@ import { UndoBar } from '@/components/undo-bar';
 import { Toast } from '@/components/toast';
 import { CountUp } from '@/components/count-up';
 import { keepCodes } from '@/components/course-name';
-import { dayName, focusLabel, shortDate } from '@/components/when';
+import { focusLabel } from '@/components/when';
 import { AddItem } from '@/components/add-item';
 import { SetupPrompt } from '@/components/setup-prompt';
 import { RescueNotice } from '@/components/rescue-notice';
@@ -24,10 +24,9 @@ import { FeedFreshness } from '@/components/feed-freshness';
 import { DeadlineCard } from '@/components/deadline-card';
 import { ClassCard } from '@/components/class-card';
 import { classesOf, classGroup } from '@/lib/classes';
-import { DeadlineRow } from '@/components/deadline-row';
-import { deadlinesByDay, type Deadline } from '@/lib/schedule/deadlines';
+import { deadlinesByDay } from '@/lib/schedule/deadlines';
 import { dueInstant } from '@/lib/schedule/plan';
-import { DEFAULT_TZ, addDays, fmtDay, fmtTime, localParts } from '@/lib/time';
+import { DEFAULT_TZ, addDays, fmtDay, fmtTime, localParts, zonedInstant } from '@/lib/time';
 import { missedBlocks } from '@/lib/schedule/complete';
 import { absence } from '@/lib/schedule/absence';
 import type { StudyBlock } from '@/lib/types';
@@ -37,7 +36,6 @@ const TZ = DEFAULT_TZ;
 
 const hours = (min: number) => `${(min / 60).toFixed(1)}h`;
 
-type ListRow = { kind: 'block'; at: string; block: StudyBlock } | { kind: 'due'; at: string; deadline: Deadline };
 
 
 /**
@@ -48,6 +46,9 @@ type ListRow = { kind: 'block'; at: string; block: StudyBlock } | { kind: 'due';
 function OutOfFlow({ when, children }: { when: boolean; children: ReactNode }) {
   return when ? createPortal(children, document.body) : <>{children}</>;
 }
+
+type View = 'day' | 'week' | 'two' | 'month';
+const VIEWS: Array<[View, string]> = [['day', 'Day'], ['week', 'Week'], ['two', '2 weeks'], ['month', 'Month']];
 
 /** The detail popover beside a tapped block, and its distance from it. */
 const POP_WIDTH = 340;
@@ -86,8 +87,13 @@ export default function WeekPage() {
    * keeps rotating a tablet from silently overriding a deliberate choice.
    */
   const narrow = useNarrow();
-  const [chosenView, setChosenView] = useState<'grid' | 'list' | 'month' | null>(null);
-  const view = chosenView ?? (narrow ? 'list' : 'grid');
+  const [chosenView, setChosenView] = useState<View | null>(null);
+  // A phone has room for one day; a laptop for a week. Two weeks and the
+  // month are a tap away. The old two-week default was too much to read, and
+  // the list it fell back to on phones was hard to follow.
+  const view = chosenView ?? (narrow ? 'day' : 'week');
+  /** Day view: how many days after today it is showing. */
+  const [dayOffset, setDayOffset] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
@@ -142,7 +148,13 @@ export default function WeekPage() {
   useEffect(() => {
     if (!openDetail) return;
     const attr = selectedId ? 'data-block-id' : selectedEventId ? 'data-event-id' : selectedDeadlineId ? 'data-deadline-id' : 'data-busy-id';
-    const place = () => {
+    // Vertical position is decided once, when it opens, against the screen as
+    // it is then. Re-deciding it on every scroll is what made it chase the
+    // screen: it was clamped to the viewport, so scrolling dragged it along and
+    // it never stayed by the block. Afterwards only a sideways scroll of the
+    // calendar moves it, and only sideways.
+    let lift: number | null = null;
+    const place = (settle: boolean) => {
       const wrap = gridWrapRef.current;
       const anchor = wrap?.querySelector<HTMLElement>(`[${attr}="${CSS.escape(openDetail)}"]`);
       if (!wrap || !anchor || narrow) { setPlaced(null); return; }
@@ -150,25 +162,27 @@ export default function WeekPage() {
       const a = anchor.getBoundingClientRect();
       const right = a.right - w.left + POP_GAP;
       const left = right + POP_WIDTH <= w.width ? right : Math.max(0, a.left - w.left - POP_WIDTH - POP_GAP);
-      // Level with the block, pulled up if it would run off the bottom.
-      const h = detailRef.current?.offsetHeight ?? 280;
-      const lowest = window.innerHeight - w.top - h - 12;
-      // Never above the sticky header, which is 56px.
-      const highest = 64 - w.top;
-      setPlaced({ id: openDetail, top: Math.max(highest, Math.min(a.top - w.top, lowest)), left });
+      if (settle || lift === null) {
+        // Level with the block, pulled up if it would run off the bottom, and
+        // never above the sticky header (56px).
+        const h = detailRef.current?.offsetHeight ?? 280;
+        const want = Math.max(64, Math.min(a.top, window.innerHeight - h - 12));
+        lift = want - a.top;
+      }
+      setPlaced({ id: openDetail, top: a.top - w.top + lift, left });
     };
-    place();
-    // Again whenever its height changes: it renders at popover width, with
-    // its real height, only after the first placement.
-    const observer = new ResizeObserver(place);
-    if (detailRef.current) observer.observe(detailRef.current);
-    window.addEventListener('resize', place);
-    // Capture, so the calendar's own sideways scroll moves it too.
-    window.addEventListener('scroll', place, true);
+    place(true);
+    // Once more after it has rendered at popover width, with its real height.
+    const frame = requestAnimationFrame(() => place(true));
+    const scroller = gridWrapRef.current?.querySelector<HTMLElement>('.overflow-x-auto');
+    const sideways = () => place(false);
+    const resized = () => place(true);
+    scroller?.addEventListener('scroll', sideways, { passive: true });
+    window.addEventListener('resize', resized);
     return () => {
-      observer.disconnect();
-      window.removeEventListener('resize', place);
-      window.removeEventListener('scroll', place, true);
+      cancelAnimationFrame(frame);
+      scroller?.removeEventListener('scroll', sideways);
+      window.removeEventListener('resize', resized);
     };
   }, [openDetail, selectedId, selectedEventId, selectedDeadlineId, narrow]);
 
@@ -227,6 +241,7 @@ export default function WeekPage() {
   // Fourteen days, matching the planner's horizon. Showing seven while planning
   // fourteen is what made next week look empty.
   const days = useMemo(() => Array.from({ length: 14 }, (_, i) => addDays(todayKey, i)), [todayKey]);
+  const gridDays = view === 'day' ? [days[Math.min(dayOffset, days.length - 1)]] : view === 'week' ? days.slice(0, 7) : days;
 
   const byDay = useMemo(() => {
     const map = new Map<string, StudyBlock[]>();
@@ -341,7 +356,7 @@ export default function WeekPage() {
       // the utility is never generated. That is what broke here before, not the
       // `max-w-*` utilities themselves, which work everywhere else in the app.
       className={`rise mx-auto w-full px-5 pb-12 pt-6 sm:pt-10 ${
-        view === 'grid' ? 'max-w-[1080px]' : 'max-w-2xl'
+        view === 'week' || view === 'two' ? 'max-w-[1080px]' : 'max-w-2xl'
       }`}
     >
       <header>
@@ -511,9 +526,9 @@ export default function WeekPage() {
 
         <div className="mt-8 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <div className="segmented" role="group" aria-label="View">
-            {(['grid', 'list', 'month'] as const).map((v) => (
+            {VIEWS.map(([v, label]) => (
               <button key={v} onClick={() => setChosenView(v)} aria-pressed={view === v}>
-                {v === 'grid' ? 'Calendar' : v === 'list' ? 'List' : 'Month'}
+                {label}
               </button>
             ))}
           </div>
@@ -532,10 +547,18 @@ export default function WeekPage() {
           change of lens.
         */}
         <div key={view} className="rise mt-4">
-          {view === 'grid' && (
+          {view !== 'month' && (
             <div ref={gridWrapRef} className="relative space-y-4">
+              {view === 'day' && (
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setDayOffset((d) => Math.max(0, d - 1))} disabled={dayOffset === 0} className="btn-quiet" aria-label="Previous day">&larr;</button>
+                  <span className="min-w-36 text-center text-base font-semibold">{dayOffset === 0 ? 'Today' : fmtDay(zonedInstant(gridDays[0], 12 * 60, TZ).toISOString(), TZ)}</span>
+                  <button onClick={() => setDayOffset((d) => Math.min(days.length - 1, d + 1))} disabled={dayOffset === days.length - 1} className="btn-quiet" aria-label="Next day">&rarr;</button>
+                  {dayOffset > 0 && <button onClick={() => setDayOffset(0)} className="btn-quiet">Today</button>}
+                </div>
+              )}
               <WeekGrid
-                days={days}
+                days={gridDays}
                 blocks={state.blocks}
                 events={state.events}
                 availability={state.availability}
@@ -688,76 +711,6 @@ export default function WeekPage() {
             />
           )}
 
-          {view === 'list' && (
-            <div>
-              {days.map((dateKey) => {
-                const all = byDay.get(dateKey) ?? [];
-                const dues = deadlines.get(dateKey) ?? [];
-                // The block at the top of the page is not repeated here. Blocks
-                // and deadlines run in time order on the one axis; on today,
-                // what is already answered collapses to the end of the day.
-                const rest = all.filter((b) => b.id !== focus?.id);
-                const asRows = (bs: StudyBlock[]): ListRow[] => bs.map((b) => ({ kind: 'block', at: b.start, block: b }));
-                const dueRows: ListRow[] = dues.map((d) => ({ kind: 'due', at: d.dueAt, deadline: d }));
-                const byTime = (a: ListRow, b: ListRow) => a.at.localeCompare(b.at);
-                const rows: ListRow[] = dateKey === todayKey
-                  ? [
-                      ...[...asRows(rest.filter((b) => b.status === 'planned')), ...dueRows].sort(byTime),
-                      ...asRows(rest.filter((b) => b.status !== 'planned')),
-                    ]
-                  : [...asRows(rest), ...dueRows].sort(byTime);
-                const total = all.filter((b) => b.status === 'planned').reduce((s, b) => s + b.minutes, 0);
-                const summary = [total > 0 ? hours(total) : '', dues.length > 0 ? `${dues.length} due` : '']
-                  .filter(Boolean).join(' · ');
-
-                return (
-                  <section key={dateKey} className="mt-2 first:mt-0">
-                    <div
-                      className="sticky z-10 flex items-baseline justify-between gap-4 border-b border-[var(--border)] bg-[var(--bg)] py-2"
-                      style={{ top: 'calc(3.5rem + env(safe-area-inset-top))' }}
-                    >
-                      <h2 className="text-sm">
-                        <Link href={`/day/${dateKey}`} className="font-semibold hover:text-[var(--accent)]">
-                          {dayName(dateKey, todayKey)}
-                        </Link>
-                        <span className="text-[var(--muted)]"> · {shortDate(dateKey)}</span>
-                      </h2>
-                      <span className="text-sm text-[var(--muted)]">
-                        {/* A day whose only block is the one at the top of the
-                            page says so, rather than showing hours over an
-                            empty list. */}
-                        {rows.length === 0
-                          ? all.length > 0
-                            ? dateKey === todayKey ? 'Nothing else today' : 'Nothing else planned'
-                            : 'Nothing planned'
-                          : summary}
-                      </span>
-                    </div>
-
-                    {rows.length > 0 && (
-                      <ul className="divide-y divide-[var(--border)]">
-                        {rows.map((r) => r.kind === 'due' ? (
-                          <DeadlineRow key={`due-${r.deadline.id}`} deadline={r.deadline} colour={colourFor(r.deadline.course)} tz={TZ} />
-                        ) : (
-                          <BlockRow
-                            key={r.block.id}
-                            block={r.block}
-                            tz={TZ}
-                            colour={colourFor(r.block.course)}
-                            isPast={new Date(r.block.end) < now}
-                            due={dueOf(r.block)}
-                            stagger={dateKey === todayKey || dateKey === addDays(todayKey, 1) ? stagger() : undefined}
-                            onComplete={(outcome, minutes) => announce(complete(r.block.id, outcome, minutes))}
-                            onDrop={() => drop(r.block.id)}
-                          />
-                        ))}
-                      </ul>
-                    )}
-                  </section>
-                );
-              })}
-            </div>
-          )}
         </div>
       </div>
 

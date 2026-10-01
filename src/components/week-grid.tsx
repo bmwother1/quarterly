@@ -546,14 +546,17 @@ export function WeekGrid({
                   // The colour already says the course, and forty one-line
                   // sessions all reading "MGMT 305" say nothing.
                   const titleOnly = code && lines < 2 && !dragging && block.title && block.title !== block.course;
-                  const nameLines = code ? 1 : Math.min(2, Math.max(1, lines));
+                  const nameLinesFor = Math.min(2, Math.max(1, lines));
+                  // "E E 454" is not read as a code, so it can take two lines,
+                  // and the assignment never got one. One line is the course.
+                  const nameLines = code || block.title !== block.course ? 1 : nameLinesFor;
                   const showTime = dragging || lines > nameLines;
                   // Under a course code, the assignment is worth more than the
                   // time: one course's sessions otherwise all read "MGMT 305"
                   // and only the axis tells them apart.
                   const subtitle = dragging
                     ? fmtTime(zonedInstant(drag!.dateKey, drag!.minute, tz), tz)
-                    : code && block.title && block.title !== block.course
+                    : block.title && block.title !== block.course
                       ? block.title
                       : fmtTime(block.start, tz);
 
