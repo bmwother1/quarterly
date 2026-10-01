@@ -70,7 +70,12 @@ export async function pull(userId: string): Promise<boolean> {
   // Everything this device holds, kept before the server copy lands on top.
   // The decision above is meant to be right; this is what makes it survivable
   // when it isn't.
-  heronStore.stash();
+  // Only when this device has edits the account has not seen. Routine pulls,
+  // now once a minute, would otherwise overwrite the one rescue slot with a
+  // copy identical to the server's, and lose the copy that mattered.
+  const mine = heronStore.getSnapshot();
+  const seen = mine.lastSyncedAt ? Date.parse(mine.lastSyncedAt) : 0;
+  if (!mine.lastModifiedAt || Date.parse(mine.lastModifiedAt) > seen) heronStore.stash();
 
   const at = new Date().toISOString();
   heronStore.set(afterPull(remote.state, at), { touch: false });
@@ -92,8 +97,8 @@ export async function syncOnSignIn(userId: string): Promise<SyncDirection> {
 
   if (decision === 'push') await push(userId);
   if (decision === 'pull') await pull(userId);
-  // 'conflict' deliberately does nothing. Both copies survive and the caller
-  // decides what to tell the student. Losing a week silently is not on the menu.
+  // A pull stashes this device's copy first (see `pull`), so whichever copy
+  // loses can be put back from the rescue notice.
   return decision;
 }
 

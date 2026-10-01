@@ -15,12 +15,18 @@ import type { HeronState } from './store.ts';
  */
 
 /**
- * `conflict` means both sides changed since they were last level. There is no
- * merge, so the only honest answers are "pick one and lose the other" or "do
- * nothing and say so". This picks the second: a sync that silently discards a
- * week is far worse than one that doesn't happen.
+ * There used to be a fourth answer, `conflict`: both sides changed, so do
+ * nothing. It kept both copies and synced neither, and on 2026-10-01 Brydon
+ * signed in on his phone and saw none of his laptop's week, with nothing on
+ * screen saying why. Doing nothing is not safe when it looks like data loss.
+ *
+ * Now the newer copy wins, and a device signing in for the first time takes
+ * the account's. Nothing is thrown away: `pull()` stashes this device's copy
+ * before replacing it, and the rescue notice offers it back. A device whose
+ * copy loses on the server keeps its own until it next pulls, and stashes it
+ * then.
  */
-export type SyncDirection = 'push' | 'pull' | 'nothing' | 'conflict';
+export type SyncDirection = 'push' | 'pull' | 'nothing';
 
 export interface RemoteMeta {
   /** ISO timestamp of the server's last write. */
@@ -81,8 +87,13 @@ export function decideDirection(local: HeronState, remote: RemoteMeta | null): S
   // Two empty copies have nothing to exchange, however old either looks.
   if (!localDirty && !hasContent(local) && !remote.hasContent) return 'nothing';
 
-  // The rule, in one line: a device with unsaved work is never overwritten.
-  if (localDirty && remoteMoved) return 'conflict';
+  // Both moved. A device that has never synced is joining an account that
+  // already has a week, so the account's copy is the one the student means.
+  // Otherwise the newer edit wins; pull() keeps the loser in the rescue slot.
+  if (localDirty && remoteMoved) {
+    if (!local.lastSyncedAt || !local.lastModifiedAt) return 'pull';
+    return Date.parse(remote.updatedAt) >= Date.parse(local.lastModifiedAt) ? 'pull' : 'push';
+  }
   if (localDirty) return 'push';
   if (remoteMoved) return 'pull';
   return 'nothing';

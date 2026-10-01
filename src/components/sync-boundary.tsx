@@ -31,28 +31,41 @@ export function SyncBoundary() {
     doneFor.current = userId;
 
     let stopAutoPush: (() => void) | null = null;
-    // Calendar links sync on their own track. A plan conflict is about the
-    // week, and holding the links back until it is settled would leave the
-    // phone unable to refresh Canvas for exactly as long as the student is
-    // deciding which week to keep.
+    // Calendar links sync on their own track (`feed-sync.ts`).
     const stopFeedSync = startFeedSync();
+
+    // Reconcile again whenever the app comes back to the front, and once a
+    // minute while it is open, so an edit on the laptop reaches the phone
+    // without a reload. Syncing only at load meant two open devices drifted
+    // apart until one was restarted.
+    let busy = false;
+    const resync = async () => {
+      if (busy || document.visibilityState !== 'visible') return;
+      busy = true;
+      try { await syncOnSignIn(userId); } catch { /* silent, as below */ }
+      busy = false;
+    };
+    const onVisible = () => { void resync(); };
+    document.addEventListener('visibilitychange', onVisible);
+    const every = setInterval(onVisible, 60_000);
 
     void (async () => {
       try {
         await ensureProfile(userId);
-        const outcome = await syncOnSignIn(userId);
-        // Only start pushing once the initial reconciliation has settled. A
-        // conflict means both copies still differ and neither has been chosen,
-        // so pushing would quietly resolve it in favour of this device, which
-        // is precisely what the conflict state exists to avoid.
-        if (outcome !== 'conflict') stopAutoPush = startAutoPush(userId);
+        await syncOnSignIn(userId);
+        stopAutoPush = startAutoPush(userId);
       } catch {
         // Deliberately silent. Nothing here is worth interrupting a student for.
       }
       logOpen();
     })();
 
-    return () => { stopAutoPush?.(); stopFeedSync(); };
+    return () => {
+      stopAutoPush?.();
+      stopFeedSync();
+      clearInterval(every);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [userId, loading]);
 
   return null;

@@ -430,7 +430,10 @@ export function useHeron(tz: string) {
     const { next } = topUp(prev, new Date(), tz);
     // Written only when something was placed. Every write marks the week
     // edited and pushes it, and this runs on every visit.
-    if (next !== prev) heronStore.set(next);
+    // Not marked as an edit: a top-up is derived from what is already here,
+    // and stamping it would make this device look newer than the account on
+    // every visit, so it would push a stale week over the laptop's newer one.
+    if (next !== prev) heronStore.set(next, { touch: false });
   }, [tz]);
 
   return {

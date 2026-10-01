@@ -57,12 +57,14 @@ describe('which copy of a week wins', () => {
     assert.equal(decideDirection(local, remote('2026-08-23T10:00:00Z')), 'pull');
   });
 
-  test('both sides edited apart is a conflict, and nothing is chosen', () => {
+  test('both sides edited apart: the newer edit wins', () => {
     // Synced at 09:00. Since then this device edited at 09:30 and another wrote
-    // at 10:00. There is no merge, so any automatic answer discards a real
-    // week. Reporting the conflict and doing nothing keeps both.
-    const local = withWork('2026-08-23T09:00:00Z', '2026-08-23T09:30:00Z');
-    assert.equal(decideDirection(local, remote('2026-08-23T10:00:00Z')), 'conflict');
+    // at 10:00. Doing nothing (the old answer) left two devices showing
+    // different weeks indefinitely. The loser is stashed by pull(), not lost.
+    const older = withWork('2026-08-23T09:00:00Z', '2026-08-23T09:30:00Z');
+    assert.equal(decideDirection(older, remote('2026-08-23T10:00:00Z')), 'pull');
+    const newer = withWork('2026-08-23T09:00:00Z', '2026-08-23T10:30:00Z');
+    assert.equal(decideDirection(newer, remote('2026-08-23T10:00:00Z')), 'push');
   });
 
   test('local changes since the last sync are pushed', () => {
@@ -77,13 +79,20 @@ describe('which copy of a week wins', () => {
     assert.equal(decideDirection(local, remote('2026-08-23T10:00:00Z')), 'nothing');
   });
 
-  test('a week built offline is not thrown away on first sign-in', () => {
+  test('a week built offline is kept recoverable on first sign-in, and the account wins', () => {
     // This was a silent data-loss path. A student used Heron signed out on
     // their phone for a week, then signed in to an account they had already
     // used elsewhere. `lastSyncedAt` was null, which parses to 0, so the server
     // always looked newer and the phone's week vanished with nothing said.
+    // It is now pulled, not left alone: Brydon's phone showed none of his
+    // laptop's week because of exactly this. pull() stashes the phone's own
+    // week first, and the rescue notice offers it back.
     const local = withWork(null, '2026-08-23T09:00:00Z');
-    assert.equal(decideDirection(local, remote('2026-08-23T10:00:00Z')), 'conflict');
+    assert.equal(decideDirection(local, remote('2026-08-23T10:00:00Z')), 'pull');
+    // Even when the phone's offline week is the newer one: the account is
+    // what a student signing in means to see.
+    const fresh = withWork(null, '2026-08-23T11:00:00Z');
+    assert.equal(decideDirection(fresh, remote('2026-08-23T10:00:00Z')), 'pull');
   });
 
   test('state written before lastModifiedAt existed is treated as dirty', () => {
@@ -91,7 +100,8 @@ describe('which copy of a week wins', () => {
     // stamp. Assuming those are disposable would delete the weeks of the only
     // people who have ever used this.
     const local = withWork('2026-08-23T09:00:00Z', null);
-    assert.equal(decideDirection(local, remote('2026-08-23T10:00:00Z')), 'conflict');
+    // Dirty, so it is never pushed blind; pulled, with its copy stashed.
+    assert.equal(decideDirection(local, remote('2026-08-23T10:00:00Z')), 'pull');
   });
 
   test('blocks alone are not content worth protecting', () => {
@@ -184,8 +194,9 @@ describe('a work schedule counts as work', () => {
     assert.equal(decision, 'push');
   });
 
-  test('unsaved local work beats a server copy that also moved', () => {
+  test('a server copy that moved later beats an older local edit', () => {
     const local = timetableOnly('2026-08-23T09:00:00Z', '2026-08-24T18:00:00Z');
-    assert.equal(decideDirection(local, remote('2026-08-24T19:00:00Z')), 'conflict');
+    // The server's 19:00 write is newer than this device's 18:00 edit.
+    assert.equal(decideDirection(local, remote('2026-08-24T19:00:00Z')), 'pull');
   });
 });
