@@ -493,3 +493,34 @@ describe('backup', () => {
     assert.match(r.error, /commitments/);
   });
 });
+
+describe('Drop it', () => {
+  const at = (h: number) => zonedInstant('2026-10-06', h * 60, TZ).toISOString();
+
+  test('on a weekly goal session removes that session and leaves the rest of the week', async () => {
+    // Brydon dropped tomorrow's run and it stayed on the calendar, on both
+    // devices, while the week's other runs disappeared.
+    const { dropRemaining } = await import('../src/lib/schedule/complete.ts');
+    const run = (id: string, h: number) => block({ id, assignmentId: null, commitmentId: 'run', start: at(h), end: at(h + 1) });
+    const state = { blocks: [run('r1', 7), run('r2', 9), run('r3', 11)], assignments: [], commitments: [] };
+    const after = dropRemaining(state as never, 'r1');
+    assert.deepEqual(after.blocks.map((b) => b.id), ['r2', 'r3']);
+  });
+
+  test('on coursework removes every planned block of it and marks it dropped, keeping history', async () => {
+    const { dropRemaining } = await import('../src/lib/schedule/complete.ts');
+    const hw = assignment({ id: 'hw' });
+    const state = {
+      blocks: [
+        block({ id: 'h1', assignmentId: 'hw', start: at(7), end: at(8) }),
+        block({ id: 'h2', assignmentId: 'hw', start: at(9), end: at(10) }),
+        block({ id: 'done', assignmentId: 'hw', status: 'done', actualMinutes: 60, start: at(5), end: at(6) }),
+        block({ id: 'other', assignmentId: 'x', start: at(12), end: at(13) }),
+      ],
+      assignments: [hw], commitments: [],
+    };
+    const after = dropRemaining(state as never, 'h1');
+    assert.deepEqual(after.blocks.map((b) => b.id).sort(), ['done', 'other']);
+    assert.equal(after.assignments[0].status, 'dropped');
+  });
+});

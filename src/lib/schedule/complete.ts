@@ -203,11 +203,16 @@ export function dropRemaining(
   const block = state.blocks.find((b) => b.id === blockId);
   if (!block) return { ...state };
 
-  const blocks = state.blocks.filter(
-    (b) => b.id === blockId || b.status !== 'planned' ||
-      (b.assignmentId !== block.assignmentId || block.assignmentId === null) &&
-      (b.commitmentId !== block.commitmentId || block.commitmentId === null),
-  );
+  // Dropping coursework drops all of it that is still planned. Dropping a
+  // weekly goal drops that one session: skipping tomorrow's run is not giving
+  // up running. The old filter kept the block that was tapped (`b.id ===
+  // blockId`) and removed the goal's *other* sessions, so Drop it on a run
+  // left that run on the calendar and deleted the rest of the week's.
+  const blocks = state.blocks.filter((b) => {
+    if (b.id === blockId) return false;
+    if (b.status !== 'planned') return true;
+    return !(block.assignmentId !== null && b.assignmentId === block.assignmentId);
+  });
 
   const assignments = state.assignments.map((a) =>
     a.id === block.assignmentId ? { ...a, status: 'dropped' as const } : a,
