@@ -1,6 +1,6 @@
 # Status
 
-**Updated: 2026-09-30** · launch day (private beta)
+**Updated: 2026-10-02** · two days into the private beta
 
 This file describes the present. It gets rewritten, not appended to.
 
@@ -16,27 +16,22 @@ agent shell.
 
 ## Right now
 
-Launch day, and Brydon used it on his own real week for the first time. The
-product works mechanically: Canvas imports, classes and weekly commitments are
-respected, nothing overlaps, the plan is deterministic, tapping anything opens
-its card beside it, and a class shows its room with a campus map link.
+The private beta is live and Brydon is its first daily user, on phone and
+laptop. The UI was rebuilt from an approved canvas prototype
+(https://claude.ai/artifact/UebdtiScxuNFoDJCBW4FKH): Today leads the Week page
+(now-card, day timeline, Coming up, overview sidebar with this week's
+assignments and goals), views are Day / Week / 2 weeks / Month, and the landing
+page leads with a live demo of a week filling in.
 
-**It is not yet delivering its promise.** On his real week, 6 of 46.5 planned
-hours were coursework; the rest was what he typed himself. That is mostly the
-two planner rules set today: **one hour per assignment** (Done finishes it,
-Partly books a follow-up) and **a block lands in the five days before its
-deadline**. Both made the screen legible; together they switched off most of the
-planner's judgement about how much time things need. See decisions.md,
-2026-09-30.
+**Planner rules are still frozen until Oct 14** (one hour per assignment, five-
+day lead window). On Oct 14, decide block sizing from his Done/Partly history.
 
-**The rule for the next two weeks: the planner rules are frozen.** Brydon uses
-it daily and answers Done, Partly or Skipped. Then one question is decided on
-his data: is one hour enough, or should blocks be sized from the estimate again
-(one a day, capped at two hours)? Repeated Partly on the same items says the
-latter.
+Sync now picks a winner (first sign-in takes the account; newer wins after) and
+re-checks every minute; **not yet confirmed on his two devices**. Drop it,
+Find another time and the popover were fixed on Oct 1 to 2 after he hit them.
 
-Class meeting times are not in Canvas for most courses; they are in MyUW. Until
-that is solved, students type classes into Setup, Classes.
+Class meeting times are not in Canvas for most courses; students type them into
+Setup, Classes, or import MyUW's file if it has one.
 
 ## Shipped
 
@@ -122,7 +117,10 @@ that is solved, students type classes into Setup, Classes.
   home screen, sign in, Settings, turn them on, then wait for a "Next up" 15
   minutes before a block. Reminders ("Final Reminder…" items) now arrive this
   way too, at 9am on their due day, so this is load-bearing.
-- **Two-device sync has never been confirmed.** Plan on the laptop, open the
+- **Two-device sync, rebuilt 2026-10-02, still unconfirmed.** Sign in on both,
+  close and reopen the phone; then tap Done on one and watch the other within a
+  minute. Replan once to restore runs the old Drop it bug deleted.
+- **Two-device sync has never been confirmed (older note).** Plan on the laptop, open the
   phone. Calendar links should appear in Settings on both. 0005 ran; confirm
   `FEED_LINK_KEY` was saved with a fresh value (the first one was shown in a
   screenshot) and the deployment redeployed after it.

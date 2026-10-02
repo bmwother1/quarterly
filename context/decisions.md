@@ -9,6 +9,45 @@ record of what was tried and abandoned is worth more than a tidy file.
 
 ---
 
+## 2026-10-02 · Sync picks a winner instead of doing nothing
+
+**Supersedes** the "conflict does nothing" rule in `sync-rule.ts`.
+
+**Decided:** a device signing in for the first time takes the account's week;
+after that, when both copies changed, the newer edit wins. Devices re-check when
+the app comes to the front and every minute while visible. `pull()` stashes this
+device's copy first, but only when it has edits the account has not seen, and
+the rescue notice offers it back.
+
+**Why:** doing nothing kept both copies and synced neither. Brydon signed in on
+his phone and saw none of his laptop's week, with nothing explaining it. A safe
+rule that looks like data loss is not safe.
+
+**Rejected:** a merge (still not worth the cost); asking the student which week
+to keep on every conflict (they cannot tell which is right from a dialog).
+
+**Revisit when:** a student loses real work to a newer-wins overwrite. The
+`revision` column is already there for optimistic locking.
+
+---
+
+## 2026-10-02 · The UI follows the canvas prototype; List is gone
+
+**Decided:** Today leads the Week page (now-card with countdown ring and Why
+now, day timeline, Coming up, a sidebar with courses, the week's assignments and
+goals as bars, and Canvas status); views are Day, Week, 2 weeks, Month, with Week
+the laptop default and Day the phone default; Bricolage Grotesque for headlines.
+Prototype: https://claude.ai/artifact/UebdtiScxuNFoDJCBW4FKH (private).
+
+**Why:** Brydon judged the UI the thing losing to Notion, Amie and Structured,
+and approved the prototype after clicking through it. List was hard to read.
+
+**Not built, on purpose:** the prototype's "What to do" steps (need the Canvas-
+reading feature; fake steps would mislead) and moving top navigation into the
+sidebar (touches every page).
+
+---
+
 ## 2026-09-30 · Work waits for the five days before it is due
 
 **Decided (Brydon):** an assignment's one block aims for the five days before

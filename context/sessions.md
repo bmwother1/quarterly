@@ -9,6 +9,20 @@ delete them.
 
 ---
 
+## 2026-10-02 · Claude Code · The redesign shipped, and three bugs a real user found in a day
+
+Brydon used it for real on phone and laptop and kept finding things no test
+covered: Skip's "Find another time" did nothing visible (it waited for a replan),
+the detail popover chased the screen on scroll (it was clamped to the viewport
+on every scroll), sync silently did nothing when a phone with its own week signed
+in (the "conflict" answer), and Drop it kept the tapped block and deleted the
+goal's other sessions (it never had a test). All four fixed and shipped, each
+with a test that fails on the old code where one was possible. The UI was
+redesigned from a canvas prototype he approved (Structured's life, Notion's
+order): a Today screen with a big now-card, day timeline, overview sidebar and a
+week scoreboard; Day/Week/2 weeks/Month views replaced List; the landing page
+leads with a live demo. Planner rules stayed frozen, as agreed.
+
 ## 2026-09-30 · Claude Code · Launch week on a real schedule: DNS, link sync, and a planner reshaped by one screen
 
 Spanned Sept 23 to launch day. Sign-in from `heron.study` now works for anyone

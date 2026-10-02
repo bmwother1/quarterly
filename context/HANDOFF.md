@@ -1,6 +1,6 @@
 # Heron — project brief
 
-*Generated 2026-09-30 from the project's `context/` files by `npm run handoff`.
+*Generated 2026-10-02 from the project's `context/` files by `npm run handoff`.
 Don't edit this by hand; edit the source files and regenerate.*
 
 This is the standing context for Heron. It covers the person building it,
@@ -192,7 +192,7 @@ compound within a course.
 
 # Where things stand
 
-**Updated: 2026-09-30** · launch day (private beta)
+**Updated: 2026-10-02** · two days into the private beta
 
 This file describes the present. It gets rewritten, not appended to.
 
@@ -208,27 +208,22 @@ agent shell.
 
 ## Right now
 
-Launch day, and Brydon used it on his own real week for the first time. The
-product works mechanically: Canvas imports, classes and weekly commitments are
-respected, nothing overlaps, the plan is deterministic, tapping anything opens
-its card beside it, and a class shows its room with a campus map link.
+The private beta is live and Brydon is its first daily user, on phone and
+laptop. The UI was rebuilt from an approved canvas prototype
+(https://claude.ai/artifact/UebdtiScxuNFoDJCBW4FKH): Today leads the Week page
+(now-card, day timeline, Coming up, overview sidebar with this week's
+assignments and goals), views are Day / Week / 2 weeks / Month, and the landing
+page leads with a live demo of a week filling in.
 
-**It is not yet delivering its promise.** On his real week, 6 of 46.5 planned
-hours were coursework; the rest was what he typed himself. That is mostly the
-two planner rules set today: **one hour per assignment** (Done finishes it,
-Partly books a follow-up) and **a block lands in the five days before its
-deadline**. Both made the screen legible; together they switched off most of the
-planner's judgement about how much time things need. See decisions.md,
-2026-09-30.
+**Planner rules are still frozen until Oct 14** (one hour per assignment, five-
+day lead window). On Oct 14, decide block sizing from his Done/Partly history.
 
-**The rule for the next two weeks: the planner rules are frozen.** Brydon uses
-it daily and answers Done, Partly or Skipped. Then one question is decided on
-his data: is one hour enough, or should blocks be sized from the estimate again
-(one a day, capped at two hours)? Repeated Partly on the same items says the
-latter.
+Sync now picks a winner (first sign-in takes the account; newer wins after) and
+re-checks every minute; **not yet confirmed on his two devices**. Drop it,
+Find another time and the popover were fixed on Oct 1 to 2 after he hit them.
 
-Class meeting times are not in Canvas for most courses; they are in MyUW. Until
-that is solved, students type classes into Setup, Classes.
+Class meeting times are not in Canvas for most courses; students type them into
+Setup, Classes, or import MyUW's file if it has one.
 
 ## Shipped
 
@@ -364,6 +359,20 @@ that is solved, students type classes into Setup, Classes.
 
 # Recent sessions
 
+## 2026-10-02 · Claude Code · The redesign shipped, and three bugs a real user found in a day
+
+Brydon used it for real on phone and laptop and kept finding things no test
+covered: Skip's "Find another time" did nothing visible (it waited for a replan),
+the detail popover chased the screen on scroll (it was clamped to the viewport
+on every scroll), sync silently did nothing when a phone with its own week signed
+in (the "conflict" answer), and Drop it kept the tapped block and deleted the
+goal's other sessions (it never had a test). All four fixed and shipped, each
+with a test that fails on the old code where one was possible. The UI was
+redesigned from a canvas prototype he approved (Structured's life, Notion's
+order): a Today screen with a big now-card, day timeline, overview sidebar and a
+week scoreboard; Day/Week/2 weeks/Month views replaced List; the landing page
+leads with a live demo. Planner rules stayed frozen, as agreed.
+
 ## 2026-09-30 · Claude Code · Launch week on a real schedule: DNS, link sync, and a planner reshaped by one screen
 
 Spanned Sept 23 to launch day. Sign-in from `heron.study` now works for anyone
@@ -473,44 +482,6 @@ The fourth prints a 15-minute block with its whole input. A fresh worktree
 needs `npx next typegen` once before `npm run check`, or typecheck fails on
 `LayoutProps`.
 
-## 2026-08-29 · Claude Code · Every blocker cleared, and three checks that lied
-
-A long session that started with three dashboard actions and ended in a design
-pass. All of it shipped.
-
-**The Supabase work is done.** `0002` ran so account deletion actually deletes,
-which closed the one place the product was lying to a student: the privacy page
-had promised it for days. Custom SMTP went in through Resend and **sign-in was
-run end to end for the first time**, which had never once been done. The
-notification cron went from inert to returning 200.
-
-**The interesting part was how much reported success while being wrong.** The
-cron logged `succeeded` twice while the app returned 401, because pg_net is
-asynchronous and the cron only records that it asked. A placeholder pasted into
-`vault.update_secret` stored itself happily as the secret. `service_role` bypasses
-RLS and still could not read the table, because `0001` granted only to
-`authenticated`; `0004` fixes that. A first sign-in sends the Confirm signup
-template rather than Magic Link, and Supabase's OTP length was 8 against an app
-built for 6, which `normaliseCode` silently truncates. Every one of those looked
-like something else.
-
-**Three items on the status file had already shipped** and were still listed as
-pending: the learned energy pattern, the returning-student experience, and later
-the drag, which Brydon confirmed by thumb. A session was minutes from rebuilding
-finished work.
-
-**The name went round again.** A collision-first search across roughly 450
-domains and a dozen trademark checks landed on Heron for the second time; Cusp,
-Cairn, Pika, Bower, Nuthatch and Tortoise all died on marks. Brydon parked it to
-keep thinking. Nothing bought, nothing renamed.
-
-**A design read closed the session.** Measured on a 375px phone rather than
-eyeballed, which was the right call: the type scale I was about to criticise
-turned out to be fine, and the real bugs were 63px of footer permanently behind
-the tab bar and a week grid showing three of fourteen columns. Fixed the first,
-and shipped the replan animation, whose first version passed 276 tests while
-animating nothing.
-
 ---
 
 # Recent decisions
@@ -518,6 +489,41 @@ animating nothing.
 *Older decisions and the full findings log stay in the repo, in
 `context/decisions.md` and `context/learned.md`. Ask for them if a question
 turns on history this brief doesn't cover.*
+
+## 2026-10-02 · Sync picks a winner instead of doing nothing
+
+**Supersedes** the "conflict does nothing" rule in `sync-rule.ts`.
+
+**Decided:** a device signing in for the first time takes the account's week;
+after that, when both copies changed, the newer edit wins. Devices re-check when
+the app comes to the front and every minute while visible. `pull()` stashes this
+device's copy first, but only when it has edits the account has not seen, and
+the rescue notice offers it back.
+
+**Why:** doing nothing kept both copies and synced neither. Brydon signed in on
+his phone and saw none of his laptop's week, with nothing explaining it. A safe
+rule that looks like data loss is not safe.
+
+**Rejected:** a merge (still not worth the cost); asking the student which week
+to keep on every conflict (they cannot tell which is right from a dialog).
+
+**Revisit when:** a student loses real work to a newer-wins overwrite. The
+`revision` column is already there for optimistic locking.
+
+## 2026-10-02 · The UI follows the canvas prototype; List is gone
+
+**Decided:** Today leads the Week page (now-card with countdown ring and Why
+now, day timeline, Coming up, a sidebar with courses, the week's assignments and
+goals as bars, and Canvas status); views are Day, Week, 2 weeks, Month, with Week
+the laptop default and Day the phone default; Bricolage Grotesque for headlines.
+Prototype: https://claude.ai/artifact/UebdtiScxuNFoDJCBW4FKH (private).
+
+**Why:** Brydon judged the UI the thing losing to Notion, Amie and Structured,
+and approved the prototype after clicking through it. List was hard to read.
+
+**Not built, on purpose:** the prototype's "What to do" steps (need the Canvas-
+reading feature; fake steps would mislead) and moving top navigation into the
+sidebar (touches every page).
 
 ## 2026-09-30 · Work waits for the five days before it is due
 
@@ -584,85 +590,6 @@ stored can dedupe a send. A time-bound notice is eligible for exactly one
 ten-minute window instead. That also fixed "Next up", which could fire twice
 (15 and 5 minutes before).
 
-## 2026-09-23 · Calendar links sync to the account, encrypted
-
-**Supersedes** the "device and not the server" half of 2026-09-22, "Remember
-the Canvas link on the device, never on the server". Remembering stays opt-in
-and ticked by default; what changes is where a remembered link lives when the
-student is signed in.
-
-**Decided:** signed in, a remembered link is also saved to the account in
-`calendar_feed` (`0005`), AES-256-GCM encrypted by `/api/feeds` with
-`FEED_LINK_KEY`, which lives in Vercel and never in Supabase. Rows are found by
-an HMAC of the URL, and the user id is the associated data, so a row moved to
-another account does not open. The route talks to Supabase with the student's
-own token, so RLS decides access; there is no service-role key in it. Signed
-out, nothing changes: the link stays in the browser. Forget deletes the row on
-every device; Delete my data cascades.
-
-**Why:** Brydon hit it on his own phone on day one. Device-only meant a link
-pasted on a laptop could never refresh the phone, and the phone is both where a
-student uses Heron and where getting the link is hardest. That is the week-4
-stale-deadline problem the 2026-09-22 decision existed to fix, back again for
-anyone with two devices.
-
-**The sync rule, and why it needs a flag.** A link missing from the account is
-either forgotten on another device or saved here before signing in. They look
-the same and need opposite answers, so each entry carries `synced`: missing and
-synced goes, missing and never synced is uploaded (`feed-sync-rule.ts`). A fetch
-is sent as a touch that only updates an existing row, never an upsert, so a
-device that has not heard about a forget cannot revive the link. A forget that
-fails on the network is kept on the device and sent before anything is read at
-the next sign-in. Each of those has a test that fails when the rule is flipped.
-
-**What it costs, stated.** The claim is no longer "never on our server". It is
-"only if you ask, encrypted, with the key outside the database". A database
-dump or backup alone reveals no link. Someone holding both the database and
-Vercel's environment could decrypt them, and that includes Brydon. The privacy
-page, the import page and `growth.md`'s "never holds a credential" line now say
-so; the pitch is "never your Canvas login".
-
-**Rejected:** plaintext behind RLS (a dump is a list of live passwords);
-Supabase Vault or pgsodium (puts the key next to the data it protects);
-syncing the link inside `plan_state` (it would also land in every backup file);
-keeping device-only and just improving the iPhone instructions (the phone still
-could not refresh a link saved on the laptop).
-
-**Revisit when:** a server-side daily refresh is built. The link is now
-reachable server-side, which is what that needs, and the 2026-09-22 reasoning
-about "fetching data vs changing the plan" still governs what it may do.
-
-## 2026-09-23 · Whatever is on the calendar counts, everywhere
-
-**Decided:** a session already on the calendar, reported or pinned, counts
-against every limit it belongs to: the day's ceiling (2026-09-22), the
-commitment's weekly quota and daily limit, and the assignment's remaining work.
-For the current week's quota the planner takes the larger of the stored tally
-and the sessions reported this week, then adds the pinned ones. The Sunday quota
-notice uses the same count.
-
-**Why:** `npm run sweep` found the same mistake three times. A pinned run was not
-in the weekly quota (a 5-a-week habit got 6), a pinned hour of a problem set was
-not in its remaining work (it was planned twice), and a limit of two a day was
-never enforced at all. Each is the planner counting only what was reported and
-ignoring what the student had already put on the calendar.
-
-**Why the larger of two counts, not either one.** The tally is wiped when the
-week's first replan comes after a session was already done (plan Sunday night,
-run Monday morning, replan at noon), so it can read low. The blocks miss a
-session dropped with "I'm not doing this", which raises the tally and leaves no
-block, so they can read low too. Neither is ever high by mistake.
-
-**Rejected:**
-- Fixing `resetWeeklyTallies` to recount from blocks. It does not receive the
-  blocks, the hook calls it, and the tally would still miss drops.
-- Deriving the quota from blocks alone and deleting `doneThisWeek`. Drops need
-  somewhere to live, and the notification engine reads it.
-
-**Revisit when:** drops get a block of their own (a skipped block marked
-"dropped" would do), at which point the tally can go and the blocks are the
-whole truth.
-
 ---
 
 # Currently waiting on Brydon
@@ -671,7 +598,10 @@ whole truth.
   home screen, sign in, Settings, turn them on, then wait for a "Next up" 15
   minutes before a block. Reminders ("Final Reminder…" items) now arrive this
   way too, at 9am on their due day, so this is load-bearing.
-- **Two-device sync has never been confirmed.** Plan on the laptop, open the
+- **Two-device sync, rebuilt 2026-10-02, still unconfirmed.** Sign in on both,
+  close and reopen the phone; then tap Done on one and watch the other within a
+  minute. Replan once to restore runs the old Drop it bug deleted.
+- **Two-device sync has never been confirmed (older note).** Plan on the laptop, open the
   phone. Calendar links should appear in Settings on both. 0005 ran; confirm
   `FEED_LINK_KEY` was saved with a fresh value (the first one was shown in a
   screenshot) and the deployment redeployed after it.

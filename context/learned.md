@@ -51,6 +51,20 @@ gets a polite yes from everyone and teaches nothing. "Walk me through last Sunda
 
 ## From building
 
+### Four of five bugs a day of real use found were ones no test could have (2026-10-02)
+
+This didn't work: 407 tests, a planner sweep, and four print-a-real-week scripts,
+and a day of Brydon using it on two devices found Skip doing nothing visible, a
+popover chasing the screen, sync silently doing nothing, and Drop it deleting
+the wrong blocks. The first three are about what the student sees happen; only
+the last was testable logic, and it had never had a test.
+
+**The habit:** after any change to what a tap does, drive it in a browser with
+the student's own words ("I skipped it and nothing happened") as the check, and
+read every handler that mutates state for a missing test. `dropRemaining` sat
+untested for weeks with its condition inverted.
+
+
 ### Fixing what the screen looked like quietly removed what the product does (2026-09-30)
 
 This didn't work. On launch day each complaint about Brydon's first real week
