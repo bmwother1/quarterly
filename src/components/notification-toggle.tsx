@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { disablePush, enablePush, pushState, type PushState } from '@/supabase/push';
 import { useAuth } from '@/hooks/use-auth';
+import { supabase } from '@/supabase/client';
 
 /**
  * Turning notifications on, and saying honestly why they might not work.
@@ -38,6 +39,24 @@ export function NotificationToggle() {
       else { setState(result.state); setMessage(result.message); }
     }
     setBusy(false);
+  }
+
+  /** A push to every device of this account, so the student sees one arrive now. */
+  async function sendTest() {
+    setBusy(true);
+    setMessage(null);
+    try {
+      const { data } = (await supabase()?.auth.getSession()) ?? { data: { session: null } };
+      const token = data.session?.access_token;
+      if (!token) { setMessage('Sign in first.'); return; }
+      const res = await fetch('/api/notify/test', { method: 'POST', headers: { authorization: `Bearer ${token}` } });
+      const body = await res.json().catch(() => ({})) as { sent?: number };
+      setMessage(res.ok && body.sent
+        ? `Sent to ${body.sent} device${body.sent === 1 ? '' : 's'}. It should arrive in a few seconds.`
+        : res.status === 404 ? 'No device has notifications on yet.' : 'That did not send. Try turning notifications off and on.');
+    } finally {
+      setBusy(false);
+    }
   }
 
   if (state === null) return <div className="min-h-10" aria-busy="true" />;
@@ -93,6 +112,12 @@ export function NotificationToggle() {
           On for this device. Each device is separate, so a phone and a laptop are asked
           independently.
         </p>
+      )}
+
+      {state === 'on' && signedIn && (
+        <button onClick={() => { void sendTest(); }} disabled={busy} className="text-sm text-[var(--accent)] underline underline-offset-4 disabled:opacity-60">
+          Send a test notification
+        </button>
       )}
 
       {message && <p className="text-sm text-[var(--warn)]">{message}</p>}
