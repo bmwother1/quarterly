@@ -27,7 +27,7 @@ page leads with a live demo of a week filling in.
 day lead window). On Oct 14, decide block sizing from his Done/Partly history.
 
 Sync now picks a winner (first sign-in takes the account; newer wins after) and
-re-checks every minute; **not yet confirmed on his two devices**. Drop it,
+re-checks every minute; **confirmed working on his phone and laptop on 2026-10-02**. Drop it,
 Find another time and the popover were fixed on Oct 1 to 2 after he hit them.
 
 Class meeting times are not in Canvas for most courses; students type them into
@@ -117,13 +117,8 @@ Setup, Classes, or import MyUW's file if it has one.
   home screen, sign in, Settings, turn them on, then wait for a "Next up" 15
   minutes before a block. Reminders ("Final Reminder…" items) now arrive this
   way too, at 9am on their due day, so this is load-bearing.
-- **Two-device sync, rebuilt 2026-10-02, still unconfirmed.** Sign in on both,
-  close and reopen the phone; then tap Done on one and watch the other within a
-  minute. Replan once to restore runs the old Drop it bug deleted.
-- **Two-device sync has never been confirmed (older note).** Plan on the laptop, open the
-  phone. Calendar links should appear in Settings on both. 0005 ran; confirm
-  `FEED_LINK_KEY` was saved with a fresh value (the first one was shown in a
-  screenshot) and the deployment redeployed after it.
+- **Replan once** to restore runs the old Drop it bug deleted (sync itself is
+  confirmed on both devices, 2026-10-02).
 - **Fix his MGMT 305A class time** in Setup (typed as 10:30 to 12:50; MyUW says
   roughly 10:30 to 11:20). The form now warns about the overlap with EE 454A.
 - **Paid testers: tag them before they sign up**, so the retention cohort is
