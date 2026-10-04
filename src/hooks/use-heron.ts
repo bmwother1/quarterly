@@ -11,6 +11,7 @@ import {
   collisionsWith, describeCollisions, describeDisplaced, pushAside, releaseForEvents,
 } from '@/lib/schedule/conflicts';
 import { releaseMissed } from '@/lib/schedule/absence';
+import { applyMakeUp, type MakeUp } from '@/lib/schedule/make-up';
 import { applySleepHours, isLive, type StepId } from '@/lib/onboarding';
 import { logEvent } from '@/supabase/events';
 
@@ -188,6 +189,12 @@ export function useHeron(tz: string) {
       partial: outcome === 'partial',
     });
     return notice;
+  }, [mutate, tz]);
+
+  /** A skipped goal session made up: added to the next one, or booked tomorrow. */
+  const makeUp = useCallback((skippedId: string, offer: MakeUp) => {
+    mutate((prev) => ({ ...prev, blocks: applyMakeUp(prev.blocks, skippedId, offer, tz) }));
+    logEvent('block_made_up', { minutes: offer.minutes, partial: offer.kind === 'extend' });
   }, [mutate, tz]);
 
   /**
@@ -437,7 +444,7 @@ export function useHeron(tz: string) {
   }, [tz]);
 
   return {
-    state, hydrated, mutate, replan, complete, drop, moveBlock, replaceAll,
+    state, hydrated, mutate, replan, complete, makeUp, drop, moveBlock, replaceAll,
     undo, undoLabel, dismissUndo, removeCommitment,
     addEvent, updateEvent, removeEvent, addTask, removeTask,
     updateAvailability, updateCommitments, reset,

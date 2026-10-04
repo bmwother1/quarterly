@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import type { StudyBlock } from '@/lib/types';
-import { fmtDay, fmtTime } from '@/lib/time';
+import { DEFAULT_TZ, fmtDay, fmtTime } from '@/lib/time';
+import { useHeron } from '@/hooks/use-heron';
+import { makeUpOptions, type MakeUp } from '@/lib/schedule/make-up';
 import type { Completion } from '@/lib/schedule/complete';
 import { keepCodes } from './course-name';
 
@@ -114,6 +116,50 @@ export function BlockActions({
   const [askingPartial, setAskingPartial] = useState(false);
   const [askingSkip, setAskingSkip] = useState(false);
   const [partialMinutes, setPartialMinutes] = useState(String(Math.round(block.minutes / 2)));
+  const { state, makeUp } = useHeron(DEFAULT_TZ);
+
+  // A weekly goal has no deadline to book against, so a skip asks where the
+  // time should go instead of "find another time".
+  if (askingSkip && block.commitmentId) {
+    const tz = DEFAULT_TZ;
+    const offers = makeUpOptions(state, block.id, new Date(), tz);
+    const label = (o: MakeUp) => {
+      const day = fmtDay(o.start, tz).split(',')[0];
+      return o.kind === 'extend'
+        ? `Add ${block.minutes} min to ${day}'s session`
+        : `Do it tomorrow, ${fmtTime(o.start, tz)}`;
+    };
+    return (
+      <div className="enter mt-3">
+        <p className="text-sm">Skipping this one. Make up the {block.minutes} minutes?</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {offers.map((o, i) => (
+            <button
+              key={o.kind}
+              onClick={() => { onComplete('skipped', null); makeUp(block.id, o); setAskingSkip(false); }}
+              className={i === 0 && primary ? 'btn-primary' : 'btn-secondary'}
+            >
+              {label(o)}
+            </button>
+          ))}
+          <button
+            onClick={() => { onComplete('skipped', null); setAskingSkip(false); }}
+            className="btn-secondary"
+          >
+            Let it go
+          </button>
+          <button onClick={() => setAskingSkip(false)} className="btn-quiet">
+            Cancel
+          </button>
+        </div>
+        {offers.length === 0 && (
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            There is no free time next to your next session or tomorrow to fit it.
+          </p>
+        )}
+      </div>
+    );
+  }
 
   if (askingSkip) {
     return (

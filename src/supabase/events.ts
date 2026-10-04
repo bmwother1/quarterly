@@ -29,6 +29,7 @@ export type EventKind =
   | 'planned'
   | 'block_done'
   | 'block_skipped'
+  | 'block_made_up'
   | 'block_moved'
   | 'feed_synced'
   /**
